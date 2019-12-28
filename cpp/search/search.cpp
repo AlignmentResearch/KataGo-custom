@@ -1442,7 +1442,7 @@ double Search::getExploreSelectionValue(
   double exploreComponent =
     searchParams.cpuctExploration
     * nnPolicyProb
-    * sqrt((double)totalChildVisits + 0.01) //TODO this is weird when totalChildVisits == 0, first exploration
+    * sqrt((double)totalChildVisits + 0.01)
     / (1.0 + childVisits);
 
   //At the last moment, adjust value to be from the player's perspective, so that players prefer values in their favor
@@ -1465,7 +1465,7 @@ double Search::getExploreSelectionValueInverse(
   double exploreComponentScaling =
     searchParams.cpuctExploration
     * nnPolicyProb
-    * sqrt((double)totalChildVisits + 0.01); //TODO this is weird when totalChildVisits == 0, first exploration
+    * sqrt((double)totalChildVisits + 0.01);
 
   //Guard against float weirdness
   if(exploreComponent <= 0)

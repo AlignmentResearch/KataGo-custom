@@ -1075,15 +1075,15 @@ MoveNum: 44 HASH: 63472B4FF111F7ACDE2C2C81DD1667D6
  1 . . . . . . . . . . . . . . . . . . .
 
 Root visits: 400
-NN rows: 359
-NN batches: 359
+NN rows: 358
+NN batches: 358
 NN avg batch size: 1
 PV: S2 R8 P14 O14 O13 N14 N13 M14 P6 K17 J17
 Tree:
 : T  21.34c W  19.11c S   2.23c ( +4.5 L  +4.5) N     400  --  S2 R8 P14 O14 O13 N14 N13
 ---Black(v)---
 S2  : T  21.91c W  19.62c S   2.29c ( +4.6 L  +4.6) LCB   26.03c P 26.11% WF  2.80% PSV      94 N      94  --  S2 R8 P14 O14 O13 N14 N13 M14
-P6  : T  19.83c W  17.75c S   2.08c ( +4.2 L  +4.2) LCB   23.90c P 13.20% WF  2.96% PSV      77 N      77  --  P6 R8 P14 O14 O13 N14 N13 M14
+P6  : T  19.82c W  17.74c S   2.08c ( +4.2 L  +4.2) LCB   23.89c P 13.20% WF  2.96% PSV      77 N      77  --  P6 R8 P14 O14 O13 N14 N13 M14
 P14 : T  21.83c W  19.57c S   2.26c ( +4.5 L  +4.5) LCB   27.40c P 14.54% WF  2.81% PSV      53 N      54  --  P14 O14 O13 N14 N13 M14 S2 R8
 Q7  : T  18.89c W  16.94c S   1.94c ( +3.9 L  +3.9) LCB   26.42c P  2.58% WF  2.98% PSV      20 N      20  --  Q7 R7 R8 Q6 P6 P7 Q8 P5
 O6  : T  18.50c W  16.56c S   1.94c ( +3.9 L  +3.9) LCB   27.44c P  1.77% WF  3.00% PSV      17 N      22  --  O6 R8 S2 P14 Q13 P13 Q12 P12

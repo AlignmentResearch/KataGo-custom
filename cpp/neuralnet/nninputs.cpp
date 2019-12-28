@@ -607,17 +607,13 @@ Hash128 NNInputs::getHash(
     }
   }
 
-  //TODO for tests
   float selfKomi =
-    hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
-
-  // float selfKomi =
-  //   hist.currentSelfKomi(nextPlayer) +
-  //   //For hashing purposes, we can just fold this adjustment into a subinterval of komi strictly fitting between half-points.
-  //   (float)(nnInputParams.drawWinLossValueForWhite * (nextPlayer == P_WHITE ? 0.20 : -0.20));
+    hist.currentSelfKomi(nextPlayer) +
+    //For hashing purposes, we can just fold this adjustment into a subinterval of komi strictly fitting between half-points.
+    (float)(nnInputParams.drawWinLossValueForWhite * (nextPlayer == P_WHITE ? 0.125 : -0.125));
 
   //Discretize the komi for the purpose of matching hash, so that extremely close effective komi we just reuse nn cache hits
-  int64_t komiDiscretized = (int64_t)(selfKomi*256.0f);
+  int64_t komiDiscretized = (int64_t)(selfKomi*512.0f);
   uint64_t komiHash = Hash::murmurMix((uint64_t)komiDiscretized);
   hash.hash0 ^= komiHash;
   hash.hash1 ^= Hash::basicLCong(komiHash);

@@ -629,8 +629,8 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   assert(weightSum > 0.0);
 
   values.winValue = winValueSum / weightSum;
-  values.drawValue = drawValueSum / weightSum;
   values.lossValue = (weightSum - winValueSum - drawValueSum - noResultValueSum) / weightSum;
+  values.drawValue = drawValueSum / weightSum;
   values.noResultValue = noResultValueSum / weightSum;
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
@@ -644,14 +644,14 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   //Perform a little normalization - due to tiny floating point errors, winValue and lossValue could be outside [0,1].
   //(particularly lossValue, as it was produced by subtractions from weightSum that could have lost precision).
   if(values.winValue < 0.0) values.winValue = 0.0;
-  if(values.drawValue < 0.0) values.drawValue = 0.0;
   if(values.lossValue < 0.0) values.lossValue = 0.0;
+  if(values.drawValue < 0.0) values.drawValue = 0.0;
   if(values.noResultValue < 0.0) values.noResultValue = 0.0;
   double sum = values.winValue + values.lossValue + values.drawValue + values.noResultValue;
   assert(sum > 0.9 && sum < 1.1); //If it's wrong by more than this, we have a bigger bug somewhere
   values.winValue /= sum;
-  values.drawValue /= sum;
   values.lossValue /= sum;
+  values.drawValue /= sum;
   values.noResultValue /= sum;
 
   double winLossValue = values.winValue - values.lossValue + values.drawValue * searchParams.drawWinLossValueForWhite;

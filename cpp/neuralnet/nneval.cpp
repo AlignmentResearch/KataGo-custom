@@ -729,7 +729,7 @@ void NNEvaluator::evaluate(
 
         if(history.rules.koRule != Rules::KO_SIMPLE && history.rules.scoringRule != Rules::SCORING_TERRITORY)
           noResultProb = 0.0;
-        if((history.rules.komi != (int)history.rules.komi) == history.hasButton)
+        if((history.rules.komi == (int)history.rules.komi) == history.hasButton)
           drawProb = 0.0;
 
         double probSum = winProb + lossProb + drawProb + noResultProb;

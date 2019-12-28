@@ -1176,7 +1176,7 @@ Rules ModelDesc::getSupportedRules(const Rules& desiredRules, bool& supported) c
       supported = false;
     }
   }
-  else if(version <= 8) {
+  else if(version <= 9) {
     if(rules.koRule == Rules::KO_SPIGHT) {
       rules.koRule = Rules::KO_SITUATIONAL;
       supported = false;

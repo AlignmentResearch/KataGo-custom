@@ -17,7 +17,7 @@ from model import Model
 b6c96 = {
   "version":9,
   "support_japanese_rules":True,
-  "use_fixup":True,
+  "use_fixup":False,
   "use_scoremean_as_lead":False,
   "trunk_num_channels":96,
   "mid_num_channels":96,

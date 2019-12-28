@@ -360,13 +360,14 @@ void NNEvaluator::serve(
         //These aren't really probabilities. Win/Loss/NoResult will get softmaxed later
         double whiteWinProb = 0.0 + rand.nextGaussian() * 0.20;
         double whiteLossProb = 0.0 + rand.nextGaussian() * 0.20;
+        double whiteDrawProb = 0.0 + rand.nextGaussian() * 0.05;
         double whiteScoreMean = 0.0 + rand.nextGaussian() * 0.20;
         double whiteScoreMeanSq = 0.0 + rand.nextGaussian() * 0.20;
         double whiteNoResultProb = 0.0 + rand.nextGaussian() * 0.20;
         double varTimeLeft = 0.5 * boardXSize * boardYSize;
         resultBuf->result->whiteWinProb = (float)whiteWinProb;
         resultBuf->result->whiteLossProb = (float)whiteLossProb;
-        resultBuf->result->whiteDrawProb = -10000.0f; //TODO make better after it's clear tests are good
+        resultBuf->result->whiteDrawProb = (float)whiteDrawProb;
         resultBuf->result->whiteNoResultProb = (float)whiteNoResultProb;
         resultBuf->result->whiteScoreMean = (float)whiteScoreMean;
         resultBuf->result->whiteScoreMeanSq = (float)whiteScoreMeanSq;

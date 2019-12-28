@@ -338,8 +338,8 @@ void GameInitializer::createGame(
   }
   if(drawRandRadius > 1e-30) {
     double mean = params.drawWinLossValueForWhite;
-    if(mean < 0.0 || mean > 1.0)
-      throw StringError("GameInitializer: params.drawWinLossValueForWhite not within [0,1]: " + Global::doubleToString(mean));
+    if(mean < -1.0 || mean > 1.0)
+      throw StringError("GameInitializer: params.drawWinLossValueForWhite not within [-1,1]: " + Global::doubleToString(mean));
     params.drawWinLossValueForWhite = mean + 2.0 * drawRandRadius * (rand.nextDouble() * 2 - 1);
     while(params.drawWinLossValueForWhite < -1.0 || params.drawWinLossValueForWhite > 1.0)
       params.drawWinLossValueForWhite = mean + 2.0 * drawRandRadius * (rand.nextDouble() * 2 - 1);
@@ -1890,7 +1890,9 @@ FinishedGameData* Play::runGame(
       assert(finalValueTargets.win == 1.0f || finalValueTargets.loss == 1.0f || finalValueTargets.draw == 1.0f);
       finalValueTargets.noResult = 0.0f;
       finalValueTargets.score = hist.finalWhiteMinusBlackScore;
-      finalValueTargets.hasLead = true;
+      //Set to false, we shouldn't actually be training on it anyways, and even if we did it would be slightly off due to
+      //drawutility making finalValueTargets.score not actually quite the right thing.
+      finalValueTargets.hasLead = false;
       finalValueTargets.lead = finalValueTargets.score;
 
       //Fill full and seki areas

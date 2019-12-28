@@ -360,7 +360,7 @@ void NNEvaluator::serve(
         //These aren't really probabilities. Win/Loss/NoResult will get softmaxed later
         double whiteWinProb = 0.0 + rand.nextGaussian() * 0.20;
         double whiteLossProb = 0.0 + rand.nextGaussian() * 0.20;
-        double whiteDrawProb = 0.0 + rand.nextGaussian() * 0.05;
+        double whiteDrawProb = -2.0 + rand.nextGaussian() * 0.20;
         double whiteScoreMean = 0.0 + rand.nextGaussian() * 0.20;
         double whiteScoreMeanSq = 0.0 + rand.nextGaussian() * 0.20;
         double whiteNoResultProb = 0.0 + rand.nextGaussian() * 0.20;
@@ -719,6 +719,9 @@ void NNEvaluator::evaluate(
 
         if(history.rules.koRule != Rules::KO_SIMPLE && history.rules.scoringRule != Rules::SCORING_TERRITORY)
           noResultLogits -= 100000.0;
+        bool komiIsInteger = history.rules.komi == (int)history.rules.komi;
+        if(komiIsInteger == history.rules.hasButton)
+          drawLogits -= 100000.0;
 
         //Softmax
         double maxLogits = std::max(std::max(std::max(winLogits,lossLogits),drawLogits),noResultLogits);
@@ -729,7 +732,7 @@ void NNEvaluator::evaluate(
 
         if(history.rules.koRule != Rules::KO_SIMPLE && history.rules.scoringRule != Rules::SCORING_TERRITORY)
           noResultProb = 0.0;
-        if((history.rules.komi == (int)history.rules.komi) == history.hasButton)
+        if(komiIsInteger == history.rules.hasButton)
           drawProb = 0.0;
 
         double probSum = winProb + lossProb + drawProb + noResultProb;

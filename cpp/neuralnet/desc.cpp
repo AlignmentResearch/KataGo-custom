@@ -848,10 +848,18 @@ ValueHeadDesc::ValueHeadDesc(istream& in, int vrsn) {
     throw StringError(
       name +
       Global::strprintf(": v2Mul.outChannels (%d) != v3Mul.inChannels (%d)", v2Mul.outChannels, v3Mul.inChannels));
-  if(v3Mul.outChannels != 3)
-    throw StringError(name + Global::strprintf(": v3Mul.outChannels (%d) != 3", v3Mul.outChannels));
-  if(v3Bias.numChannels != 3)
-    throw StringError(name + Global::strprintf(": v3Bias.numChannels (%d) != 3", v3Bias.numChannels));
+  if(version >= 9) {
+    if(v3Mul.outChannels != 4)
+      throw StringError(name + Global::strprintf(": v3Mul.outChannels (%d) != 4", v3Mul.outChannels));
+    if(v3Bias.numChannels != 4)
+      throw StringError(name + Global::strprintf(": v3Bias.numChannels (%d) != 4", v3Bias.numChannels));
+  }
+  else {
+    if(v3Mul.outChannels != 3)
+      throw StringError(name + Global::strprintf(": v3Mul.outChannels (%d) != 3", v3Mul.outChannels));
+    if(v3Bias.numChannels != 3)
+      throw StringError(name + Global::strprintf(": v3Bias.numChannels (%d) != 3", v3Bias.numChannels));
+  }
 
   if(sv3Mul.inChannels != v2Mul.outChannels)
     throw StringError(
@@ -1147,7 +1155,7 @@ void ModelDesc::loadFromFileMaybeGZipped(const string& fileName, ModelDesc& desc
 
 
 Rules ModelDesc::getSupportedRules(const Rules& desiredRules, bool& supported) const {
-  static_assert(NNModelVersion::latestModelVersionImplemented == 8, "");
+  static_assert(NNModelVersion::latestModelVersionImplemented == 9, "");
   Rules rules = desiredRules;
   supported = true;
   if(version <= 6) {

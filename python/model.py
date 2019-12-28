@@ -35,6 +35,8 @@ class Model:
       return 22
     elif version == 8:
       return 22
+    elif version == 9:
+      return 22
     else:
       assert(False)
 
@@ -51,6 +53,8 @@ class Model:
       return 16
     elif version == 8:
       return 19
+    elif version == 9:
+      return 21
     else:
       assert(False)
 
@@ -68,9 +72,9 @@ class Model:
     self.policy_output_shape = [self.pos_len*self.pos_len+1,2] #+1 for pass move
     self.policy_target_shape = [self.pos_len*self.pos_len+1] #+1 for pass move
     self.policy_target_weight_shape = []
-    self.value_target_shape = [3]
-    self.td_value_target_shape = [2,3]
-    self.miscvalues_target_shape = [10] #0:scoremean, #1 scorestdev, #2 lead, #3 variance time #4-#9 td value targets
+    self.value_target_shape = [4]
+    self.td_value_target_shape = [2,4]
+    self.miscvalues_target_shape = [12] #0:scoremean, #1 scorestdev, #2 lead, #3 variance time #4-#11 td value targets
     self.scoremean_target_shape = [] #0
     self.scorestdev_target_shape = [] #1
     self.lead_target_shape = [] #2
@@ -108,6 +112,10 @@ class Model:
     self.support_japanese_rules = True #by default
     if "support_japanese_rules" in config and config["support_japanese_rules"] == False:
       self.support_japanese_rules = False
+
+    self.use_scoremean_as_lead = False #by default
+    if "use_scoremean_as_lead" in config and config["use_scoremean_as_lead"] == True:
+      self.use_scoremean_as_lead = True
 
     self.build_model(config,placeholders)
 
@@ -199,7 +207,7 @@ class Model:
   #Returns the new idx, which could be the same as idx if this isn't a good training row
   def fill_row_features(self, board, pla, opp, boards, moves, move_idx, rules, bin_input_data, global_input_data, idx):
     #Currently only support v4 or v5 or v7 MODEL features (inputs version v3 and v4 and v6)
-    assert(self.version == 4 or self.version == 5 or self.version == 7 or self.version == 8)
+    assert(self.version == 4 or self.version == 5 or self.version == 7 or self.version == 8 or self.version == 9)
 
     bsize = board.size
     assert(self.pos_len >= bsize)
@@ -451,32 +459,50 @@ class Model:
       if "hasButton" in rules and rules["hasButton"] and Board.PASS_LOC not in [move[1] for move in moves]:
         global_input_data[idx,17] = 1.0
 
+    if self.version >= 9:
+      if "drawWinLossValueForWhite" in rules:
+        global_input_data[idx,18] = 0.5 * (rules["drawWinLossValueForWhite"] if pla == Board.WHITE else -rules["drawWinLossValueForWhite"])
+
+    boardAreaIsEven = (board.size % 2 == 0)
+    drawableKomisAreEven = boardAreaIsEven
+    if drawableKomisAreEven:
+      komiFloor = math.floor(selfKomi / 2.0) * 2.0
+    else:
+      komiFloor = math.floor((selfKomi-1.0) / 2.0) * 2.0 + 1.0
+
+    delta = selfKomi - komiFloor
+    assert(delta >= -0.0001)
+    assert(delta <= 2.0001)
+    if delta < 0.0:
+      delta = 0.0
+    if delta > 2.0:
+      delta = 2.0
+
+    if delta < 0.5:
+      wave = delta
+    elif delta < 1.5:
+      wave = 1.0-delta
+    else:
+      wave = delta-2.0
+
+    if self.version >= 9:
+      if delta == 0.0:
+        global_input_data[idx,19] = 1.0
+      elif delta == 0.5:
+        global_input_data[idx,19] = -1.0
+      elif delta == 1.0:
+        global_input_data[idx,19] = 0.0
+      elif delta == 1.5:
+        global_input_data[idx,19] = -1.0
+      elif delta == 2.0:
+        global_input_data[idx,19] = 1.0
+      else:
+        assert(False)
+
     if rules["scoringRule"] == "SCORING_AREA" or rules["encorePhase"] > 1:
-      boardAreaIsEven = (board.size % 2 == 0)
-
-      drawableKomisAreEven = boardAreaIsEven
-
-      if drawableKomisAreEven:
-        komiFloor = math.floor(selfKomi / 2.0) * 2.0
-      else:
-        komiFloor = math.floor((selfKomi-1.0) / 2.0) * 2.0 + 1.0
-
-      delta = selfKomi - komiFloor
-      assert(delta >= -0.0001)
-      assert(delta <= 2.0001)
-      if delta < 0.0:
-        delta = 0.0
-      if delta > 2.0:
-        delta = 2.0
-
-      if delta < 0.5:
-        wave = delta
-      elif delta < 1.5:
-        wave = 1.0-delta
-      else:
-        wave = delta-2.0
-
-      if self.version >= 8:
+      if self.version >= 9:
+        global_input_data[idx,20] = wave
+      elif self.version >= 8:
         global_input_data[idx,18] = wave
       elif self.version >= 7:
         global_input_data[idx,15] = wave
@@ -837,11 +863,12 @@ class Model:
     #self.version = 5 #V4 features, slightly different pass-alive stones feature
     #self.version = 6 #V5 features, most higher-level go features removed
     #self.version = 7 #V6 features, more rules support
-    #self.version = 8 #V7 features, asym
+    #self.version = 8 #V7 features, asym, unbalanced training, lead, variance time
+    #self.version = 9 #V8 features, win-loss-draw-head
 
     self.version = Model.get_version(config)
-    #These are the only four supported versions
-    assert(self.version == 4 or self.version == 5 or self.version == 6 or self.version == 7 or self.version == 8)
+    #These are the only supported versions
+    assert(self.version == 9)
 
     #Input layer---------------------------------------------------------------------------------
     bin_inputs = (placeholders["bin_inputs"] if "bin_inputs" in placeholders else
@@ -899,7 +926,7 @@ class Model:
     #We do this by building a matrix for each batch element, mapping input channels to possibly-turned off channels.
     #This matrix is a sum of hist_matrix_base which always turns off all the channels, and h0, h1, h2,... which perform
     #the modifications to hist_matrix_base to make it turn on channels based on whether we have move0, move1,...
-    if self.version == 4 or self.version == 5 or self.version == 7 or self.version == 8:
+    if self.version == 9:
       hist_matrix_base = np.diag(np.array([
         1.0, #0
         1.0, #1
@@ -949,32 +976,6 @@ class Model:
       h3[12,12] = 1.0
       h4 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
       h4[13,13] = 1.0
-    elif self.version == 6:
-      hist_matrix_base = np.diag(np.array([
-        1.0, #0
-        1.0, #1
-        1.0, #2
-        1.0, #3
-        1.0, #4
-        1.0, #5
-        0.0, #6
-        0.0, #7
-        0.0, #8
-        0.0, #9
-        0.0, #10
-        1.0, #11
-        1.0, #12
-      ],dtype=np.float32))
-      h0 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
-      h0[6,6] = 1.0
-      h1 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
-      h1[7,7] = 1.0
-      h2 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
-      h2[8,8] = 1.0
-      h3 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
-      h3[9,9] = 1.0
-      h4 = np.zeros([self.num_bin_input_features,self.num_bin_input_features],dtype=np.float32)
-      h4[10,10] = 1.0
 
     hist_matrix_base = tf.reshape(tf.constant(hist_matrix_base),[1,self.num_bin_input_features,self.num_bin_input_features])
     hist_matrix_builder = tf.constant(np.array([h0,h1,h2,h3,h4]))
@@ -1159,7 +1160,7 @@ class Model:
 
     if not self.support_japanese_rules:
       # Force no-result prediction to 0 after softmax
-      v3_layer = v3_layer + tf.constant([0,0,-5000.0],dtype=tf.float32)
+      v3_layer = v3_layer + tf.constant([0,0,0,-5000.0],dtype=tf.float32)
     value_output = tf.reshape(v3_layer, [-1] + self.value_target_shape, name = "value_output")
 
     miscvalues_output = tf.reshape(mv3_layer, [-1] + self.miscvalues_target_shape, name = "miscvalues_output")
@@ -1177,7 +1178,7 @@ class Model:
     scorebelief_mid = self.pos_len*self.pos_len+Model.EXTRA_SCORE_DISTR_RADIUS
     assert(scorebelief_len == self.pos_len*self.pos_len*2+Model.EXTRA_SCORE_DISTR_RADIUS*2)
 
-    if self.version == 4 or self.version == 5 or self.version == 7 or self.version == 8:
+    if self.version == 9:
       self.score_belief_offset_vector = np.array([float(i-scorebelief_mid)+0.5 for i in range(scorebelief_len)],dtype=np.float32)
       self.score_belief_parity_vector = np.array([0.5-float((i-scorebelief_mid) % 2) for i in range(scorebelief_len)],dtype=np.float32)
       sbv2_size = config["sbv2_num_channels"]
@@ -1194,20 +1195,6 @@ class Model:
         tf.reshape(sb2_layer_partial,[-1,1,sbv2_size]) +
         tf.reshape(sb2_offset_partial,[1,scorebelief_len,sbv2_size]) +
         tf.reshape(sb2_parity_partial,[-1,scorebelief_len,sbv2_size])
-      )
-      sb2_layer = self.relu_spatial1d("sb2/relu",sb2_layer)
-    elif self.version == 6:
-      self.score_belief_offset_vector = np.array([float(i-scorebelief_mid)+0.5 for i in range(scorebelief_len)],dtype=np.float32)
-      sbv2_size = config["sbv2_num_channels"]
-      sb2w = self.weight_variable("sb2/w",[v1_size*3,sbv2_size],v1_size*3+1,sbv2_size)
-      sb2b = self.weight_variable("sb2/b",[sbv2_size],v1_size*3+1,sbv2_size,scale_initial_weights=0.2,reg="tiny")
-      sb2_layer_partial = tf.matmul(v1_layer_pooled, sb2w) + sb2b
-      sb2_offset_vector = tf.constant(0.05 * self.score_belief_offset_vector, dtype=tf.float32)
-      sb2_offset_w = self.weight_variable("sb2_offset/w",[1,sbv2_size],v1_size*3+1,sbv2_size,scale_initial_weights=0.5)
-      sb2_offset_partial = tf.matmul(tf.reshape(sb2_offset_vector,[-1,1]), sb2_offset_w)
-      sb2_layer = (
-        tf.reshape(sb2_layer_partial,[-1,1,sbv2_size]) +
-        tf.reshape(sb2_offset_partial,[1,scorebelief_len,sbv2_size])
       )
       sb2_layer = self.relu_spatial1d("sb2/relu",sb2_layer)
     else:
@@ -1380,15 +1367,15 @@ class Target_vars:
       tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.policy_target1, logits=policy_output[:,:,1])
     )
 
-    self.value_loss_unreduced = 1.20 * tf.nn.softmax_cross_entropy_with_logits_v2(
+    self.value_loss_unreduced = 1.10 * tf.nn.softmax_cross_entropy_with_logits_v2(
       labels=self.value_target,
       logits=value_output
     )
 
-    self.td_value_loss_unreduced = 0.60 * (
+    self.td_value_loss_unreduced = 0.55 * (
       tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=self.td_value_target,
-        logits=tf.reshape(miscvalues_output[:,4:10],[-1] + model.td_value_target_shape)
+        logits=tf.reshape(miscvalues_output[:,4:12],[-1] + model.td_value_target_shape)
       ) -
       # Subtract out the entropy, so as to get loss 0 at perfect prediction
       tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -1679,7 +1666,7 @@ class ModelUtils:
     placeholders["policy_target1"] = policy_target1
     placeholders["policy_target_weight1"] = features["gtnc"][:,28]
 
-    placeholders["value_target"] = features["gtnc"][:,0:3]
+    placeholders["value_target"] = features["gtnc"][:,0:4]
     placeholders["td_value_target"] = tf.stack([features["gtnc"][:,5:9],features["gtnc"][:,10:14]],axis=1)
     placeholders["scoremean_target"] = features["gtnc"][:,4]
     placeholders["lead_target"] = features["gtnc"][:,21]

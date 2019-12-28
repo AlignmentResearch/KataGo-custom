@@ -2326,3 +2326,421 @@ void NNInputs::fillRowV7(
   }
 
 }
+
+
+//===========================================================================================
+//INPUTSVERSION 8
+//===========================================================================================
+
+
+void NNInputs::fillRowV8(
+  const Board& board, const BoardHistory& hist, Player nextPlayer,
+  const MiscNNInputParams& nnInputParams,
+  int nnXLen, int nnYLen, bool useNHWC, float* rowBin, float* rowGlobal
+) {
+  assert(nnXLen <= NNPos::MAX_BOARD_LEN);
+  assert(nnYLen <= NNPos::MAX_BOARD_LEN);
+  assert(board.x_size <= nnXLen);
+  assert(board.y_size <= nnYLen);
+  std::fill(rowBin,rowBin+NUM_FEATURES_SPATIAL_V8*nnXLen*nnYLen,false);
+  std::fill(rowGlobal,rowGlobal+NUM_FEATURES_GLOBAL_V8,0.0f);
+
+  Player pla = nextPlayer;
+  Player opp = getOpp(pla);
+  int xSize = board.x_size;
+  int ySize = board.y_size;
+
+  int featureStride;
+  int posStride;
+  if(useNHWC) {
+    featureStride = 1;
+    posStride = NNInputs::NUM_FEATURES_SPATIAL_V8;
+  }
+  else {
+    featureStride = nnXLen * nnYLen;
+    posStride = 1;
+  }
+
+  for(int y = 0; y<ySize; y++) {
+    for(int x = 0; x<xSize; x++) {
+      int pos = NNPos::xyToPos(x,y,nnXLen);
+      Loc loc = Location::getLoc(x,y,xSize);
+
+      //Feature 0 - on board
+      setRowBin(rowBin,pos,0, 1.0f, posStride, featureStride);
+
+      Color stone = board.colors[loc];
+
+      //Features 1,2 - pla,opp stone
+      //Features 3,4,5 - 1,2,3 libs
+      if(stone == pla)
+        setRowBin(rowBin,pos,1, 1.0f, posStride, featureStride);
+      else if(stone == opp)
+        setRowBin(rowBin,pos,2, 1.0f, posStride, featureStride);
+
+      if(stone == pla || stone == opp) {
+        int libs = board.getNumLiberties(loc);
+        if(libs == 1) setRowBin(rowBin,pos,3, 1.0f, posStride, featureStride);
+        else if(libs == 2) setRowBin(rowBin,pos,4, 1.0f, posStride, featureStride);
+        else if(libs == 3) setRowBin(rowBin,pos,5, 1.0f, posStride, featureStride);
+      }
+    }
+  }
+
+  //Feature 6 - ko-ban locations, including possibly superko.
+  if(hist.encorePhase == 0) {
+    if(board.ko_loc != Board::NULL_LOC) {
+      int pos = NNPos::locToPos(board.ko_loc,xSize,nnXLen,nnYLen);
+      setRowBin(rowBin,pos,6, 1.0f, posStride, featureStride);
+    }
+    for(int y = 0; y<ySize; y++) {
+      for(int x = 0; x<xSize; x++) {
+        Loc loc = Location::getLoc(x,y,xSize);
+        if(hist.superKoBanned[loc] && loc != board.ko_loc) {
+          int pos = NNPos::locToPos(loc,xSize,nnXLen,nnYLen);
+          setRowBin(rowBin,pos,6, 1.0f, posStride, featureStride);
+        }
+      }
+    }
+  }
+  else {
+    //Feature 6,7,8 - in the encore, no-second-ko-capture locations, encore ko prohibitions where we have to pass for ko
+    for(int y = 0; y<ySize; y++) {
+      for(int x = 0; x<xSize; x++) {
+        Loc loc = Location::getLoc(x,y,xSize);
+        int pos = NNPos::locToPos(loc,xSize,nnXLen,nnYLen);
+        if(hist.superKoBanned[loc])
+          setRowBin(rowBin,pos,6, 1.0f, posStride, featureStride);
+        if(hist.koRecapBlocked[loc])
+          setRowBin(rowBin,pos,7, 1.0f, posStride, featureStride);
+      }
+    }
+  }
+
+  //Hide history from the net if a pass would end things and we're behaving as if a pass won't.
+  //Or if the game is in fact over right now!
+  bool hideHistory =
+    hist.isGameFinished ||
+    hist.isPastNormalPhaseEnd ||
+    (nnInputParams.conservativePass && hist.passWouldEndGame(board,nextPlayer));
+
+  //Features 9,10,11,12,13
+  if(!hideHistory) {
+    const vector<Move>& moveHistory = hist.moveHistory;
+    size_t moveHistoryLen = moveHistory.size();
+    //Also effectively wipe history as we change phase
+    assert(moveHistoryLen >= hist.numTurnsThisPhase);
+    int numTurnsThisPhase = hist.numTurnsThisPhase;
+
+    if(numTurnsThisPhase >= 1 && moveHistory[moveHistoryLen-1].pla == opp) {
+      Loc prev1Loc = moveHistory[moveHistoryLen-1].loc;
+      if(prev1Loc == Board::PASS_LOC)
+        rowGlobal[0] = 1.0;
+      else if(prev1Loc != Board::NULL_LOC) {
+        int pos = NNPos::locToPos(prev1Loc,xSize,nnXLen,nnYLen);
+        setRowBin(rowBin,pos,9, 1.0f, posStride, featureStride);
+      }
+      if(numTurnsThisPhase >= 2 && moveHistory[moveHistoryLen-2].pla == pla) {
+        Loc prev2Loc = moveHistory[moveHistoryLen-2].loc;
+        if(prev2Loc == Board::PASS_LOC)
+          rowGlobal[1] = 1.0;
+        else if(prev2Loc != Board::NULL_LOC) {
+          int pos = NNPos::locToPos(prev2Loc,xSize,nnXLen,nnYLen);
+          setRowBin(rowBin,pos,10, 1.0f, posStride, featureStride);
+        }
+        if(numTurnsThisPhase >= 3 && moveHistory[moveHistoryLen-3].pla == opp) {
+          Loc prev3Loc = moveHistory[moveHistoryLen-3].loc;
+          if(prev3Loc == Board::PASS_LOC)
+            rowGlobal[2] = 1.0;
+          else if(prev3Loc != Board::NULL_LOC) {
+            int pos = NNPos::locToPos(prev3Loc,xSize,nnXLen,nnYLen);
+            setRowBin(rowBin,pos,11, 1.0f, posStride, featureStride);
+          }
+          if(numTurnsThisPhase >= 4 && moveHistory[moveHistoryLen-4].pla == pla) {
+            Loc prev4Loc = moveHistory[moveHistoryLen-4].loc;
+            if(prev4Loc == Board::PASS_LOC)
+              rowGlobal[3] = 1.0;
+            else if(prev4Loc != Board::NULL_LOC) {
+              int pos = NNPos::locToPos(prev4Loc,xSize,nnXLen,nnYLen);
+              setRowBin(rowBin,pos,12, 1.0f, posStride, featureStride);
+            }
+            if(numTurnsThisPhase >= 5 && moveHistory[moveHistoryLen-5].pla == opp) {
+              Loc prev5Loc = moveHistory[moveHistoryLen-5].loc;
+              if(prev5Loc == Board::PASS_LOC)
+                rowGlobal[4] = 1.0;
+              else if(prev5Loc != Board::NULL_LOC) {
+                int pos = NNPos::locToPos(prev5Loc,xSize,nnXLen,nnYLen);
+                setRowBin(rowBin,pos,13, 1.0f, posStride, featureStride);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  //Ladder features 14,15,16,17
+  auto addLadderFeature = [&board,xSize,nnXLen,nnYLen,posStride,featureStride,rowBin,opp](Loc loc, int pos, const vector<Loc>& workingMoves){
+    assert(board.colors[loc] == P_BLACK || board.colors[loc] == P_WHITE);
+    assert(pos >= 0 && pos < NNPos::MAX_BOARD_AREA);
+    setRowBin(rowBin,pos,14, 1.0f, posStride, featureStride);
+    if(board.colors[loc] == opp && board.getNumLiberties(loc) > 1) {
+      for(size_t j = 0; j < workingMoves.size(); j++) {
+        int workingPos = NNPos::locToPos(workingMoves[j],xSize,nnXLen,nnYLen);
+        setRowBin(rowBin,workingPos,17, 1.0f, posStride, featureStride);
+      }
+    }
+  };
+
+  iterLadders(board, nnXLen, addLadderFeature);
+
+  const Board& prevBoard = hideHistory ? board : hist.getRecentBoard(1);
+  auto addPrevLadderFeature = [&prevBoard,posStride,featureStride,rowBin](Loc loc, int pos, const vector<Loc>& workingMoves){
+    (void)workingMoves;
+    (void)loc;
+    assert(prevBoard.colors[loc] == P_BLACK || prevBoard.colors[loc] == P_WHITE);
+    assert(pos >= 0 && pos < NNPos::MAX_BOARD_AREA);
+    setRowBin(rowBin,pos,15, 1.0f, posStride, featureStride);
+  };
+  iterLadders(prevBoard, nnXLen, addPrevLadderFeature);
+
+  const Board& prevPrevBoard = hideHistory ? board : hist.getRecentBoard(2);
+  auto addPrevPrevLadderFeature = [&prevPrevBoard,posStride,featureStride,rowBin](Loc loc, int pos, const vector<Loc>& workingMoves){
+    (void)workingMoves;
+    (void)loc;
+    assert(prevPrevBoard.colors[loc] == P_BLACK || prevPrevBoard.colors[loc] == P_WHITE);
+    assert(pos >= 0 && pos < NNPos::MAX_BOARD_AREA);
+    setRowBin(rowBin,pos,16, 1.0f, posStride, featureStride);
+  };
+  iterLadders(prevPrevBoard, nnXLen, addPrevPrevLadderFeature);
+
+  //Features 18,19 - current territory, not counting group tax
+  Color area[Board::MAX_ARR_SIZE];
+  bool hasAreaFeature = false;
+  if(hist.rules.scoringRule == Rules::SCORING_AREA && hist.rules.taxRule == Rules::TAX_NONE) {
+    hasAreaFeature = true;
+    bool nonPassAliveStones = true;
+    bool safeBigTerritories = true;
+    bool unsafeBigTerritories = true;
+    board.calculateArea(area,nonPassAliveStones,safeBigTerritories,unsafeBigTerritories,hist.rules.multiStoneSuicideLegal);
+  }
+  else {
+    bool keepTerritories = false;
+    bool keepStones = false;
+    int whiteMinusBlackIndependentLifeRegionCount = 0;
+    if(hist.rules.scoringRule == Rules::SCORING_AREA && (hist.rules.taxRule == Rules::TAX_SEKI || hist.rules.taxRule == Rules::TAX_ALL)) {
+      hasAreaFeature = true;
+      keepTerritories = false;
+      keepStones = true;
+    }
+    else if(hist.rules.scoringRule == Rules::SCORING_TERRITORY && hist.rules.taxRule == Rules::TAX_NONE) {
+      //Territory scoring omits feature until we reach the stage where scoring matters
+      if(hist.encorePhase >= 2) {
+        hasAreaFeature = true;
+        keepTerritories = true;
+        keepStones = false;
+      }
+    }
+    else if(hist.rules.scoringRule == Rules::SCORING_TERRITORY && (hist.rules.taxRule == Rules::TAX_SEKI || hist.rules.taxRule == Rules::TAX_ALL)) {
+      //Territory scoring omits feature until we reach the stage where scoring matters
+      if(hist.encorePhase >= 2) {
+        hasAreaFeature = true;
+        keepTerritories = false;
+        keepStones = false;
+      }
+    }
+    else {
+      ASSERT_UNREACHABLE;
+    }
+
+    if(hasAreaFeature) {
+      board.calculateIndependentLifeArea(
+        area,whiteMinusBlackIndependentLifeRegionCount,
+        keepTerritories,
+        keepStones,
+        hist.rules.multiStoneSuicideLegal
+      );
+    }
+  }
+
+  if(hasAreaFeature) {
+    for(int y = 0; y<ySize; y++) {
+      for(int x = 0; x<xSize; x++) {
+        Loc loc = Location::getLoc(x,y,xSize);
+        int pos = NNPos::locToPos(loc,xSize,nnXLen,nnYLen);
+        if(area[loc] == pla)
+          setRowBin(rowBin,pos,18, 1.0f, posStride, featureStride);
+        else if(area[loc] == opp)
+          setRowBin(rowBin,pos,19, 1.0f, posStride, featureStride);
+        else {
+          if(hist.rules.scoringRule == Rules::SCORING_TERRITORY) {
+            //Also we must be in the second encore phase, based on the logic above.
+            if(board.colors[loc] == pla && hist.secondEncoreStartColors[loc] == pla)
+              setRowBin(rowBin,pos,18, 1.0f, posStride, featureStride);
+            else if(board.colors[loc] == opp && hist.secondEncoreStartColors[loc] == opp)
+              setRowBin(rowBin,pos,19, 1.0f, posStride, featureStride);
+          }
+        }
+      }
+    }
+  }
+
+  //Features 20, 21 - second encore starting stones
+  if(hist.encorePhase >= 2) {
+    for(int y = 0; y<ySize; y++) {
+      for(int x = 0; x<xSize; x++) {
+        Loc loc = Location::getLoc(x,y,xSize);
+        int pos = NNPos::locToPos(loc,xSize,nnXLen,nnYLen);
+        if(hist.secondEncoreStartColors[loc] == pla)
+          setRowBin(rowBin,pos,20, 1.0f, posStride, featureStride);
+        else if(hist.secondEncoreStartColors[loc] == opp)
+          setRowBin(rowBin,pos,21, 1.0f, posStride, featureStride);
+      }
+    }
+  }
+
+
+  //Global features.
+  //The first 5 of them were set already above to flag which of the past 5 moves were passes.
+
+  //Komi and any score adjustments
+  float selfKomi = hist.currentSelfKomi(nextPlayer);
+  float bArea = xSize * ySize;
+  //Bound komi just in case
+  if(selfKomi > bArea+1.0f)
+    selfKomi = bArea+1.0f;
+  if(selfKomi < -bArea-1.0f)
+    selfKomi = -bArea-1.0f;
+  rowGlobal[5] = selfKomi/20.0f;
+
+  //Ko rule
+  if(hist.rules.koRule == Rules::KO_SIMPLE) {}
+  else if(hist.rules.koRule == Rules::KO_POSITIONAL || hist.rules.koRule == Rules::KO_SPIGHT) {
+    rowGlobal[6] = 1.0f;
+    rowGlobal[7] = 0.5f;
+  }
+  else if(hist.rules.koRule == Rules::KO_SITUATIONAL) {
+    rowGlobal[6] = 1.0f;
+    rowGlobal[7] = -0.5f;
+  }
+  else
+    ASSERT_UNREACHABLE;
+
+  //Suicide
+  if(hist.rules.multiStoneSuicideLegal)
+    rowGlobal[8] = 1.0f;
+
+  //Scoring
+  if(hist.rules.scoringRule == Rules::SCORING_AREA) {}
+  else if(hist.rules.scoringRule == Rules::SCORING_TERRITORY)
+    rowGlobal[9] = 1.0f;
+  else
+    ASSERT_UNREACHABLE;
+  //Tax
+  if(hist.rules.taxRule == Rules::TAX_NONE) {}
+  else if(hist.rules.taxRule == Rules::TAX_SEKI)
+    rowGlobal[10] = 1.0f;
+  else if(hist.rules.taxRule == Rules::TAX_ALL) {
+    rowGlobal[10] = 1.0f;
+    rowGlobal[11] = 1.0f;
+  }
+  else
+    ASSERT_UNREACHABLE;
+
+  //Encore phase
+  if(hist.encorePhase > 0)
+    rowGlobal[12] = 1.0f;
+  if(hist.encorePhase > 1)
+    rowGlobal[13] = 1.0f;
+
+  //Does a pass end the current phase given the ruleset and history?
+  bool passWouldEndPhase = hideHistory ? false : hist.passWouldEndPhase(board,nextPlayer);
+  rowGlobal[14] = passWouldEndPhase ? 1.0f : 0.0f;
+
+  //Used for handicap play
+  //Parameter 15 is used because there's actually a discontinuity in how training behavior works when this is
+  //nonzero, no matter how slightly.
+  if(nnInputParams.playoutDoublingAdvantage != 0) {
+    rowGlobal[15] = 1.0;
+    rowGlobal[16] = (float)(0.5 * nnInputParams.playoutDoublingAdvantage);
+  }
+
+  //Button
+  if(hist.hasButton)
+    rowGlobal[17] = 1.0;
+
+  //Draw utility
+  if(nextPlayer == P_WHITE)
+    rowGlobal[18] = (float)(0.5*nnInputParams.drawWinLossValueForWhite);
+  else
+    rowGlobal[18] = (float)(-0.5*nnInputParams.drawWinLossValueForWhite);
+
+  //Provide parity information about the board size and komi
+  //This comes from the following observation:
+  //From white's perspective:
+  //Komi = 0.0 - Draw possible
+  //Komi = 0.5 - Win the games we would have drawn with komi 0.0
+  //Komi = 1.0 - Usually no difference from komi 0.5
+  //Komi = 1.5 - Usually no difference from komi 0.5
+  //Komi = 2.0 - Draw possible
+  //If we were to assign an "effective goodness" to these komis in order it would look like
+  //0 1 1 1 2 3 3 3 4 5 5 5 6 ...
+  //since when away from the right parity, increasing the komi doesn't help us except in cases of seki with odd numbers of dame.
+  //If we were to add 0.5 times a vector like:
+  //0 -1 0 1 0 -1 0 1 0 -1 0 ...
+  //Then this would become a linear function and hopefully easier for a neural net to learn.
+  //We expect that this is hard for a neural net to learn since it depends on the parity of the board size
+  //and is very "xor"like.
+  //So we provide it as an input, in the form of the following triangular wave with a period of 2 komi points:
+  //  ../\........
+  //  ./..\.......
+  //  /....\..../.
+  //  ......\../..
+  //  .......\/...
+  //The upsloping part of the wave is centered around the komi value where you could draw
+  //since komi is extra valuable when it turns losses into draws into wins, peaking at the komi value where you could draw + 0.5.
+  //It's downsloping around the komi value where you can't draw, since the marginal komi there is nearly useless, not causing you to win
+  //more games except in case of odd-dame seki.
+
+  {
+    bool boardAreaIsEven = (xSize*ySize) % 2 == 0;
+
+    //What is the parity of the komi values that can produce jigos?
+    bool drawableKomisAreEven = boardAreaIsEven;
+
+    //Find the difference between the komi viewed from our perspective and the nearest drawable komi below it.
+    float komiFloor;
+    if(drawableKomisAreEven)
+      komiFloor = floor(selfKomi / 2.0f) * 2.0f;
+    else
+      komiFloor = floor((selfKomi-1.0f) / 2.0f) * 2.0f + 1.0f;
+
+    //Cap just in case we have floating point weirdness
+    float delta = selfKomi - komiFloor;
+    assert(delta >= -0.0001f);
+    assert(delta <= 2.0001f);
+    if(delta < 0.0f)
+      delta = 0.0f;
+    if(delta > 2.0f)
+      delta = 2.0f;
+
+    //We make a wave to distinguish integer vs noninteger komi and the parity of the integer komi. This one we need always.
+    //And we make a wave that slopes up at drawable komi and down at nondrawable. This one we need only for area scoringish situations.
+    float wave0 = 0.0f;
+    float wave1 = 0.0f;
+    if(delta == 0.0f)      {wave0 =  1.0f; wave1 = 0.0f; }
+    else if(delta == 0.5f) {wave0 = -1.0f; wave1 = 1.0f; }
+    else if(delta == 1.0f) {wave0 =  0.0f; wave1 = 0.0f; }
+    else if(delta == 1.5f) {wave0 = -1.0f; wave1 = -1.0f; }
+    else if(delta == 2.0f) {wave0 =  1.0f; wave1 = 0.0f; }
+    else ASSERT_UNREACHABLE;
+
+    rowGlobal[19] = wave0;
+
+    //NOTE: If ever changing which feature this is, must also update index in model.py where we multiply it into the scorebelief parity vector
+    if(hist.rules.scoringRule == Rules::SCORING_AREA || hist.encorePhase >= 2) {
+      rowGlobal[20] = wave1;
+    }
+  }
+
+}

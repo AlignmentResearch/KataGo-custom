@@ -13,13 +13,14 @@
 //6 = V5 features, disable fancy features
 //7 = V6 features, support new rules configurations
 //8 = V7 features, unbalanced training, button go, lead and variance time
+//9 = V8 features, win-loss-draw head
 
 static void fail(int modelVersion) {
   throw StringError("NNModelVersion: Model version not currently implemented or supported: " + Global::intToString(modelVersion));
 }
 
-static_assert(NNModelVersion::latestModelVersionImplemented == 8, "");
-static_assert(NNModelVersion::latestInputsVersionImplemented == 7, "");
+static_assert(NNModelVersion::latestModelVersionImplemented == 9, "");
+static_assert(NNModelVersion::latestInputsVersionImplemented == 8, "");
 
 int NNModelVersion::getInputsVersion(int modelVersion) {
   if(modelVersion == 3 || modelVersion == 4)
@@ -32,6 +33,8 @@ int NNModelVersion::getInputsVersion(int modelVersion) {
     return 6;
   else if(modelVersion == 8)
     return 7;
+  else if(modelVersion == 9)
+    return 8;
 
   fail(modelVersion);
   return -1;
@@ -48,6 +51,8 @@ int NNModelVersion::getNumSpatialFeatures(int modelVersion) {
     return NNInputs::NUM_FEATURES_SPATIAL_V6;
   else if(modelVersion == 8)
     return NNInputs::NUM_FEATURES_SPATIAL_V7;
+  else if(modelVersion == 9)
+    return NNInputs::NUM_FEATURES_SPATIAL_V8;
 
   fail(modelVersion);
   return -1;
@@ -64,6 +69,8 @@ int NNModelVersion::getNumGlobalFeatures(int modelVersion) {
     return NNInputs::NUM_FEATURES_GLOBAL_V6;
   else if(modelVersion == 8)
     return NNInputs::NUM_FEATURES_GLOBAL_V7;
+  else if(modelVersion == 9)
+    return NNInputs::NUM_FEATURES_GLOBAL_V8;
 
   fail(modelVersion);
   return -1;

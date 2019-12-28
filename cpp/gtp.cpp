@@ -434,7 +434,7 @@ struct GTPEngine {
     //Chat
     if(ogsChatToStderr) {
       int64_t visits = bot->getSearch()->getRootVisits();
-      double winrate = 0.5 * (1.0 + (values.winValue - values.lossValue));
+      double winrate = 0.5 * (1.0 + (values.winLossValue));
       double leadForPrinting = lead;
       //Print winrate from desired perspective
       if(perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && pla == P_BLACK)) {
@@ -607,6 +607,7 @@ struct GTPEngine {
           cout << " visits " << data.numVisits;
           cout << " utility " << utility;
           cout << " winrate " << winrate;
+          cout << " drawProb " << data.drawProb;
           cout << " scoreMean " << lead;
           cout << " scoreStdev " << data.scoreStdev;
           cout << " scoreLead " << lead;

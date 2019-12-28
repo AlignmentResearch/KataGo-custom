@@ -26,7 +26,7 @@ namespace NNPos {
 }
 
 struct MiscNNInputParams {
-  double drawEquivalentWinsForWhite = 0.5;
+  double drawWinLossValueForWhite = 0.0;
   bool conservativePass = false;
   double playoutDoublingAdvantage = 0.0;
 
@@ -99,6 +99,7 @@ struct NNOutput {
   //These three are categorial probabilities for each outcome.
   float whiteWinProb;
   float whiteLossProb;
+  float whiteDrawProb;
   float whiteNoResultProb;
 
   //The first two moments of the believed distribution of the expected score at the end of the game, from white's perspective.
@@ -142,21 +143,15 @@ namespace ScoreValue {
   void initTables();
   void freeTables();
 
-  //The number of wins a game result should count as
-  double whiteWinsOfWinner(Player winner, double drawEquivalentWinsForWhite);
-  //The score difference that a game result should count as on average
-  double whiteScoreDrawAdjust(double finalWhiteMinusBlackScore, double drawEquivalentWinsForWhite, const BoardHistory& hist);
-
   //The unscaled utility of achieving a certain score difference
-  double whiteScoreValueOfScoreSmooth(double finalWhiteMinusBlackScore, double center, double scale, double drawEquivalentWinsForWhite, const Board& b, const BoardHistory& hist);
-  double whiteScoreValueOfScoreSmoothNoDrawAdjust(double finalWhiteMinusBlackScore, double center, double scale, const Board& b);
+  double whiteScoreValueOfScoreSmooth(double finalWhiteMinusBlackScore, double center, double scale, const Board& b);
   //Approximately invert whiteScoreValueOfScoreSmooth
   double approxWhiteScoreOfScoreValueSmooth(double scoreValue, double center, double scale, const Board& b);
 
   //Compute what the scoreMeanSq should be for a final game result
-  //It is NOT simply the same as finalWhiteMinusBlackScore^2 because for integer komi we model it as a distribution where with the appropriate probability
-  //you gain or lose 0.5 point to achieve the desired drawEquivalentWinsForWhite, so it actually has some variance.
-  double whiteScoreMeanSqOfScoreGridded(double finalWhiteMinusBlackScore, double drawEquivalentWinsForWhite);
+  //It is NOT simply the same as finalWhiteMinusBlackScore^2 because during net training the score distribution is supported only on
+  //integers+0.5, so for consistency we model it here the same way, in which it appears to actually have some variance.
+  double whiteScoreMeanSqOfScoreGridded(double finalWhiteMinusBlackScore);
 
   //The expected unscaled utility of the final score difference, given the mean and stdev of the distribution of that difference,
   //assuming roughly a normal distribution.

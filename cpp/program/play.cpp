@@ -235,6 +235,7 @@ void GameInitializer::initShared(ConfigParser& cfg, Logger& logger) {
 
   forkCompensateKomiProb = cfg.contains("forkCompensateKomiProb") ? cfg.getDouble("forkCompensateKomiProb",0.0,1.0) : handicapCompensateKomiProb;
 
+  //TODO
   //Disabled because there are enough other things that can result in integer komi
   //such as komiAuto that this is very confusing
   //komiAllowIntegerProb = cfg.getDouble("komiAllowIntegerProb",0.0,1.0);
@@ -336,12 +337,12 @@ void GameInitializer::createGame(
       params.noResultUtilityForWhite = mean + noResultStdev * nextGaussianTruncated(rand, 3.0);
   }
   if(drawRandRadius > 1e-30) {
-    double mean = params.drawEquivalentWinsForWhite;
+    double mean = params.drawWinLossValueForWhite;
     if(mean < 0.0 || mean > 1.0)
-      throw StringError("GameInitializer: params.drawEquivalentWinsForWhite not within [0,1]: " + Global::doubleToString(mean));
-    params.drawEquivalentWinsForWhite = mean + drawRandRadius * (rand.nextDouble() * 2 - 1);
-    while(params.drawEquivalentWinsForWhite < 0.0 || params.drawEquivalentWinsForWhite > 1.0)
-      params.drawEquivalentWinsForWhite = mean + drawRandRadius * (rand.nextDouble() * 2 - 1);
+      throw StringError("GameInitializer: params.drawWinLossValueForWhite not within [0,1]: " + Global::doubleToString(mean));
+    params.drawWinLossValueForWhite = mean + 2.0 * drawRandRadius * (rand.nextDouble() * 2 - 1);
+    while(params.drawWinLossValueForWhite < -1.0 || params.drawWinLossValueForWhite > 1.0)
+      params.drawWinLossValueForWhite = mean + 2.0 * drawRandRadius * (rand.nextDouble() * 2 - 1);
   }
 }
 
@@ -1052,7 +1053,7 @@ void Play::playExtraBlack(
   NNResultBuf buf;
   for(int i = 0; i<numExtraBlack; i++) {
     MiscNNInputParams nnInputParams;
-    nnInputParams.drawEquivalentWinsForWhite = bot->searchParams.drawEquivalentWinsForWhite;
+    nnInputParams.drawWinLossValueForWhite = bot->searchParams.drawWinLossValueForWhite;
     bot->nnEvaluator->evaluate(board,hist,pla,nnInputParams,buf,NULL,false,false);
     std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
 
@@ -1173,6 +1174,7 @@ static void extractValueTargets(ValueTargets& buf, const Search* toMoveBot, cons
 
   buf.win = (float)values.winValue;
   buf.loss = (float)values.lossValue;
+  buf.draw = (float)values.drawValue;
   buf.noResult = (float)values.noResultValue;
   buf.score = (float)values.expectedScore;
 }
@@ -1290,7 +1292,7 @@ static Loc getGameInitializationMove(
 ) {
   NNEvaluator* nnEval = (pla == P_BLACK ? botB : botW)->nnEvaluator;
   MiscNNInputParams nnInputParams;
-  nnInputParams.drawEquivalentWinsForWhite = (pla == P_BLACK ? botB : botW)->searchParams.drawEquivalentWinsForWhite;
+  nnInputParams.drawWinLossValueForWhite = (pla == P_BLACK ? botB : botW)->searchParams.drawWinLossValueForWhite;
   nnEval->evaluate(board,hist,pla,nnInputParams,buf,NULL,false,false);
   std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
 
@@ -1650,7 +1652,7 @@ FinishedGameData* Play::runGame(
   gameData->gameHash.hash0 = gameRand.nextUInt64();
   gameData->gameHash.hash1 = gameRand.nextUInt64();
 
-  gameData->drawEquivalentWinsForWhite = botSpecB.baseParams.drawEquivalentWinsForWhite;
+  gameData->drawWinLossValueForWhite = botSpecB.baseParams.drawWinLossValueForWhite;
   gameData->playoutDoublingAdvantagePla = otherGameProps.playoutDoublingAdvantagePla;
   gameData->playoutDoublingAdvantage = otherGameProps.playoutDoublingAdvantage;
 
@@ -1867,6 +1869,7 @@ FinishedGameData* Play::runGame(
     if(hist.isGameFinished && hist.isNoResult) {
       finalValueTargets.win = 0.0f;
       finalValueTargets.loss = 0.0f;
+      finalValueTargets.draw = 0.0f;
       finalValueTargets.noResult = 1.0f;
       finalValueTargets.score = 0.0f;
 
@@ -1881,10 +1884,12 @@ FinishedGameData* Play::runGame(
       //We also do want to call this here to force-end the game if we crossed a move limit.
       hist.endAndScoreGameNow(board,gameData->finalOwnership);
 
-      finalValueTargets.win = (float)ScoreValue::whiteWinsOfWinner(hist.winner, gameData->drawEquivalentWinsForWhite);
-      finalValueTargets.loss = 1.0f - finalValueTargets.win;
+      finalValueTargets.win =  hist.winner == C_WHITE ? 1.0f : 0.0f;
+      finalValueTargets.loss = hist.winner == C_BLACK ? 1.0f : 0.0f;
+      finalValueTargets.draw = hist.winner == C_EMPTY ? 1.0f : 0.0f;
+      assert(finalValueTargets.win == 1.0f || finalValueTargets.loss == 1.0f || finalValueTargets.draw == 1.0f);
       finalValueTargets.noResult = 0.0f;
-      finalValueTargets.score = (float)ScoreValue::whiteScoreDrawAdjust(hist.finalWhiteMinusBlackScore,gameData->drawEquivalentWinsForWhite,hist);
+      finalValueTargets.score = hist.finalWhiteMinusBlackScore;
       finalValueTargets.hasLead = true;
       finalValueTargets.lead = finalValueTargets.score;
 
@@ -2023,7 +2028,7 @@ FinishedGameData* Play::runGame(
         else {
           Search* toMoveBot2 = sp2->pla == P_BLACK ? botB : botW;
           MiscNNInputParams nnInputParams;
-          nnInputParams.drawEquivalentWinsForWhite = toMoveBot2->searchParams.drawEquivalentWinsForWhite;
+          nnInputParams.drawWinLossValueForWhite = toMoveBot2->searchParams.drawWinLossValueForWhite;
           toMoveBot2->nnEvaluator->evaluate(
             sp2->board,sp2->hist,sp2->pla,nnInputParams,
             nnResultBuf,NULL,false,false
@@ -2219,14 +2224,14 @@ void Play::maybeForkGame(
   double bestScore = 0.0;
 
   NNResultBuf buf;
-  double drawEquivalentWinsForWhite = 0.5;
+  double drawWinLossValueForWhite = 0.0;
   for(int i = 0; i<numChoices; i++) {
     Loc loc = possibleMoves[i];
     Board copy = board;
     BoardHistory copyHist = hist;
     copyHist.makeBoardMoveAssumeLegal(copy,loc,pla,NULL);
     MiscNNInputParams nnInputParams;
-    nnInputParams.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
+    nnInputParams.drawWinLossValueForWhite = drawWinLossValueForWhite;
     bot->nnEvaluator->evaluate(copy,copyHist,getOpp(pla),nnInputParams,buf,NULL,false,false);
     std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
     double whiteScore = nnOutput->whiteScoreMean;

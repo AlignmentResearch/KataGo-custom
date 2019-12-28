@@ -160,10 +160,10 @@ void Tests::runNNInputsV3V4Tests() {
   };
 
   auto fillRows = [](int version, Hash128& hash,
-                     Board& board, const BoardHistory& hist, Player nextPla, double drawEquivalentWinsForWhite, int nnXLen, int nnYLen, bool inputsUseNHWC,
+                     Board& board, const BoardHistory& hist, Player nextPla, double drawWinLossValueForWhite, int nnXLen, int nnYLen, bool inputsUseNHWC,
                      float* rowBin, float* rowGlobal) {
     MiscNNInputParams nnInputParams;
-    nnInputParams.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
+    nnInputParams.drawWinLossValueForWhite = drawWinLossValueForWhite;
 
     hash = NNInputs::getHash(board,hist,nextPla,nnInputParams);
 
@@ -213,7 +213,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       int nnXLen = 19;
       int nnYLen = 19;
-      double drawEquivalentWinsForWhite = 0.2;
+      double drawWinLossValueForWhite = -0.6;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -223,7 +223,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       auto run = [&](bool inputsUseNHWC) {
         Hash128 hash;
-        fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         out << hash << endl;
         for(int c = 0; c<numFeaturesBin; c++)
           printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,c);
@@ -272,7 +272,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       int nnXLen = 19;
       int nnYLen = 19;
-      double drawEquivalentWinsForWhite = 0.3;
+      double drawWinLossValueForWhite = -0.4;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -282,7 +282,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       auto run = [&](bool inputsUseNHWC) {
         Hash128 hash;
-        fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         out << hash << endl;
         int c = version != 5 ? 6 : 3;
         printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,c);
@@ -332,7 +332,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       int nnXLen = 7;
       int nnYLen = 7;
-      double drawEquivalentWinsForWhite = 0.5;
+      double drawWinLossValueForWhite = 0.0;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -342,7 +342,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       auto run = [&](bool inputsUseNHWC) {
         Hash128 hash;
-        fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         out << hash << endl;
         for(int c = 0; c<numFeaturesBin; c++)
           printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,c);
@@ -391,7 +391,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       int nnXLen = 9;
       int nnYLen = 9;
-      double drawEquivalentWinsForWhite = 0.8;
+      double drawWinLossValueForWhite = 0.6;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -401,7 +401,7 @@ void Tests::runNNInputsV3V4Tests() {
 
       auto run = [&](bool inputsUseNHWC) {
         Hash128 hash;
-        fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         out << hash << endl;
         for(int c = 0; c<numFeaturesBin; c++)
           printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,c);
@@ -450,7 +450,7 @@ xxx..xx
 
       int nnXLen = 7;
       int nnYLen = 7;
-      double drawEquivalentWinsForWhite = 0.3;
+      double drawWinLossValueForWhite = -0.4;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -460,7 +460,7 @@ xxx..xx
 
       bool inputsUseNHWC = true;
       Hash128 hash;
-      fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+      fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
 
       int c = 18;
       printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,c);
@@ -471,14 +471,14 @@ xxx..xx
 
       nextPla = P_WHITE;
       hist.clear(board,nextPla,initialRules,0);
-      fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+      fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
       for(c = 0; c<numFeaturesGlobal; c++)
         printNNInputGlobal(out,version,rowGlobal,c);
 
       nextPla = P_BLACK;
       initialRules.komi = 1;
       hist.clear(board,nextPla,initialRules,0);
-      fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+      fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
       for(c = 0; c<numFeaturesGlobal; c++)
         printNNInputGlobal(out,version,rowGlobal,c);
 
@@ -581,7 +581,7 @@ xxx..xx
 
       int nnXLen = size;
       int nnYLen = size;
-      double drawEquivalentWinsForWhite = 0.47;
+      double drawWinLossValueForWhite = -0.06;
 
       for(int version = minVersion; version <= maxVersion; version++) {
         cout << "VERSION " << version << endl;
@@ -599,7 +599,7 @@ xxx..xx
               BoardHistory hist(board,nextPla,rules[i+j],0);
               bool inputsUseNHWC = true;
               Hash128 hash;
-              fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+              fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
               out << rowGlobal[c] << " ";
             }
             out << endl;
@@ -640,7 +640,7 @@ xxx..xx
 
       int nnXLen = 6;
       int nnYLen = 6;
-      double drawEquivalentWinsForWhite = 0.0;
+      double drawWinLossValueForWhite = -1.0;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -664,7 +664,7 @@ xxx..xx
           out << endl;
           bool inputsUseNHWC = true;
           Hash128 hash;
-          fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+          fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
           out << "Pass Hist Channels: ";
           for(int c = 0; c<5; c++)
             out << rowGlobal[c] << " ";
@@ -718,7 +718,7 @@ xxx..xx
 
       int nnXLen = 13;
       int nnYLen = 13;
-      double drawEquivalentWinsForWhite = 0.0;
+      double drawWinLossValueForWhite = -1.0;
 
       int numFeaturesBin;
       int numFeaturesGlobal;
@@ -735,7 +735,7 @@ xxx..xx
           out << "Move " << i << endl;
           bool inputsUseNHWC = true;
           Hash128 hash;
-          fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+          fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
           printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,18);
           printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,19);
         }
@@ -762,7 +762,7 @@ xxx..xx
 
       int nnXLen = 7;
       int nnYLen = 7;
-      double drawEquivalentWinsForWhite = 0.5;
+      double drawWinLossValueForWhite = 0.0;
       int numFeaturesBin;
       int numFeaturesGlobal;
       float* rowBin;
@@ -793,7 +793,7 @@ o.xoo.x
           auto run = [&](bool inputsUseNHWC) {
             Player nextPla = hist.moveHistory.size() > 0 ? getOpp(hist.moveHistory[hist.moveHistory.size()-1].pla) : hist.initialPla;
             Hash128 hash;
-            fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+            fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
             out << hash << endl;
             printNNInputGlobal(out,version,rowGlobal,5);
             int c = 18;
@@ -875,7 +875,7 @@ o.xoo.x
 
       int nnXLen = 9;
       int nnYLen = 1;
-      double drawEquivalentWinsForWhite = 0.5;
+      double drawWinLossValueForWhite = 0.0;
       int numFeaturesBin;
       int numFeaturesGlobal;
       float* rowBin;
@@ -889,7 +889,7 @@ o.xoo.x
 
       auto run = [&](bool inputsUseNHWC) {
         Hash128 hash;
-        fillRows(version,hash,board,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,board,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,9);
         printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,10);
         printNNInputHWAndBoard(out,version,board,hist,nnXLen,nnYLen,inputsUseNHWC,rowBin,11);
@@ -940,7 +940,7 @@ o.xoo.x
 
     int nnXLen = size;
     int nnYLen = size;
-    double drawEquivalentWinsForWhite = 0.5;
+    double drawWinLossValueForWhite = 0.0;
 
     for(int version = maxVersion; version <= maxVersion; version++) {
       cout << "VERSION " << version << endl;
@@ -955,7 +955,7 @@ o.xoo.x
         bool inputsUseNHWC = true;
         Hash128 hash;
         Board b = board;
-        fillRows(version,hash,b,hist,nextPla,drawEquivalentWinsForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
+        fillRows(version,hash,b,hist,nextPla,drawWinLossValueForWhite,nnXLen,nnYLen,inputsUseNHWC,rowBin,rowGlobal);
         for(int c = 0; c<numFeaturesGlobal; c++)
           cout << rowGlobal[c] << " ";
         cout << endl;

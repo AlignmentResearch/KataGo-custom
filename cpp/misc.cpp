@@ -309,7 +309,7 @@ static void initializeDemoGame(Board& board, BoardHistory& hist, Player& pla, Ra
           Search* search = bot->getSearch();
           NNResultBuf buf;
           MiscNNInputParams nnInputParams;
-          nnInputParams.drawEquivalentWinsForWhite = search->searchParams.drawEquivalentWinsForWhite;
+          nnInputParams.drawWinLossValueForWhite = search->searchParams.drawWinLossValueForWhite;
           search->nnEvaluator->evaluate(board,hist,pla,nnInputParams,buf,NULL,false,false);
           std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
 

@@ -490,18 +490,8 @@ int BoardHistory::numberOfKoHashOccurrencesInHistory(Hash128 koHash, const KoHas
   return count;
 }
 
-float BoardHistory::whiteKomiAdjustmentForDraws(double drawEquivalentWinsForWhite) const {
-  //We fold the draw utility into the komi, for input into things like the neural net.
-  //Basically we model it as if the final score were jittered by a uniform draw from [-0.5,0.5].
-  //E.g. if komi from self perspective is 7 and a draw counts as 0.75 wins and 0.25 losses,
-  //then komi input should be as if it was 7.25, which in a jigo game when jittered by 0.5 gives white 75% wins and 25% losses.
-  bool komiIsInteger = ((int)rules.komi == rules.komi);
-  float drawAdjustment = !komiIsInteger ? 0.0f : (float)(drawEquivalentWinsForWhite - 0.5);
-  return drawAdjustment;
-}
-
-float BoardHistory::currentSelfKomi(Player pla, double drawEquivalentWinsForWhite) const {
-  float whiteKomiAdjusted = whiteBonusScore + whiteHandicapBonusScore + rules.komi + whiteKomiAdjustmentForDraws(drawEquivalentWinsForWhite);
+float BoardHistory::currentSelfKomi(Player pla) const {
+  float whiteKomiAdjusted = whiteBonusScore + whiteHandicapBonusScore + rules.komi;
 
   if(pla == P_WHITE)
     return whiteKomiAdjusted;

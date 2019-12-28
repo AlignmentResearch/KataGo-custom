@@ -111,8 +111,7 @@ struct BoardHistory {
   //Set assumeMultipleStartingBlackMovesAreHandicap and update bonus points accordingly
   void setAssumeMultipleStartingBlackMovesAreHandicap(bool b);
 
-  float whiteKomiAdjustmentForDraws(double drawEquivalentWinsForWhite) const;
-  float currentSelfKomi(Player pla, double drawEquivalentWinsForWhite) const;
+  float currentSelfKomi(Player pla) const;
 
   //Returns a reference a recent board state, where 0 is the current board, 1 is 1 move ago, etc.
   //Requires that numMovesAgo < NUM_RECENT_BOARDS

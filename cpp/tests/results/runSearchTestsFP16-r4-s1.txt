@@ -558,7 +558,7 @@ O1  : T  24.46c W  23.83c S   0.63c ( +1.3 L  +1.3) LCB  260.00c P  1.36% WF  7.
 
 Jigo and drawUtility===================
 (Game almost over, just a little cleanup)
-testParams.drawEquivalentWinsForWhite = 0.7
+testParams.drawWinLossValueForWhite = 0.4
 
 Komi 7.5 (white wins by 0.5)
 MoveNum: 330 HASH: 281627648FE3899F71BFE7E88DE69A36

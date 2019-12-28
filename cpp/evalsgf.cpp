@@ -221,7 +221,7 @@ int MainCmds::evalsgf(int argc, const char* const* argv) {
     bool skipCache = true;
     bool includeOwnerMap = true;
     MiscNNInputParams nnInputParams;
-    nnInputParams.drawEquivalentWinsForWhite = params.drawEquivalentWinsForWhite;
+    nnInputParams.drawWinLossValueForWhite = params.drawWinLossValueForWhite;
     nnEval->evaluate(board,hist,nextPla,nnInputParams,buf,NULL,skipCache,includeOwnerMap);
 
     cout << "Rules: " << hist.rules << endl;
@@ -282,6 +282,7 @@ int MainCmds::evalsgf(int argc, const char* const* argv) {
       NNOutput* nnOutput = search->rootNode->nnOutput.get();
       cout << "White win: " << nnOutput->whiteWinProb << endl;
       cout << "White loss: " << nnOutput->whiteLossProb << endl;
+      cout << "White draw: " << nnOutput->whiteDrawProb << endl;
       cout << "White noresult: " << nnOutput->whiteNoResultProb << endl;
       cout << "White score mean " << nnOutput->whiteScoreMean << endl;
       cout << "White score stdev " << sqrt(max(0.0,(double)nnOutput->whiteScoreMeanSq - nnOutput->whiteScoreMean*nnOutput->whiteScoreMean)) << endl;

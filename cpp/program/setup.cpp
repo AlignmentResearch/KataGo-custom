@@ -299,8 +299,15 @@ vector<SearchParams> Setup::loadParams(
     else                                                 params.dynamicScoreUtilityFactor = cfg.getDouble("dynamicScoreUtilityFactor",        0.0, 1.0);
     if(cfg.contains("noResultUtilityForWhite"+idxStr)) params.noResultUtilityForWhite = cfg.getDouble("noResultUtilityForWhite"+idxStr, -1.0, 1.0);
     else                                               params.noResultUtilityForWhite = cfg.getDouble("noResultUtilityForWhite",        -1.0, 1.0);
-    if(cfg.contains("drawEquivalentWinsForWhite"+idxStr)) params.drawEquivalentWinsForWhite = cfg.getDouble("drawEquivalentWinsForWhite"+idxStr, 0.0, 1.0);
-    else                                                  params.drawEquivalentWinsForWhite = cfg.getDouble("drawEquivalentWinsForWhite",        0.0, 1.0);
+    if(cfg.contains("drawWinLossValueForWhite"+idxStr)) params.drawWinLossValueForWhite = cfg.getDouble("drawWinLossValueForWhite"+idxStr, -1.0, 1.0);
+    else if(cfg.contains("drawWinLossValueForWhite"))   params.drawWinLossValueForWhite = cfg.getDouble("drawWinLossValueForWhite",        -1.0, 1.0);
+    else if(cfg.contains("drawEquivalentWinsForWhite"+idxStr)) params.drawWinLossValueForWhite = cfg.getDouble("drawEquivalentWinsForWhite"+idxStr, 0.0, 1.0) * 2 - 1;
+    else                                                       params.drawWinLossValueForWhite = cfg.getDouble("drawEquivalentWinsForWhite",        0.0, 1.0) * 2 - 1;
+    if((cfg.contains("drawWinLossValueForWhite") && cfg.contains("drawEquivalentWinsForWhite"))
+       || (cfg.contains("drawWinLossValueForWhite"+idxStr) && cfg.contains("drawEquivalentWinsForWhite"))
+       || (cfg.contains("drawWinLossValueForWhite") && cfg.contains("drawEquivalentWinsForWhite"+idxStr))
+       || (cfg.contains("drawWinLossValueForWhite"+idxStr) && cfg.contains("drawEquivalentWinsForWhite"+idxStr)))
+      throw IOError("Please only specify one of drawWinLossValueForWhite and drawEquivalentWinsForWhite, not both, in the same config");
 
     if(cfg.contains("dynamicScoreCenterZeroWeight"+idxStr)) params.dynamicScoreCenterZeroWeight = cfg.getDouble("dynamicScoreCenterZeroWeight"+idxStr, 0.0, 1.0);
     else if(cfg.contains("dynamicScoreCenterZeroWeight"))   params.dynamicScoreCenterZeroWeight = cfg.getDouble("dynamicScoreCenterZeroWeight",        0.0, 1.0);

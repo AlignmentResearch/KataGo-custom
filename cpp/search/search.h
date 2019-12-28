@@ -25,6 +25,7 @@ struct DistributionTable;
 struct ReportedSearchValues {
   double winValue;
   double lossValue;
+  double drawValue;
   double noResultValue;
   double staticScoreValue;
   double dynamicScoreValue;
@@ -40,6 +41,7 @@ struct ReportedSearchValues {
 struct NodeStats {
   int64_t visits;
   double winValueSum;
+  double drawValueSum;
   double noResultValueSum;
   double scoreMeanSum;
   double scoreMeanSqSum;
@@ -114,6 +116,7 @@ struct SearchThread {
   std::vector<double> weightBuf;
   std::vector<double> weightSqBuf;
   std::vector<double> winValuesBuf;
+  std::vector<double> drawValuesBuf;
   std::vector<double> noResultValuesBuf;
   std::vector<double> scoreMeansBuf;
   std::vector<double> scoreMeanSqsBuf;
@@ -365,7 +368,10 @@ private:
     bool isRoot
   ) const;
 
-  void addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract);
+  void addLeafValue(
+    SearchNode& node, double winValue, double drawValue, double noResultValue,
+    double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract
+  );
 
   void maybeRecomputeExistingNNOutput(
     SearchThread& thread, SearchNode& node, bool isRoot
@@ -383,7 +389,7 @@ private:
 
   AnalysisData getAnalysisDataOfSingleChild(
     const SearchNode* child, std::vector<Loc>& scratchLocs, std::vector<double>& scratchValues,
-    Loc move, double policyProb, double fpuValue, double parentUtility, double parentWinLossValue,
+    Loc move, double policyProb, double fpuValue, double parentUtility, double parentWinLossValue, double parentDrawProb,
     double parentScoreMean, double parentScoreStdev, double parentLead, int maxPVDepth
   ) const;
 

@@ -80,7 +80,7 @@ void Tests::runTrainingWriteTests() {
 
   auto run = [&](
     const string& seedBase, const Rules& rules,
-    double drawEquivalentWinsForWhite, int inputsVersion,
+    double drawWinLossValueForWhite, int inputsVersion,
     int nnXLen, int nnYLen,
     int boardXLen, int boardYLen,
     bool cheapLongSgf
@@ -91,7 +91,7 @@ void Tests::runTrainingWriteTests() {
 
     SearchParams params;
     params.maxVisits = cheapLongSgf ? 2 : 100;
-    params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
+    params.drawWinLossValueForWhite = drawWinLossValueForWhite;
 
     MatchPairer::BotSpec botSpec;
     botSpec.botIdx = 0;
@@ -153,7 +153,7 @@ void Tests::runTrainingWriteTests() {
 
   int inputsVersion = 3;
 
-  run("testtrainingwrite-tt",Rules::getTrompTaylorish(),0.5,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-tt",Rules::getTrompTaylorish(),0.0,inputsVersion,5,5,5,5,false);
 
   Rules rules;
   rules.koRule = Rules::KO_SIMPLE;
@@ -161,26 +161,26 @@ void Tests::runTrainingWriteTests() {
   rules.multiStoneSuicideLegal = false;
   rules.taxRule = Rules::TAX_SEKI;
   rules.komi = 5;
-  run("testtrainingwrite-jp",rules,0.5,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-jp",rules,0.0,inputsVersion,5,5,5,5,false);
 
   rules = Rules::getTrompTaylorish();
   rules.komi = 7;
-  run("testtrainingwrite-gooddraws",rules,0.7,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-gooddraws",rules,0.4,inputsVersion,5,5,5,5,false);
 
   inputsVersion = 5;
-  run("testtrainingwrite-tt-v5",Rules::getTrompTaylorish(),0.5,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-tt-v5",Rules::getTrompTaylorish(),0.0,inputsVersion,5,5,5,5,false);
 
   //Non-square v4
   inputsVersion = 4;
-  run("testtrainingwrite-rect-v4",Rules::getTrompTaylorish(),0.5,inputsVersion,9,3,7,3,false);
+  run("testtrainingwrite-rect-v4",Rules::getTrompTaylorish(),0.0,inputsVersion,9,3,7,3,false);
 
   //V3 group taxing
   inputsVersion = 3;
   rules = Rules::getTrompTaylorish();
   rules.taxRule = Rules::TAX_ALL;
-  run("testtrainingwrite-taxall-v3",rules,0.5,inputsVersion,5,5,5,5,false);
-  run("testtrainingwrite-taxall-v3-a",rules,0.5,inputsVersion,5,5,5,5,false);
-  run("testtrainingwrite-taxall-v3-c",rules,0.5,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-taxall-v3",rules,0.0,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-taxall-v3-a",rules,0.0,inputsVersion,5,5,5,5,false);
+  run("testtrainingwrite-taxall-v3-c",rules,0.0,inputsVersion,5,5,5,5,false);
 
   //JP 3x3 game
   inputsVersion = 3;
@@ -206,7 +206,7 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
   auto run = [&](
     const string& seedBase,
     const Rules& rules,
-    double drawEquivalentWinsForWhite,
+    double drawWinLossValueForWhite,
     int numExtraBlack,
     bool makeGameFairForEmptyBoard
   ) {
@@ -214,7 +214,7 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = 100;
-    params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
+    params.drawWinLossValueForWhite = drawWinLossValueForWhite;
 
     MatchPairer::BotSpec botSpec;
     botSpec.botIdx = 0;
@@ -305,51 +305,51 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
   };
 
 
-  run("testselfplayinit0",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit1",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit2",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit3",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit4",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit5",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit6",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit7",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit8",Rules::getTrompTaylorish(),0.5,0,false);
-  run("testselfplayinit9",Rules::getTrompTaylorish(),0.5,0,false);
+  run("testselfplayinit0",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit1",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit2",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit3",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit4",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit5",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit6",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit7",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit8",Rules::getTrompTaylorish(),0,0,false);
+  run("testselfplayinit9",Rules::getTrompTaylorish(),0,0,false);
 
-  run("testselfplayinith1-0",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-1",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-2",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-3",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-4",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-5",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-6",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-7",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-8",Rules::getTrompTaylorish(),0.5,1,false);
-  run("testselfplayinith1-9",Rules::getTrompTaylorish(),0.5,1,false);
+  run("testselfplayinith1-0",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-1",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-2",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-3",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-4",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-5",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-6",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-7",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-8",Rules::getTrompTaylorish(),0,1,false);
+  run("testselfplayinith1-9",Rules::getTrompTaylorish(),0,1,false);
 
-  run("testselfplayinith2-0",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-1",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-2",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-3",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-4",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-5",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-6",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-7",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-8",Rules::getTrompTaylorish(),0.5,2,false);
-  run("testselfplayinith2-9",Rules::getTrompTaylorish(),0.5,2,false);
+  run("testselfplayinith2-0",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-1",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-2",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-3",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-4",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-5",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-6",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-7",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-8",Rules::getTrompTaylorish(),0,2,false);
+  run("testselfplayinith2-9",Rules::getTrompTaylorish(),0,2,false);
 
-  run("testselfplayinithE0",Rules::getTrompTaylorish(),0.5,0,true);
-  run("testselfplayinithE1",Rules::getTrompTaylorish(),0.5,1,true);
-  run("testselfplayinithE2",Rules::getTrompTaylorish(),0.5,2,true);
+  run("testselfplayinithE0",Rules::getTrompTaylorish(),0,0,true);
+  run("testselfplayinithE1",Rules::getTrompTaylorish(),0,1,true);
+  run("testselfplayinithE2",Rules::getTrompTaylorish(),0,2,true);
 
   Rules r = Rules::getTrompTaylorish();
   r.hasButton = true;
-  run("testselfplayinit0button",r,0.5,0,false);
-  run("testselfplayinit1button",r,0.5,0,false);
-  run("testselfplayinith1-0button",r,0.5,1,false);
-  run("testselfplayinith1-1button",r,0.5,1,false);
-  run("testselfplayinith2-0button",r,0.5,2,false);
-  run("testselfplayinith2-1button",r,0.5,2,false);
+  run("testselfplayinit0button",r,0,0,false);
+  run("testselfplayinit1button",r,0,0,false);
+  run("testselfplayinith1-0button",r,0,1,false);
+  run("testselfplayinith1-1button",r,0,1,false);
+  run("testselfplayinith2-0button",r,0,2,false);
+  run("testselfplayinith2-1button",r,0,2,false);
 
 
   NeuralNet::globalCleanup();
@@ -377,7 +377,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = 100;
-    params.drawEquivalentWinsForWhite = 0.5;
+    params.drawWinLossValueForWhite = 0.0;
     if(testLead) {
       params.chosenMoveTemperature = 1.0;
       params.chosenMoveTemperatureEarly = 1.0;
@@ -729,7 +729,7 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = 30;
-    params.drawEquivalentWinsForWhite = 0.5;
+    params.drawWinLossValueForWhite = 0.0;
 
     MatchPairer::BotSpec botSpec;
     botSpec.botIdx = 0;

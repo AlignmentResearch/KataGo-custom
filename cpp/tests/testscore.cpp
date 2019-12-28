@@ -10,32 +10,19 @@ void Tests::runScoreTests() {
   ostringstream out;
 
   auto printScoreStats = [&out](const Board& board, const BoardHistory& hist) {
-    out << "Black self komi wins/draw=0.5: " << hist.currentSelfKomi(P_BLACK, 0.5) << endl;
-    out << "White self komi wins/draw=0.5: " << hist.currentSelfKomi(P_WHITE, 0.5) << endl;
-    out << "Black self komi wins/draw=0.25: " << hist.currentSelfKomi(P_BLACK, 0.25) << endl;
-    out << "White self komi wins/draw=0.25: " << hist.currentSelfKomi(P_WHITE, 0.25) << endl;
-    out << "Black self komi wins/draw=0.75: " << hist.currentSelfKomi(P_BLACK, 0.75) << endl;
-    out << "White self komi wins/draw=0.75: " << hist.currentSelfKomi(P_WHITE, 0.75) << endl;
+    out << "Black self komi: " << hist.currentSelfKomi(P_BLACK) << endl;
+    out << "White self komi: " << hist.currentSelfKomi(P_WHITE) << endl;
 
     out << "Winner: " << PlayerIO::colorToChar(hist.winner) << endl;
     double score = hist.finalWhiteMinusBlackScore;
     out << "Final score: " << score << endl;
 
-    double drawEquivsToTry[1] = {0.5};
-    for(int i = 0; i<1; i++) {
-      double drawEquiv = drawEquivsToTry[i];
-      string s = Global::strprintf("%.1f", drawEquiv);
-      double scoreAdjusted = ScoreValue::whiteScoreDrawAdjust(score, drawEquiv, hist);
-      double stdev = sqrt(std::max(0.0,ScoreValue::whiteScoreMeanSqOfScoreGridded(score,drawEquiv) - scoreAdjusted * scoreAdjusted));
-      double expectedScoreValue = ScoreValue::expectedWhiteScoreValue(scoreAdjusted, stdev, 0.0, 2.0, board);
-      out << "WL Wins wins/draw=" << s << ": " << ScoreValue::whiteWinsOfWinner(hist.winner, drawEquiv) << endl;
-      out << "Score wins/draw=" << s << ": " << scoreAdjusted << endl;
-      out << "Score Stdev wins/draw=" << s << ": " << stdev << endl;
-      out << "Score Util Smooth  wins/draw=" << s << ": " << ScoreValue::whiteScoreValueOfScoreSmooth(score, 0.0, 2.0, drawEquiv, board, hist) << endl;
-      out << "Score Util SmootND wins/draw=" << s << ": " << ScoreValue::whiteScoreValueOfScoreSmoothNoDrawAdjust(score, 0.0, 2.0, board) << endl;
-      out << "Score Util Gridded wins/draw=" << s << ": " << expectedScoreValue << endl;
-      out << "Score Util GridInv wins/draw=" << s << ": " << ScoreValue::approxWhiteScoreOfScoreValueSmooth(expectedScoreValue,0.0,2.0,board) << endl;
-    }
+    double stdev = sqrt(std::max(0.0,ScoreValue::whiteScoreMeanSqOfScoreGridded(score) - score * score));
+    double expectedScoreValue = ScoreValue::expectedWhiteScoreValue(score, stdev, 0.0, 2.0, board);
+    out << "Score Stdev" << ": " << stdev << endl;
+    out << "Score Util Smooth " << ": " << ScoreValue::whiteScoreValueOfScoreSmooth(score, 0.0, 2.0, board) << endl;
+    out << "Score Util Gridded" << ": " << expectedScoreValue << endl;
+    out << "Score Util GridInv" << ": " << ScoreValue::approxWhiteScoreOfScoreValueSmooth(expectedScoreValue,0.0,2.0,board) << endl;
   };
 
   {

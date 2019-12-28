@@ -6,6 +6,7 @@ using namespace std;
 ValueTargets::ValueTargets()
   :win(0),
    loss(0),
+   draw(0),
    noResult(0),
    score(0),
    hasLead(false),
@@ -55,7 +56,7 @@ FinishedGameData::FinishedGameData()
    startPla(P_BLACK),
    gameHash(),
 
-   drawEquivalentWinsForWhite(0.0),
+   drawWinLossValueForWhite(0.0),
    playoutDoublingAdvantagePla(P_BLACK),
    playoutDoublingAdvantage(0.0),
 
@@ -135,6 +136,7 @@ void FinishedGameData::printDebug(ostream& out) const {
     out << "whiteValueTargetsByTurn " << i << " ";
     out << whiteValueTargetsByTurn[i].win << " ";
     out << whiteValueTargetsByTurn[i].loss << " ";
+    out << whiteValueTargetsByTurn[i].draw << " ";
     out << whiteValueTargetsByTurn[i].noResult << " ";
     out << whiteValueTargetsByTurn[i].score << " ";
     if(whiteValueTargetsByTurn[i].hasLead)
@@ -287,6 +289,7 @@ static int8_t convertRadiusOneToRadius120(float x, Rand& rand) {
 static void fillValueTDTargets(const vector<ValueTargets>& whiteValueTargetsByTurn, int idx, Player nextPlayer, double nowFactor, float* buf) {
   double winValue = 0.0;
   double lossValue = 0.0;
+  double drawValue = 0.0;
   double noResultValue = 0.0;
   double score = 0.0;
 
@@ -306,13 +309,15 @@ static void fillValueTDTargets(const vector<ValueTargets>& whiteValueTargetsByTu
     const ValueTargets& targets = whiteValueTargetsByTurn[i];
     winValue += weightNow * (nextPlayer == P_WHITE ? targets.win : targets.loss);
     lossValue += weightNow * (nextPlayer == P_WHITE ? targets.loss : targets.win);
+    drawValue += weightNow * targets.draw;
     noResultValue += weightNow * targets.noResult;
     score += weightNow * (nextPlayer == P_WHITE ? targets.score : -targets.score);
   }
   buf[0] = (float)winValue;
   buf[1] = (float)lossValue;
-  buf[2] = (float)noResultValue;
-  buf[3] = (float)score;
+  buf[2] = (float)drawValue;
+  buf[3] = (float)noResultValue;
+  buf[4] = (float)score;
 }
 
 void TrainingWriteBuffers::addRow(
@@ -346,7 +351,7 @@ void TrainingWriteBuffers::addRow(
 
   {
     MiscNNInputParams nnInputParams;
-    nnInputParams.drawEquivalentWinsForWhite = data.drawEquivalentWinsForWhite;
+    nnInputParams.drawWinLossValueForWhite = data.drawWinLossValueForWhite;
     //Note: this is coordinated with the fact that selfplay does not use this feature on side positions
     if(!isSidePosition)
       nnInputParams.playoutDoublingAdvantage = getOpp(nextPlayer) == data.playoutDoublingAdvantagePla ? -data.playoutDoublingAdvantage : data.playoutDoublingAdvantage;
@@ -425,10 +430,9 @@ void TrainingWriteBuffers::addRow(
   //by omitting the "1.0 +" at the front (breaks scaling to small board sizes), so when we fixed this we also
   //decreased the other numbers slightly to try to maximally limit the impact of the fix on the numerical values
   //on the actual board sizes 9-19, since it would be costly to retest.
-  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0/(1.0 + boardArea * 0.176), rowGlobal+4);
-  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0/(1.0 + boardArea * 0.056), rowGlobal+8);
-  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0/(1.0 + boardArea * 0.016), rowGlobal+12);
-  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0, rowGlobal+16);
+  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0/(1.0 + boardArea * 0.176), rowGlobal+5);
+  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0/(1.0 + boardArea * 0.056), rowGlobal+10);
+  fillValueTDTargets(whiteValueTargets, whiteValueTargetsIdx, nextPlayer, 1.0, rowGlobal+15);
 
   //Lead
   rowGlobal[21] = 0.0f;
@@ -447,8 +451,8 @@ void TrainingWriteBuffers::addRow(
       int turnsFromNow = i-whiteValueTargetsIdx;
       const ValueTargets& prevTargets = whiteValueTargets[i-1];
       const ValueTargets& targets = whiteValueTargets[i];
-      double prevWL = prevTargets.win - prevTargets.loss;
-      double nextWL = targets.win - targets.loss;
+      double prevWL = prevTargets.win - prevTargets.loss + prevTargets.draw * data.drawWinLossValueForWhite;
+      double nextWL = targets.win - targets.loss + targets.draw * data.drawWinLossValueForWhite;
       double variance = (nextWL - prevWL) * (nextWL - prevWL);
       sum += turnsFromNow * variance;
     }
@@ -485,7 +489,7 @@ void TrainingWriteBuffers::addRow(
   rowGlobal[46] = (float)((gameHash.hash1 >> 44) & 0xFFFFF);
 
   //Various other data
-  rowGlobal[47] = hist.currentSelfKomi(nextPlayer,data.drawEquivalentWinsForWhite);
+  rowGlobal[47] = hist.currentSelfKomi(nextPlayer);
   rowGlobal[48] = (hist.encorePhase == 2 || hist.rules.scoringRule == Rules::SCORING_AREA) ? 1.0f : 0.0f;
 
   //Earlier neural net metadata
@@ -841,13 +845,13 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
     if(!data.endHist.isGameFinished)
       assert(data.hitTurnLimit);
     else if(data.endHist.isNoResult)
-      assert(lastTargets.win == 0.0f && lastTargets.loss == 0.0f && lastTargets.noResult == 1.0f);
+      assert(lastTargets.win == 0.0f && lastTargets.loss == 0.0f && lastTargets.draw == 0.0f && lastTargets.noResult == 1.0f);
     else if(data.endHist.winner == P_BLACK)
-      assert(lastTargets.win == 0.0f && lastTargets.loss == 1.0f && lastTargets.noResult == 0.0f);
+      assert(lastTargets.win == 0.0f && lastTargets.loss == 1.0f && lastTargets.draw == 0.0f && lastTargets.noResult == 0.0f);
     else if(data.endHist.winner == P_WHITE)
-      assert(lastTargets.win == 1.0f && lastTargets.loss == 0.0f && lastTargets.noResult == 0.0f);
+      assert(lastTargets.win == 1.0f && lastTargets.loss == 0.0f && lastTargets.draw == 0.0f && lastTargets.noResult == 0.0f);
     else
-      assert(lastTargets.noResult == 0.0f);
+      assert(lastTargets.win == 0.0f && lastTargets.loss == 0.0f && lastTargets.draw == 1.0f && lastTargets.noResult == 0.0f);
 
     assert(data.finalFullArea != NULL);
     assert(data.finalOwnership != NULL);

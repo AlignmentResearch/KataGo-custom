@@ -159,6 +159,7 @@ int MainCmds::analysis(int argc, const char* const* argv) {
         moveInfo["visits"] = data.numVisits;
         moveInfo["utility"] = utility;
         moveInfo["winrate"] = winrate;
+        moveInfo["drawProb"] = data.drawProb;
         moveInfo["scoreMean"] = scoreMean;
         moveInfo["scoreStdev"] = data.scoreStdev;
         moveInfo["prior"] = data.policyPrior;

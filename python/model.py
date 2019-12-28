@@ -1680,8 +1680,8 @@ class ModelUtils:
     placeholders["policy_target_weight1"] = features["gtnc"][:,28]
 
     placeholders["value_target"] = features["gtnc"][:,0:3]
-    placeholders["td_value_target"] = tf.stack([features["gtnc"][:,4:7],features["gtnc"][:,8:11]],axis=1)
-    placeholders["scoremean_target"] = features["gtnc"][:,3]
+    placeholders["td_value_target"] = tf.stack([features["gtnc"][:,5:9],features["gtnc"][:,10:14]],axis=1)
+    placeholders["scoremean_target"] = features["gtnc"][:,4]
     placeholders["lead_target"] = features["gtnc"][:,21]
     placeholders["variance_time_target"] = features["gtnc"][:,22]
     placeholders["scorebelief_target"] = features["sdn"] / 100.0

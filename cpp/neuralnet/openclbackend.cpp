@@ -2522,9 +2522,20 @@ void NeuralNet::getOutput(
 
     int numValueChannels = gpuHandle->model->numValueChannels;
     assert(numValueChannels == 3);
-    output->whiteWinProb = inputBuffers->valueResults[row * numValueChannels];
-    output->whiteLossProb = inputBuffers->valueResults[row * numValueChannels + 1];
-    output->whiteNoResultProb = inputBuffers->valueResults[row * numValueChannels + 2];
+    if(version >= 9) {
+      assert(numValueChannels == 4);
+      output->whiteWinProb = inputBuffers->valueResults[row * numValueChannels];
+      output->whiteLossProb = inputBuffers->valueResults[row * numValueChannels + 1];
+      output->whiteDrawProb = inputBuffers->valueResults[row * numValueChannels + 2];
+      output->whiteNoResultProb = inputBuffers->valueResults[row * numValueChannels + 3];
+    }
+    else {
+      assert(numValueChannels == 3);
+      output->whiteWinProb = inputBuffers->valueResults[row * numValueChannels];
+      output->whiteLossProb = inputBuffers->valueResults[row * numValueChannels + 1];
+      output->whiteDrawProb = -10000.0f;
+      output->whiteNoResultProb = inputBuffers->valueResults[row * numValueChannels + 2];
+    }
 
     //As above, these are NOT actually from white's perspective, but rather the player to move.
     //As usual the client does the postprocessing.

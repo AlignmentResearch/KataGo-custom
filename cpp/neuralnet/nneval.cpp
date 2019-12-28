@@ -366,6 +366,7 @@ void NNEvaluator::serve(
         double varTimeLeft = 0.5 * boardXSize * boardYSize;
         resultBuf->result->whiteWinProb = (float)whiteWinProb;
         resultBuf->result->whiteLossProb = (float)whiteLossProb;
+        resultBuf->result->whiteDrawProb = -10000.0f; //TODO make better after it's clear tests are good
         resultBuf->result->whiteNoResultProb = (float)whiteNoResultProb;
         resultBuf->result->whiteScoreMean = (float)whiteScoreMean;
         resultBuf->result->whiteScoreMeanSq = (float)whiteScoreMeanSq;
@@ -562,6 +563,7 @@ void NNEvaluator::evaluate(
   if(hadResultWithoutOwnerMap) {
     buf.result->whiteWinProb = resultWithoutOwnerMap->whiteWinProb;
     buf.result->whiteLossProb = resultWithoutOwnerMap->whiteLossProb;
+    buf.result->whiteDrawProb = resultWithoutOwnerMap->whiteDrawProb;
     buf.result->whiteNoResultProb = resultWithoutOwnerMap->whiteNoResultProb;
     buf.result->whiteScoreMean = resultWithoutOwnerMap->whiteScoreMean;
     buf.result->whiteScoreMeanSq = resultWithoutOwnerMap->whiteScoreMeanSq;
@@ -641,28 +643,32 @@ void NNEvaluator::evaluate(
 
       double winProb;
       double lossProb;
+      double drawProb;
       double noResultProb;
       //Version 3 neural nets just pack the pre-arctanned scoreValue into the whiteScoreMean field
       double scoreValue = atan(buf.result->whiteScoreMean) * twoOverPi;
       {
         double winLogits = buf.result->whiteWinProb;
         double lossLogits = buf.result->whiteLossProb;
+        double drawLogits = buf.result->whiteDrawProb;
         double noResultLogits = buf.result->whiteNoResultProb;
 
         //Softmax
-        double maxLogits = std::max(std::max(winLogits,lossLogits),noResultLogits);
+        double maxLogits = std::max(std::max(std::max(winLogits,lossLogits),drawLogits),noResultLogits);
         winProb = exp(winLogits - maxLogits);
         lossProb = exp(lossLogits - maxLogits);
+        drawProb = exp(drawLogits - maxLogits);
         noResultProb = exp(noResultLogits - maxLogits);
 
-        double probSum = winProb + lossProb + noResultProb;
+        double probSum = winProb + lossProb + drawProb + noResultProb;
         winProb /= probSum;
         lossProb /= probSum;
+        drawProb /= probSum;
         noResultProb /= probSum;
 
         if(!isfinite(probSum) || !isfinite(scoreValue)) {
           cout << "Got nonfinite for nneval value" << endl;
-          cout << winLogits << " " << lossLogits << " " << noResultLogits << " " << scoreValue << endl;
+          cout << winLogits << " " << lossLogits << " " << drawLogits << " " << noResultLogits << " " << scoreValue << endl;
           throw StringError("Got nonfinite for nneval value");
         }
       }
@@ -670,6 +676,7 @@ void NNEvaluator::evaluate(
       if(nextPlayer == P_WHITE) {
         buf.result->whiteWinProb = (float)winProb;
         buf.result->whiteLossProb = (float)lossProb;
+        buf.result->whiteDrawProb = (float)drawProb;
         buf.result->whiteNoResultProb = (float)noResultProb;
         buf.result->whiteScoreMean = (float)ScoreValue::approxWhiteScoreOfScoreValueSmooth(scoreValue,0.0,2.0,board);
         buf.result->whiteScoreMeanSq = buf.result->whiteScoreMean * buf.result->whiteScoreMean;
@@ -679,6 +686,7 @@ void NNEvaluator::evaluate(
       else {
         buf.result->whiteWinProb = (float)lossProb;
         buf.result->whiteLossProb = (float)winProb;
+        buf.result->whiteDrawProb = (float)drawProb;
         buf.result->whiteNoResultProb = (float)noResultProb;
         buf.result->whiteScoreMean = -(float)ScoreValue::approxWhiteScoreOfScoreValueSmooth(scoreValue,0.0,2.0,board);
         buf.result->whiteScoreMeanSq = buf.result->whiteScoreMean * buf.result->whiteScoreMean;
@@ -690,6 +698,7 @@ void NNEvaluator::evaluate(
     else if(modelVersion == 4 || modelVersion == 5 || modelVersion == 6 || modelVersion == 7 || modelVersion == 8) {
       double winProb;
       double lossProb;
+      double drawProb;
       double noResultProb;
       double scoreMean;
       double scoreMeanSq;
@@ -698,6 +707,7 @@ void NNEvaluator::evaluate(
       {
         double winLogits = buf.result->whiteWinProb;
         double lossLogits = buf.result->whiteLossProb;
+        double drawLogits = buf.result->whiteDrawProb;
         double noResultLogits = buf.result->whiteNoResultProb;
         double scoreMeanPreScaled = buf.result->whiteScoreMean;
         double scoreStdevPreSoftplus = buf.result->whiteScoreMeanSq;
@@ -708,17 +718,21 @@ void NNEvaluator::evaluate(
           noResultLogits -= 100000.0;
 
         //Softmax
-        double maxLogits = std::max(std::max(winLogits,lossLogits),noResultLogits);
+        double maxLogits = std::max(std::max(std::max(winLogits,lossLogits),drawLogits),noResultLogits);
         winProb = exp(winLogits - maxLogits);
         lossProb = exp(lossLogits - maxLogits);
+        drawProb = exp(drawLogits - maxLogits);
         noResultProb = exp(noResultLogits - maxLogits);
 
         if(history.rules.koRule != Rules::KO_SIMPLE && history.rules.scoringRule != Rules::SCORING_TERRITORY)
           noResultProb = 0.0;
+        if((history.rules.komi != (int)history.rules.komi) == history.hasButton)
+          drawProb = 0.0;
 
-        double probSum = winProb + lossProb + noResultProb;
+        double probSum = winProb + lossProb + drawProb + noResultProb;
         winProb /= probSum;
         lossProb /= probSum;
+        drawProb /= probSum;
         noResultProb /= probSum;
 
         scoreMean = scoreMeanPreScaled * 20.0;
@@ -735,7 +749,7 @@ void NNEvaluator::evaluate(
 
         if(!isfinite(probSum) || !isfinite(scoreMean) || !isfinite(scoreMeanSq) || !isfinite(lead) || !isfinite(varTimeLeft)) {
           cout << "Got nonfinite for nneval value" << endl;
-          cout << winLogits << " " << lossLogits << " " << noResultLogits
+          cout << winLogits << " " << lossLogits << " " << drawLogits << " " << noResultLogits
                << " " << scoreMean << " " << scoreMeanSq
                << " " << lead << " " << varTimeLeft << endl;
           throw StringError("Got nonfinite for nneval value");
@@ -745,6 +759,7 @@ void NNEvaluator::evaluate(
       if(nextPlayer == P_WHITE) {
         buf.result->whiteWinProb = (float)winProb;
         buf.result->whiteLossProb = (float)lossProb;
+        buf.result->whiteDrawProb = (float)drawProb;
         buf.result->whiteNoResultProb = (float)noResultProb;
         buf.result->whiteScoreMean = (float)scoreMean;
         buf.result->whiteScoreMeanSq = (float)scoreMeanSq;
@@ -753,6 +768,7 @@ void NNEvaluator::evaluate(
       else {
         buf.result->whiteWinProb = (float)lossProb;
         buf.result->whiteLossProb = (float)winProb;
+        buf.result->whiteDrawProb = (float)drawProb;
         buf.result->whiteNoResultProb = (float)noResultProb;
         buf.result->whiteScoreMean = -(float)scoreMean;
         buf.result->whiteScoreMeanSq = (float)scoreMeanSq;

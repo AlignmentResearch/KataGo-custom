@@ -33,6 +33,7 @@ HASH: 3773EEE6C3458BE993E7323E0D6C3E1E
 
 Win 65.03c
 Loss 34.96c
+Draw 0.00c
 NoResult 0.01c
 ScoreMean 5.8
 ScoreMeanSq 33.4
@@ -107,6 +108,7 @@ HASH: 3773EEE6C3458BE993E7323E0D6C3E1E
 
 Win 65.03c
 Loss 34.96c
+Draw 0.00c
 NoResult 0.01c
 ScoreMean 5.8
 ScoreMeanSq 33.4
@@ -174,6 +176,7 @@ HASH: 4C9FC5A01FEE957760D54502B286F0C1
 
 Win 71.13c
 Loss 28.86c
+Draw 0.00c
 NoResult 0.02c
 ScoreMean 3.4
 ScoreMeanSq 11.2
@@ -222,6 +225,7 @@ HASH: 4C9FC5A01FEE957760D54502B286F0C1
 
 Win 71.13c
 Loss 28.86c
+Draw 0.00c
 NoResult 0.02c
 ScoreMean 3.4
 ScoreMeanSq 11.2

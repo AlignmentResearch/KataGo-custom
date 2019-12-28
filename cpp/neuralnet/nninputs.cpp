@@ -41,32 +41,10 @@ const Hash128 MiscNNInputParams::ZOBRIST_PLAYOUT_DOUBLINGS =
 //-----------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------
 
-double ScoreValue::whiteWinsOfWinner(Player winner, double drawEquivalentWinsForWhite) {
-  if(winner == P_WHITE)
-    return 1.0;
-  else if(winner == P_BLACK)
-    return 0.0;
-
-  assert(winner == C_EMPTY);
-  return drawEquivalentWinsForWhite;
-}
-
 static const double twoOverPi = 0.63661977236758134308;
 static const double piOverTwo = 1.57079632679489661923;
 
-double ScoreValue::whiteScoreDrawAdjust(double finalWhiteMinusBlackScore, double drawEquivalentWinsForWhite, const BoardHistory& hist) {
-  return finalWhiteMinusBlackScore + hist.whiteKomiAdjustmentForDraws(drawEquivalentWinsForWhite);
-}
-
-double ScoreValue::whiteScoreValueOfScoreSmooth(double finalWhiteMinusBlackScore, double center, double scale, double drawEquivalentWinsForWhite, const Board& b, const BoardHistory& hist) {
-  double adjustedScore = finalWhiteMinusBlackScore + hist.whiteKomiAdjustmentForDraws(drawEquivalentWinsForWhite) - center;
-  if(b.x_size == b.y_size)
-    return atan(adjustedScore / (scale*b.x_size)) * twoOverPi;
-  else
-    return atan(adjustedScore / (scale*sqrt(b.x_size*b.y_size))) * twoOverPi;
-}
-
-double ScoreValue::whiteScoreValueOfScoreSmoothNoDrawAdjust(double finalWhiteMinusBlackScore, double center, double scale, const Board& b) {
+double ScoreValue::whiteScoreValueOfScoreSmooth(double finalWhiteMinusBlackScore, double center, double scale, const Board& b) {
   double adjustedScore = finalWhiteMinusBlackScore - center;
   if(b.x_size == b.y_size)
     return atan(adjustedScore / (scale*b.x_size)) * twoOverPi;
@@ -89,7 +67,7 @@ double ScoreValue::approxWhiteScoreOfScoreValueSmooth(double scoreValue, double 
     return scoreUnscaled * (scale*sqrt(b.x_size*b.y_size)) + center;
 }
 
-double ScoreValue::whiteScoreMeanSqOfScoreGridded(double finalWhiteMinusBlackScore, double drawEquivalentWinsForWhite) {
+double ScoreValue::whiteScoreMeanSqOfScoreGridded(double finalWhiteMinusBlackScore) {
   assert((int)(finalWhiteMinusBlackScore * 2) == finalWhiteMinusBlackScore * 2);
   bool finalScoreIsInteger = ((int)finalWhiteMinusBlackScore == finalWhiteMinusBlackScore);
   if(!finalScoreIsInteger)
@@ -100,7 +78,7 @@ double ScoreValue::whiteScoreMeanSqOfScoreGridded(double finalWhiteMinusBlackSco
   double lowerSq = lower * lower;
   double upperSq = upper * upper;
 
-  return lowerSq + (upperSq - lowerSq) * drawEquivalentWinsForWhite;
+  return (lowerSq + upperSq) * 0.5;
 }
 
 
@@ -141,7 +119,7 @@ void ScoreValue::initTables() {
   double* svPrecomp = new double[(maxSVSteps-minSVSteps)+1];
   for(int i = minSVSteps; i <= maxSVSteps; i++) {
     double mean = (double)i / stepsPerUnit;
-    double sv = whiteScoreValueOfScoreSmoothNoDrawAdjust(mean, 0.0, 1.0, board);
+    double sv = whiteScoreValueOfScoreSmooth(mean, 0.0, 1.0, board);
     svPrecomp[i-minSVSteps] = sv;
   }
 
@@ -305,6 +283,7 @@ NNOutput::NNOutput(const NNOutput& other) {
   nnHash = other.nnHash;
   whiteWinProb = other.whiteWinProb;
   whiteLossProb = other.whiteLossProb;
+  whiteDrawProb = other.whiteDrawProb;
   whiteNoResultProb = other.whiteNoResultProb;
   whiteScoreMean = other.whiteScoreMean;
   whiteScoreMeanSq = other.whiteScoreMeanSq;
@@ -341,6 +320,7 @@ NNOutput::NNOutput(const vector<shared_ptr<NNOutput>>& others) {
 
   whiteWinProb = 0.0f;
   whiteLossProb = 0.0f;
+  whiteDrawProb = 0.0f;
   whiteNoResultProb = 0.0f;
   whiteScoreMean = 0.0f;
   whiteScoreMeanSq = 0.0f;
@@ -350,6 +330,7 @@ NNOutput::NNOutput(const vector<shared_ptr<NNOutput>>& others) {
     const NNOutput& other = *(others[i]);
     whiteWinProb += other.whiteWinProb;
     whiteLossProb += other.whiteLossProb;
+    whiteDrawProb += other.whiteDrawProb;
     whiteNoResultProb += other.whiteNoResultProb;
     whiteScoreMean += other.whiteScoreMean;
     whiteScoreMeanSq += other.whiteScoreMeanSq;
@@ -358,6 +339,7 @@ NNOutput::NNOutput(const vector<shared_ptr<NNOutput>>& others) {
   }
   whiteWinProb /= floatLen;
   whiteLossProb /= floatLen;
+  whiteDrawProb /= floatLen;
   whiteNoResultProb /= floatLen;
   whiteScoreMean /= floatLen;
   whiteScoreMeanSq /= floatLen;
@@ -424,6 +406,7 @@ NNOutput& NNOutput::operator=(const NNOutput& other) {
   nnHash = other.nnHash;
   whiteWinProb = other.whiteWinProb;
   whiteLossProb = other.whiteLossProb;
+  whiteDrawProb = other.whiteDrawProb;
   whiteNoResultProb = other.whiteNoResultProb;
   whiteScoreMean = other.whiteScoreMean;
   whiteScoreMeanSq = other.whiteScoreMeanSq;
@@ -470,6 +453,7 @@ NNOutput::~NNOutput() {
 void NNOutput::debugPrint(ostream& out, const Board& board) {
   out << "Win " << Global::strprintf("%.2fc",whiteWinProb*100) << endl;
   out << "Loss " << Global::strprintf("%.2fc",whiteLossProb*100) << endl;
+  out << "Draw " << Global::strprintf("%.2fc",whiteDrawProb*100) << endl;
   out << "NoResult " << Global::strprintf("%.2fc",whiteNoResultProb*100) << endl;
   out << "ScoreMean " << Global::strprintf("%.1f",whiteScoreMean) << endl;
   out << "ScoreMeanSq " << Global::strprintf("%.1f",whiteScoreMeanSq) << endl;
@@ -563,6 +547,18 @@ static void iterLadders(const Board& board, int nnXLen, std::function<void(Loc,i
   }
 }
 
+//Used for legacy neural nets
+//BROKEN for button go! Since button changes whether integer komi implies drawishness or not!
+static float selfKomiAdjustmentForDraws(const BoardHistory& hist, Player pla, double drawWinLossValueForWhite) {
+  //We fold the draw utility into the komi, for input into things like the neural net.
+  //Basically we model it as if the final score were jittered by a uniform draw from [-0.5,0.5].
+  //E.g. if komi from self perspective is 7 and a draw counts as 0.75 wins and 0.25 losses,
+  //then komi input should be as if it was 7.25, which in a jigo game when jittered by 0.5 gives white 75% wins and 25% losses.
+  bool komiIsInteger = ((int)hist.rules.komi == hist.rules.komi);
+  float drawAdjustment = !komiIsInteger ? 0.0f : (float)(drawWinLossValueForWhite * 0.5f);
+  return pla == P_WHITE ? drawAdjustment : -drawAdjustment;
+}
+
 //Currently does NOT depend on history (except for marking ko-illegal spots)
 Hash128 NNInputs::getHash(
   const Board& board, const BoardHistory& hist, Player nextPlayer,
@@ -611,7 +607,14 @@ Hash128 NNInputs::getHash(
     }
   }
 
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  //TODO for tests
+  float selfKomi =
+    hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
+
+  // float selfKomi =
+  //   hist.currentSelfKomi(nextPlayer) +
+  //   //For hashing purposes, we can just fold this adjustment into a subinterval of komi strictly fitting between half-points.
+  //   (float)(nnInputParams.drawWinLossValueForWhite * (nextPlayer == P_WHITE ? 0.20 : -0.20));
 
   //Discretize the komi for the purpose of matching hash, so that extremely close effective komi we just reuse nn cache hits
   int64_t komiDiscretized = (int64_t)(selfKomi*256.0f);
@@ -883,7 +886,7 @@ void NNInputs::fillRowV3(
   //The first 5 of them were set already above to flag which of the past 5 moves were passes.
 
   //Komi and any score adjustments
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  float selfKomi = hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
   float bArea = xSize * ySize;
   //Bound komi just in case
   if(selfKomi > bArea+1.0f)
@@ -1213,7 +1216,7 @@ void NNInputs::fillRowV4(
   //The first 5 of them were set already above to flag which of the past 5 moves were passes.
 
   //Komi and any score adjustments
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  float selfKomi = hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
   float bArea = xSize * ySize;
   //Bound komi just in case
   if(selfKomi > bArea+1.0f)
@@ -1481,7 +1484,7 @@ void NNInputs::fillRowV5(
   //The first 5 of them were set already above to flag which of the past 5 moves were passes.
 
   //Komi and any score adjustments
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  float selfKomi = hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
   float bArea = xSize * ySize;
   //Bound komi just in case
   if(selfKomi > bArea+1.0f)
@@ -1798,7 +1801,7 @@ void NNInputs::fillRowV6(
   //The first 5 of them were set already above to flag which of the past 5 moves were passes.
 
   //Komi and any score adjustments
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  float selfKomi = hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
   float bArea = xSize * ySize;
   //Bound komi just in case
   if(selfKomi > bArea+1.0f)
@@ -2193,7 +2196,7 @@ void NNInputs::fillRowV7(
   //The first 5 of them were set already above to flag which of the past 5 moves were passes.
 
   //Komi and any score adjustments
-  float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
+  float selfKomi = hist.currentSelfKomi(nextPlayer) + selfKomiAdjustmentForDraws(hist,nextPlayer,nnInputParams.drawWinLossValueForWhite);
   float bArea = xSize * ySize;
   //Bound komi just in case
   if(selfKomi > bArea+1.0f)

@@ -54,7 +54,7 @@ namespace {
     int numGameThreads;
     bool isDraining;
 
-    double drawEquivalentWinsForWhite;
+    double drawWinLossValueForWhite;
     double noResultUtilityForWhite;
 
     int numGamesTallied;
@@ -76,7 +76,7 @@ namespace {
        finishedGameQueue(),
        numGameThreads(0),
        isDraining(false),
-       drawEquivalentWinsForWhite(0.5),
+       drawWinLossValueForWhite(0.0),
        noResultUtilityForWhite(0.0),
        numGamesTallied(0),
        numBaselineWinPoints(0.0),
@@ -86,7 +86,7 @@ namespace {
     {
       SearchParams baseParams = Setup::loadSingleParams(cfg);
 
-      drawEquivalentWinsForWhite = baseParams.drawEquivalentWinsForWhite;
+      drawWinLossValueForWhite = baseParams.drawWinLossValueForWhite;
       noResultUtilityForWhite = baseParams.noResultUtilityForWhite;
 
       //Initialize object for randomly pairing bots. Actually since this is only selfplay, this only
@@ -116,7 +116,7 @@ namespace {
         double whitePoints;
         double blackPoints;
         if(data->endHist.isGameFinished && data->endHist.isNoResult) {
-          whitePoints = drawEquivalentWinsForWhite;
+          whitePoints = 0.5 + 0.5 * drawWinLossValueForWhite;
           blackPoints = 1.0 - whitePoints;
           logger.write("Game " + Global::intToString(numGamesTallied) + ": noresult");
         }

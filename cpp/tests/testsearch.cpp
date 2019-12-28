@@ -223,8 +223,8 @@ static void runBasicPositions(NNEvaluator* nnEval, Logger& logger)
       cout << "Jigo and drawUtility===================" << endl;
       cout << "(Game almost over, just a little cleanup)" << endl;
       SearchParams testParams = params;
-      testParams.drawEquivalentWinsForWhite = 0.7;
-      cout << "testParams.drawEquivalentWinsForWhite = 0.7" << endl;
+      testParams.drawWinLossValueForWhite = 0.4;
+      cout << "testParams.drawWinLossValueForWhite = 0.4" << endl;
       cout << endl;
 
       bot->setParams(testParams);
@@ -1459,6 +1459,7 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool cuda
   bool includeOwnerMap = true;
 
   vector<float> winProbs;
+  vector<float> drawProbs;
   vector<float> scoreMeans;
   vector<float> policyProbs;
 
@@ -1471,6 +1472,7 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool cuda
     nnEval->evaluate(board,hist,nextPla,nnInputParams,buf,NULL,skipCache,includeOwnerMap);
 
     winProbs.push_back(buf.result->whiteWinProb);
+    drawProbs.push_back(buf.result->whiteDrawProb);
     scoreMeans.push_back(buf.result->whiteScoreMean);
     for(int y = 0; y<board.y_size; y++) {
       for(int x = 0; x<board.x_size; x++) {
@@ -1485,6 +1487,8 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool cuda
     cout << std::fixed;
     for(int i = 0; i<winProbs.size(); i++)
       cout << winProbs[i] << endl;
+    for(int i = 0; i<drawProbs.size(); i++)
+      cout << drawProbs[i] << endl;
     for(int i = 0; i<scoreMeans.size(); i++)
       cout << scoreMeans[i] << endl;
     for(int i = 0; i<policyProbs.size(); i++)
@@ -1496,6 +1500,9 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool cuda
     double winProbSquerr = 0.0;
     for(int i = 0; i<winProbs.size(); i++)
     { in >> d; winProbSquerr += (d - winProbs[i]) * (d - winProbs[i]); }
+    double drawProbSquerr = 0.0;
+    for(int i = 0; i<drawProbs.size(); i++)
+    { in >> d; drawProbSquerr += (d - drawProbs[i]) * (d - drawProbs[i]); }
     double scoreMeanSquerr = 0.0;
     for(int i = 0; i<scoreMeans.size(); i++)
     { in >> d; scoreMeanSquerr += (d - scoreMeans[i]) * (d - scoreMeans[i]); }
@@ -1503,6 +1510,7 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool cuda
     for(int i = 0; i<policyProbs.size(); i++)
     { in >> d; policyProbSquerr += (d - policyProbs[i]) * (d - policyProbs[i]); }
     cout << "winProbSquerr " << winProbSquerr << endl;
+    cout << "drawProbSquerr " << drawProbSquerr << endl;
     cout << "scoreMeanSquerr " << scoreMeanSquerr << endl;
     cout << "policyProbSquerr " << policyProbSquerr << endl;
   }

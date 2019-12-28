@@ -33,11 +33,13 @@ In addition to a basic set of [GTP commands](https://www.lysator.liu.se/~gunnar/
       * Additional possible key-value pairs:
          * `ownership true` - Output the predicted final ownership of every point on the board.
       * Output format:
+         * NOTE: Consumers of this data should attempt to be robust to the order of these fields, as well as to possible addition of new fields in the future.
          * Outputted lines look like `info move Q4 visits 246 utility -0.0249489 radius 0.0134198 winrate 0.491129 scoreMean -0.114924 scoreStdev 31.2765 prior 0.0272995 lcb 0.486337 utilityLcb -0.0383687 order 0 pv Q4 C4 D17 R16 D15 E4 info move R4 visits 711 utility -0.0362005 radius 0.00784969 winrate 0.487353 scoreMean -0.758136 scoreStdev 31.1881 prior 0.109013 lcb 0.48455 utilityLcb -0.0440501 order 1 pv R4 Q17 D3 C16 D5 info move R16 visits 702 utility -0.0345537 radius 0.00793677 winrate 0.487982 scoreMean -0.690915 scoreStdev 31.189 prior 0.0923564 lcb 0.485148 utilityLcb -0.0424905 order 2 pv R16 C16 R4 D3 P16 D5 E17 info move D17 visits 686 utility -0.035279 radius 0.00776143 winrate 0.487766 scoreMean -0.741424 scoreStdev 31.179 prior 0.0967651 lcb 0.484994 utilityLcb -0.0430404 order 3 pv D17 C4 Q17`
          * `info` - Indicates the start of information for a new possible move
          * `move` - The move being analyzed.
          * `visits` - The number of visits invested into the move so far.
          * `winrate` - The winrate of the move so far, as a float in [0,1].
+         * `drawProb` - The estimated probabilty of a draw based on self-play-training conditions, as a float in [0,1].
          * `scoreMean` - Same as scoreLead. "Mean" is a slight misnomer, but this is kept this way to preserve compatibility with existing tools.
          * `scoreStdev` - The predicted standard deviation of the final score of the game after this move, in points. (NOTE: due to the mechanics of MCTS, this value will be significantly biased high currently, although it can still be informative as *relative* indicator).
          * `scoreLead` - The predicted average number of points that the current side is leading by (with this many points fewer, it would be an even game).

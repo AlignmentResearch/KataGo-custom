@@ -12,6 +12,7 @@ struct ValueTargets {
   //As usual, these are from the perspective of white.
   float win;
   float loss;
+  float draw;
   float noResult;
   float score;
   bool hasLead;
@@ -50,7 +51,7 @@ struct FinishedGameData {
   Player startPla; //Player to move as of end of startHist.
   Hash128 gameHash;
 
-  double drawEquivalentWinsForWhite;
+  double drawWinLossValueForWhite;
   Player playoutDoublingAdvantagePla;
   double playoutDoublingAdvantage;
   bool hitTurnLimit;
@@ -110,13 +111,12 @@ struct TrainingWriteBuffers {
   NumpyBuffer<int16_t> policyTargetsNCMove;
 
   //Value targets and other metadata, from the perspective of the player to move
-  //C0-3: Categorial game result, win,loss,noresult, and also score. Draw is encoded as some blend of win and loss based on drawEquivalentWinsForWhite.
-  //C4-7: MCTS win-loss-noresult estimate td-like target, lambda = 35/36, nowFactor = 1/36
-  //C8-11: MCTS win-loss-noresult estimate td-like target, lambda = 11/12, nowFactor = 1/12
-  //C12-15: MCTS win-loss-noresult estimate td-like target, lambda = 3/4, nowFactor = 1/4
-  //C16-19: MCTS win-loss-noresult estimate td-like target, lambda = 0, nowFactor = 1 (no-temporal-averaging MCTS search result)
+  //C0-4: Categorial game result, win,loss,draw,noresult, and also score.
+  //C5-9: MCTS win-loss-draw-noresult estimate td-like target, lambda = 35/36, nowFactor = 1/36
+  //C10-14: MCTS win-loss-draw-noresult estimate td-like target, lambda = 11/12, nowFactor = 1/12
+  //C15-19: MCTS win-loss-draw-noresult estimate td-like target, lambda = 0, nowFactor = 1 (no-temporal-averaging MCTS search result)
 
-  //C20: Actual final score, from the perspective of the player to move, adjusted for draw utility, zero if C27 is zero.
+  //C20: Actual final score, from the perspective of the player to move, zero if C27 is zero.
   //C21: Lead in points, number of points to make the game fair, zero if C29 is zero.
   //C22: Expected arrival time of WL variance.
   //C23-24: Unused

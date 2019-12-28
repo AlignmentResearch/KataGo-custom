@@ -2696,8 +2696,8 @@ Channel: 15: 0
 Channel: 16: 0
 Channel: 17: 0
 Channel: 18: -0.3
-Channel: 19: -1
-Channel: 20: 1
+Channel: 19: -0.5
+Channel: 20: 0.5
 
 -----------------------------------------------------------------
 NN Inputs V3V4V5V6 Ko
@@ -2939,8 +2939,8 @@ Channel: 15: 0
 Channel: 16: 0
 Channel: 17: 0
 Channel: 18: -0.2
-Channel: 19: -1
-Channel: 20: -1
+Channel: 19: -0.5
+Channel: 20: -0.5
 
 -----------------------------------------------------------------
 NN Inputs V3V4V5V6 7x7
@@ -4163,8 +4163,8 @@ Channel: 15: 0
 Channel: 16: 0
 Channel: 17: 0
 Channel: 18: -0
-Channel: 19: -1
-Channel: 20: -1
+Channel: 19: -0.5
+Channel: 20: -0.5
 
 -----------------------------------------------------------------
 NN Inputs V3V4V5V6 7x7 embedded in 9x9
@@ -5633,8 +5633,8 @@ Channel: 15: 0
 Channel: 16: 0
 Channel: 17: 0
 Channel: 18: -0.3
-Channel: 19: -1
-Channel: 20: -1
+Channel: 19: -0.5
+Channel: 20: -0.5
 
 -----------------------------------------------------------------
 NN Inputs V3V4V6 Area Komi
@@ -5988,7 +5988,7 @@ Channel: 15: 0
 Channel: 16: 0
 Channel: 17: 0
 Channel: 18: 0.2
-Channel: 19: 1
+Channel: 19: 0.5
 Channel: 20: 0
 
 -----------------------------------------------------------------
@@ -6264,8 +6264,8 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 
-0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 
+0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 
+0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 
 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
@@ -6286,7 +6286,7 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 
+0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
@@ -6308,8 +6308,8 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 
-0 -1 0 1 0 -1 0 1 0 -1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 
+0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 
+0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 0 0 0 0 0 0 0 0 0 0 0 
 
 
 VERSION 3
@@ -6582,8 +6582,8 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 
-0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 0 1 0 -1 
+0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 
+0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 
 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
@@ -6604,7 +6604,7 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 
+0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
@@ -6626,8 +6626,8 @@ VERSION 8
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 0 0 1 1 
 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 0.03 
-0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 0 -1 1 -1 
-0 1 0 -1 0 1 0 -1 0 1 0 -1 0 0 0 0 0 0 0 0 0 0 0 0 
+0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 0 -0.5 0.5 -0.5 
+0 0.5 0 -0.5 0 0.5 0 -0.5 0 0.5 0 -0.5 0 0 0 0 0 0 0 0 0 0 0 0 
 
 
 -----------------------------------------------------------------
@@ -16126,7 +16126,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 HASH: B874D14AF182A34643825FC7511C94ED
    A B C D E F G
@@ -16151,7 +16151,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 HASH: F4BCC4690AC715A67E336C5AB1D2D970
    A B C D E F G
@@ -16176,7 +16176,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -16203,7 +16203,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 One more move
@@ -16230,7 +16230,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 F6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Reclear history
@@ -16257,7 +16257,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 One more move
@@ -16284,7 +16284,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -16311,7 +16311,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Unset assumeMultipleStartingBlackMovesAreHandicap
@@ -16338,7 +16338,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Play white move
@@ -16365,7 +16365,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 E6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -1
 
 Reclear history
@@ -16392,7 +16392,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -1
 ----------------------------------------
 Black makes 3 moves in a row
@@ -16419,7 +16419,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 
-0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 HASH: B874D14AF182A34643825FC7511C94ED
    A B C D E F G
@@ -16444,7 +16444,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 
-0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 HASH: F4BCC4690AC715A67E336C5AB1D2D970
    A B C D E F G
@@ -16469,7 +16469,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -46
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -16496,7 +16496,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.25 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.25 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -44
 
 One more move
@@ -16604,7 +16604,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.35 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -42
 
 Unset assumeMultipleStartingBlackMovesAreHandicap
@@ -16685,7 +16685,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 1 0 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -1
 ----------------------------------------
 Black makes 3 moves in a row
@@ -16712,7 +16712,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -45.5
 HASH: B874D14AF182A34643825FC7511C94ED
    A B C D E F G
@@ -16737,7 +16737,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -45.5
 HASH: F4BCC4690AC715A67E336C5AB1D2D970
    A B C D E F G
@@ -16762,7 +16762,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -45.5
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -16816,7 +16816,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 F6 
-0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -41.5
 
 Reclear history
@@ -16843,7 +16843,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -42.5
 
 One more move
@@ -16870,7 +16870,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -41.5
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -16924,7 +16924,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -41.5
 
 Play white move
@@ -16951,7 +16951,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 E6 
-0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: 2.5
 
 Reclear history
@@ -16978,7 +16978,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.15 1 0.5 0 0 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -1.5
 ----------------------------------------
 Black makes 3 moves in a row
@@ -17164,7 +17164,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.55 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.55 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -38
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -17218,7 +17218,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.55 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.55 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: -38
 
 Play white move
@@ -17272,7 +17272,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.35 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 1 1 0 0 0 0 0 0 0 0 -0 0.5 0 
 Final score: 3
 ----------------------------------------
 Black makes 3 moves in a row
@@ -17325,7 +17325,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 
-0 0 0 0 0 -0.35 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -41.5
 HASH: F4BCC4690AC715A67E336C5AB1D2D970
    A B C D E F G
@@ -17350,7 +17350,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.45 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.45 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -39.5
 
 Set assumeMultipleStartingBlackMovesAreHandicap
@@ -17377,7 +17377,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 
-0 0 0 0 0 -0.45 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.45 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -39.5
 
 One more move
@@ -17404,7 +17404,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves D4 D5 D6 F6 
-0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -37.5
 
 Reclear history
@@ -17431,7 +17431,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -38.5
 
 One more move
@@ -17485,7 +17485,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 
-0 0 0 0 0 -0.65 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.65 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: -35.5
 
 Unset assumeMultipleStartingBlackMovesAreHandicap
@@ -17539,7 +17539,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C6 E6 
-0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.55 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: 6.5
 
 Reclear history
@@ -17566,7 +17566,7 @@ Presumed next pla Black
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves 
-0 0 0 0 0 -0.35 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 1 0 
+0 0 0 0 0 -0.35 1 0.5 0 1 0 0 0 0 0 0 0 1 -0 0.5 0 
 Final score: 2.5
 Running neuralnetless search tests
 ===================================================================

@@ -2724,11 +2724,11 @@ void NNInputs::fillRowV8(
     //And we make a wave that slopes up at drawable komi and down at nondrawable. This one we need only for area scoringish situations.
     float wave0 = 0.0f;
     float wave1 = 0.0f;
-    if(delta == 0.0f)      {wave0 =  1.0f; wave1 = 0.0f; }
-    else if(delta == 0.5f) {wave0 = -1.0f; wave1 = 1.0f; }
+    if(delta == 0.0f)      {wave0 =  0.5f; wave1 = 0.0f; }
+    else if(delta == 0.5f) {wave0 = -0.5f; wave1 = 0.5f; }
     else if(delta == 1.0f) {wave0 =  0.0f; wave1 = 0.0f; }
-    else if(delta == 1.5f) {wave0 = -1.0f; wave1 = -1.0f; }
-    else if(delta == 2.0f) {wave0 =  1.0f; wave1 = 0.0f; }
+    else if(delta == 1.5f) {wave0 = -0.5f; wave1 = -0.5f; }
+    else if(delta == 2.0f) {wave0 =  0.5f; wave1 = 0.0f; }
     else ASSERT_UNREACHABLE;
 
     rowGlobal[19] = wave0;

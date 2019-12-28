@@ -651,23 +651,23 @@ MoveNum: 330 HASH: 281627648FE3899F71BFE7E88DE69A36
  1 . . O . O . O . O O X . . . . . X X X
 
 Root visits: 200
-NN rows: 80
-NN batches: 80
+NN rows: 81
+NN batches: 81
 NN avg batch size: 1
 PV: N4 pass pass
 Tree:
-: T  49.49c W  49.24c S   0.25c ( +0.5 L  +0.5) N     200  --  N4 pass pass
+: T  49.62c W  49.43c S   0.19c ( +0.4 L  +0.4) N     200  --  N4 pass pass
 ---Black(v)---
-N4  : T  47.17c W  46.95c S   0.22c ( +0.4 L  +0.4) LCB   52.29c P 25.66% WF  9.60% PSV     183 N     183  --  N4 pass pass
-O4  : T  71.75c W  71.29c S   0.46c ( +0.9 L  +0.9) LCB  224.01c P  6.63% WF  6.60% PSV       3 N       3  --  O4 pass N4
-L16 : T  78.43c W  77.71c S   0.72c ( +1.5 L  +1.5) LCB  260.00c P  2.45% WF  6.62% PSV       1 N       1  --  L16
+N4  : T  47.30c W  47.15c S   0.16c ( +0.3 L  +0.3) LCB   52.46c P 25.66% WF  9.58% PSV     183 N     183  --  N4 pass pass
+O4  : T  71.75c W  71.29c S   0.46c ( +0.9 L  +0.9) LCB  224.01c P  6.63% WF  6.61% PSV       3 N       3  --  O4 pass N4
+L16 : T  78.43c W  77.71c S   0.72c ( +1.5 L  +1.5) LCB  260.00c P  2.45% WF  6.63% PSV       1 N       1  --  L16
 O3  : T  78.63c W  77.99c S   0.64c ( +1.3 L  +1.3) LCB  260.00c P  2.40% WF  6.61% PSV       1 N       1  --  O3
 N3  : T  76.03c W  75.46c S   0.57c ( +1.1 L  +1.1) LCB  260.00c P  2.17% WF  6.80% PSV       0 N       1  --  N3
 M16 : T  84.68c W  83.90c S   0.77c ( +1.6 L  +1.6) LCB  260.00c P  2.17% WF  6.17% PSV       0 N       1  --  M16
-L17 : T  83.40c W  82.70c S   0.71c ( +1.4 L  +1.4) LCB  260.00c P  2.12% WF  6.26% PSV       0 N       1  --  L17
+L17 : T  83.40c W  82.70c S   0.71c ( +1.4 L  +1.4) LCB  260.00c P  2.12% WF  6.27% PSV       0 N       1  --  L17
 K18 : T  83.28c W  82.52c S   0.76c ( +1.5 L  +1.5) LCB  260.00c P  1.89% WF  6.27% PSV       0 N       1  --  K18
 H10 : T  72.04c W  71.56c S   0.49c ( +1.0 L  +1.0) LCB  260.00c P  1.87% WF  7.10% PSV       0 N       1  --  H10
-L15 : T  82.85c W  82.07c S   0.77c ( +1.6 L  +1.6) LCB  260.00c P  1.83% WF  6.30% PSV       0 N       1  --  L15
+L15 : T  82.85c W  82.07c S   0.77c ( +1.6 L  +1.6) LCB  260.00c P  1.83% WF  6.31% PSV       0 N       1  --  L15
 K16 : T  81.80c W  81.09c S   0.71c ( +1.4 L  +1.4) LCB  260.00c P  1.53% WF  6.38% PSV       0 N       1  --  K16
 L14 : T  87.33c W  86.48c S   0.85c ( +1.7 L  +1.7) LCB  260.00c P  1.49% WF  5.99% PSV       0 N       1  --  L14
 G10 : T  74.39c W  73.85c S   0.54c ( +1.1 L  +1.1) LCB  260.00c P  1.49% WF  6.92% PSV       0 N       1  --  G10

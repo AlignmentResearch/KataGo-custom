@@ -627,26 +627,26 @@ MoveNum: 330 HASH: 281627648FE3899F71BFE7E88DE69A36
  1 . . O . O . O . O O X . . . . . X X X
 
 Root visits: 200
-NN rows: 134
-NN batches: 134
+NN rows: 133
+NN batches: 133
 NN avg batch size: 1
 PV: O4 pass O2 pass N2 pass N4 pass
 Tree:
-: T  28.91c W  28.36c S   0.55c ( +1.1 L  +1.1) N     200  --  O4 pass O2 pass N2 pass N4
+: T  28.67c W  28.13c S   0.53c ( +1.1 L  +1.1) N     200  --  O4 pass O2 pass N2 pass N4
 ---Black(v)---
-O4  : T  25.58c W  25.11c S   0.48c ( +0.9 L  +0.9) LCB   30.43c P  6.54% WF  9.22% PSV     102 N     102  --  O4 pass O2 pass N2 pass N4 pass
-N4  : T  38.22c W  37.80c S   0.42c ( +0.8 L  +0.8) LCB   44.04c P 25.09% WF  6.85% PSV      26 N      26  --  N4 pass pass
-O2  : T  27.18c W  26.67c S   0.51c ( +1.0 L  +1.0) LCB   36.21c P  3.72% WF  8.70% PSV      21 N      27  --  O2 pass O4 pass N4 pass pass
-N2  : T  34.36c W  33.55c S   0.80c ( +1.6 L  +1.6) LCB   64.89c P  3.34% WF  7.75% PSV       4 N       6  --  N2 pass N4 pass
-O3  : T  32.31c W  31.55c S   0.77c ( +1.5 L  +1.5) LCB   66.19c P  2.57% WF  7.99% PSV       4 N       6  --  O3 pass N4 pass
-H10 : T  31.58c W  30.92c S   0.66c ( +1.3 L  +1.3) LCB   67.27c P  2.22% WF  8.07% PSV       4 N       6  --  H10 pass N4 pass pass
-N3  : T  31.72c W  31.02c S   0.70c ( +1.4 L  +1.4) LCB   66.22c P  2.07% WF  8.05% PSV       4 N       6  --  N3 pass N4
-G10 : T  29.50c W  28.88c S   0.62c ( +1.2 L  +1.2) LCB   65.72c P  1.46% WF  8.32% PSV       4 N       6  --  G10 pass N4 pass pass
-K12 : T  32.42c W  31.54c S   0.88c ( +1.8 L  +1.8) LCB   98.70c P  1.96% WF  8.01% PSV       3 N       4  --  K12 pass N4 pass
-P1  : T  31.55c W  30.74c S   0.81c ( +1.6 L  +1.6) LCB  240.08c P  1.49% WF  8.12% PSV       3 N       3  --  P1 pass N4
-C19 : T  39.39c W  38.55c S   0.83c ( +1.7 L  +1.7) LCB  281.21c P  3.03% WF  7.35% PSV       2 N       3  --  C19 B19 N4
-O1  : T  31.35c W  30.54c S   0.81c ( +1.6 L  +1.6) LCB  191.02c P  1.39% WF  8.14% PSV       2 N       3  --  O1 pass N4
-pss : T 106.82c W 100.00c S   6.82c (+14.2 L +14.2) LCB  260.00c P  1.63% WF  3.44% PSV       0 N       1  --  pass
+O4  : T  25.44c W  24.98c S   0.46c ( +0.9 L  +0.9) LCB   30.20c P  6.54% WF  9.19% PSV     104 N     104  --  O4 pass O2 pass N2 pass N4 pass
+N4  : T  38.17c W  37.80c S   0.37c ( +0.7 L  +0.7) LCB   43.97c P 25.09% WF  6.81% PSV      26 N      26  --  N4 pass pass
+O2  : T  27.17c W  26.67c S   0.50c ( +1.0 L  +1.0) LCB   36.18c P  3.72% WF  8.65% PSV      20 N      27  --  O2 pass O4 pass N4 pass pass
+N2  : T  32.62c W  31.79c S   0.83c ( +1.7 L  +1.7) LCB   72.51c P  3.34% WF  7.93% PSV       5 N       5  --  N2 pass N4 pass
+N3  : T  29.84c W  29.13c S   0.72c ( +1.4 L  +1.4) LCB   75.69c P  2.07% WF  8.24% PSV       5 N       5  --  N3 pass N4
+O3  : T  32.31c W  31.55c S   0.77c ( +1.5 L  +1.5) LCB   66.19c P  2.57% WF  7.95% PSV       4 N       6  --  O3 pass N4 pass
+H10 : T  31.56c W  30.92c S   0.64c ( +1.3 L  +1.3) LCB   67.18c P  2.22% WF  8.04% PSV       4 N       6  --  H10 pass N4 pass pass
+G10 : T  29.49c W  28.88c S   0.60c ( +1.2 L  +1.2) LCB   65.62c P  1.46% WF  8.28% PSV       4 N       6  --  G10 pass N4 pass pass
+K12 : T  32.42c W  31.54c S   0.88c ( +1.8 L  +1.8) LCB   98.70c P  1.96% WF  7.97% PSV       3 N       4  --  K12 pass N4 pass
+C19 : T  39.39c W  38.55c S   0.83c ( +1.7 L  +1.7) LCB  281.21c P  3.03% WF  7.32% PSV       2 N       3  --  C19 B19 N4
+P1  : T  31.55c W  30.74c S   0.81c ( +1.6 L  +1.6) LCB  240.08c P  1.49% WF  8.08% PSV       2 N       3  --  P1 pass N4
+O1  : T  31.35c W  30.54c S   0.81c ( +1.6 L  +1.6) LCB  191.02c P  1.39% WF  8.10% PSV       2 N       3  --  O1 pass N4
+pss : T 106.73c W 100.00c S   6.73c (+14.0 L +14.0) LCB  260.00c P  1.63% WF  3.43% PSV       0 N       1  --  pass
 
 Consecutive searches playouts and visits===================
 Doing three consecutive searches by visits

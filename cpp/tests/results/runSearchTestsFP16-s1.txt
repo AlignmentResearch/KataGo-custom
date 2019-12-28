@@ -677,9 +677,9 @@ NN batches: 94
 NN avg batch size: 1
 PV: N4 pass pass
 Tree:
-: T  52.39c W  52.18c S   0.21c ( +0.4 L  +0.4) N     200  --  N4 pass pass
+: T  52.33c W  52.18c S   0.15c ( +0.3 L  +0.3) N     200  --  N4 pass pass
 ---Black(v)---
-N4  : T  49.80c W  49.62c S   0.18c ( +0.4 L  +0.4) LCB   54.24c P 21.07% WF  8.77% PSV     182 N     182  --  N4 pass pass
+N4  : T  49.73c W  49.61c S   0.12c ( +0.2 L  +0.2) LCB   54.19c P 21.07% WF  8.77% PSV     182 N     182  --  N4 pass pass
 O4  : T  74.83c W  74.52c S   0.31c ( +0.6 L  +0.6) LCB  260.00c P  5.26% WF  6.14% PSV       2 N       2  --  O4 pass
 L16 : T  84.45c W  83.83c S   0.61c ( +1.2 L  +1.2) LCB  260.00c P  3.56% WF  5.78% PSV       1 N       1  --  L16
 H10 : T  83.81c W  83.24c S   0.56c ( +1.1 L  +1.1) LCB  260.00c P  2.98% WF  5.82% PSV       1 N       1  --  H10

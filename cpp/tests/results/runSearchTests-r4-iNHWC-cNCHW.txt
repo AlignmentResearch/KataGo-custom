@@ -639,23 +639,23 @@ NN batches: 153
 NN avg batch size: 1
 PV: O4 pass H10 pass K12 pass N4 pass pass
 Tree:
-: T  13.70c W  13.44c S   0.25c ( +0.5 L  +0.5) N     200  --  O4 pass H10 pass K12 pass N4
+: T  13.68c W  13.44c S   0.24c ( +0.5 L  +0.5) N     200  --  O4 pass H10 pass K12 pass N4
 ---Black(v)---
-O4  : T  11.54c W  11.37c S   0.17c ( +0.3 L  +0.3) LCB   18.54c P  4.98% WF  7.67% PSV      66 N      66  --  O4 pass H10 pass K12 pass N4 pass
-P5  : T   8.83c W   8.69c S   0.14c ( +0.3 L  +0.3) LCB   16.16c P  1.71% WF  8.08% PSV      48 N      48  --  P5 pass O2 pass H10 pass N4
-N4  : T  25.02c W  24.67c S   0.36c ( +0.7 L  +0.7) LCB   40.06c P 18.14% WF  5.82% PSV      15 N      15  --  N4 pass H10 pass K12 pass pass
-N2  : T  13.28c W  12.90c S   0.38c ( +0.8 L  +0.8) LCB   34.85c P  2.08% WF  7.28% PSV      10 N      10  --  N2 pass O2 pass N4 pass
-H10 : T  19.85c W  19.55c S   0.30c ( +0.6 L  +0.6) LCB   56.29c P  5.41% WF  6.57% PSV       8 N       8  --  H10 pass N4 pass K12 pass pass
-O2  : T  16.12c W  15.80c S   0.32c ( +0.6 L  +0.6) LCB   41.34c P  2.91% WF  6.95% PSV       7 N      11  --  O2 pass H10 pass N4 pass pass
-G10 : T  14.85c W  14.55c S   0.30c ( +0.6 L  +0.6) LCB   54.61c P  2.76% WF  7.11% PSV       7 N       7  --  G10 pass N4 pass K12 pass
-K12 : T  17.36c W  17.04c S   0.33c ( +0.6 L  +0.6) LCB   91.48c P  2.85% WF  6.87% PSV       5 N       5  --  K12 pass N4 pass pass
-O3  : T  17.45c W  17.11c S   0.35c ( +0.7 L  +0.7) LCB   90.90c P  2.25% WF  6.86% PSV       4 N       5  --  O3 pass N4 pass pass
-N3  : T  16.21c W  15.89c S   0.32c ( +0.6 L  +0.6) LCB   94.34c P  1.64% WF  6.98% PSV       4 N       5  --  N3 pass N4 pass pass
+O4  : T  11.53c W  11.37c S   0.15c ( +0.3 L  +0.3) LCB   18.52c P  4.98% WF  7.66% PSV      66 N      66  --  O4 pass H10 pass K12 pass N4 pass
+P5  : T   8.82c W   8.69c S   0.13c ( +0.3 L  +0.3) LCB   16.14c P  1.71% WF  8.08% PSV      48 N      48  --  P5 pass O2 pass H10 pass N4
+N4  : T  24.99c W  24.67c S   0.33c ( +0.7 L  +0.7) LCB   39.98c P 18.14% WF  5.82% PSV      15 N      15  --  N4 pass H10 pass K12 pass pass
+N2  : T  13.27c W  12.90c S   0.37c ( +0.7 L  +0.7) LCB   34.79c P  2.08% WF  7.28% PSV      10 N      10  --  N2 pass O2 pass N4 pass
+H10 : T  19.83c W  19.55c S   0.28c ( +0.5 L  +0.5) LCB   56.16c P  5.41% WF  6.57% PSV       8 N       8  --  H10 pass N4 pass K12 pass pass
+O2  : T  16.10c W  15.80c S   0.30c ( +0.6 L  +0.6) LCB   41.26c P  2.91% WF  6.95% PSV       7 N      11  --  O2 pass H10 pass N4 pass pass
+G10 : T  14.84c W  14.55c S   0.29c ( +0.6 L  +0.6) LCB   54.51c P  2.76% WF  7.11% PSV       7 N       7  --  G10 pass N4 pass K12 pass
+K12 : T  17.34c W  17.04c S   0.31c ( +0.6 L  +0.6) LCB   91.26c P  2.85% WF  6.87% PSV       5 N       5  --  K12 pass N4 pass pass
+O3  : T  17.43c W  17.11c S   0.33c ( +0.6 L  +0.6) LCB   90.68c P  2.25% WF  6.87% PSV       4 N       5  --  O3 pass N4 pass pass
+N3  : T  16.19c W  15.89c S   0.30c ( +0.6 L  +0.6) LCB   94.12c P  1.64% WF  6.98% PSV       4 N       5  --  N3 pass N4 pass pass
 F16 : T  15.85c W  15.40c S   0.44c ( +0.9 L  +0.9) LCB   90.27c P  1.59% WF  7.03% PSV       4 N       4  --  F16 pass N4
 B19 : T  15.89c W  15.52c S   0.37c ( +0.7 L  +0.7) LCB  106.49c P  1.54% WF  7.02% PSV       4 N       4  --  B19 C19 N4 pass
-C19 : T  19.92c W  19.58c S   0.34c ( +0.7 L  +0.7) LCB   98.63c P  2.33% WF  6.63% PSV       3 N       5  --  C19 B19 N4 pass pass
-P1  : T  19.38c W  19.01c S   0.37c ( +0.7 L  +0.7) LCB   86.83c P  1.59% WF  6.68% PSV       2 N       5  --  P1 pass N4 pass pass
-pss : T 106.82c W 100.00c S   6.82c (+14.2 L +14.2) LCB  260.00c P  1.97% WF  2.44% PSV       0 N       1  --  pass
+C19 : T  19.90c W  19.58c S   0.32c ( +0.6 L  +0.6) LCB   98.45c P  2.33% WF  6.63% PSV       3 N       5  --  C19 B19 N4 pass pass
+P1  : T  19.36c W  19.01c S   0.35c ( +0.7 L  +0.7) LCB   86.61c P  1.59% WF  6.68% PSV       2 N       5  --  P1 pass N4 pass pass
+pss : T 106.73c W 100.00c S   6.73c (+14.0 L +14.0) LCB  260.00c P  1.97% WF  2.44% PSV       0 N       1  --  pass
 
 Consecutive searches playouts and visits===================
 Doing three consecutive searches by visits

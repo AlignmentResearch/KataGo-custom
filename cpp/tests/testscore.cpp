@@ -21,8 +21,8 @@ void Tests::runScoreTests() {
     double score = hist.finalWhiteMinusBlackScore;
     out << "Final score: " << score << endl;
 
-    double drawEquivsToTry[4] = {0.5, 0.3, 0.7, 1.0};
-    for(int i = 0; i<4; i++) {
+    double drawEquivsToTry[1] = {0.5};
+    for(int i = 0; i<1; i++) {
       double drawEquiv = drawEquivsToTry[i];
       string s = Global::strprintf("%.1f", drawEquiv);
       double scoreAdjusted = ScoreValue::whiteScoreDrawAdjust(score, drawEquiv, hist);

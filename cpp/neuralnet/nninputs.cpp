@@ -2666,10 +2666,10 @@ void NNInputs::fillRowV8(
     rowGlobal[17] = 1.0;
 
   //Draw utility
-  if(nextPlayer == P_WHITE)
-    rowGlobal[18] = (float)(0.5*nnInputParams.drawWinLossValueForWhite);
-  else
-    rowGlobal[18] = (float)(-0.5*nnInputParams.drawWinLossValueForWhite);
+  // if(nextPlayer == P_WHITE)
+  //   rowGlobal[18] = (float)(0.5*nnInputParams.drawWinLossValueForWhite);
+  // else
+  //   rowGlobal[18] = (float)(-0.5*nnInputParams.drawWinLossValueForWhite);
 
   //Provide parity information about the board size and komi
   //This comes from the following observation:
@@ -2731,7 +2731,7 @@ void NNInputs::fillRowV8(
     else if(delta == 2.0f) {wave0 =  0.5f; wave1 = 0.0f; }
     else ASSERT_UNREACHABLE;
 
-    rowGlobal[19] = wave0;
+    // rowGlobal[19] = wave0;
 
     //NOTE: If ever changing which feature this is, must also update index in model.py where we multiply it into the scorebelief parity vector
     if(hist.rules.scoringRule == Rules::SCORING_AREA || hist.encorePhase >= 2) {

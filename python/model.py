@@ -1367,12 +1367,12 @@ class Target_vars:
       tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.policy_target1, logits=policy_output[:,:,1])
     )
 
-    self.value_loss_unreduced = 1.10 * tf.nn.softmax_cross_entropy_with_logits_v2(
+    self.value_loss_unreduced = 1.20 * tf.nn.softmax_cross_entropy_with_logits_v2(
       labels=self.value_target,
       logits=value_output
     )
 
-    self.td_value_loss_unreduced = 0.55 * (
+    self.td_value_loss_unreduced = 0.60 * (
       tf.nn.softmax_cross_entropy_with_logits_v2(
         labels=self.td_value_target,
         logits=tf.reshape(miscvalues_output[:,4:12],[-1] + model.td_value_target_shape)
@@ -1411,12 +1411,14 @@ class Target_vars:
       ) / model.mask_sum_hw
     )
 
-    self.scoring_loss_unreduced = 0.6 * self.scoring_target_weight * (
+    self.scoring_loss_unreduced = 0.5 * self.scoring_target_weight * (
       tf.reduce_sum(
         tf.square(self.scoring_target - scoring_output) * tf.reshape(model.mask_before_symmetry,[-1,model.pos_len,model.pos_len]),
         axis=[1,2]
       ) / model.mask_sum_hw
     )
+    #Simple huberlike transform to reduce crazy values
+    self.scoring_loss_unreduced = 4.0 * (tf.sqrt(self.scoring_loss_unreduced * 0.5 + 1.0) - 1.0)
 
     #The futurepos targets extrapolate a fixed number of steps into the future independent
     #of board size. So unlike the ownership above, generally a fixed number of spots are going to be

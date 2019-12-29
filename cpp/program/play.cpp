@@ -1667,7 +1667,7 @@ FinishedGameData* Play::runGame(
   if(fancyModes.fancyKomiVarying &&
      botB->nnEvaluator->isNeuralNetLess() &&
      (botW == NULL || botW->nnEvaluator->isNeuralNetLess())) {
-    hist.setKomi(roundAndClipKomi(hist.rules.komi + 40.0 * nextGaussianTruncated(gameRand,2.5), board, false));
+    hist.setKomi(roundAndClipKomi(hist.rules.komi + 30.0 * nextGaussianTruncated(gameRand,2.5), board, false));
   }
 
   gameData->bName = botSpecB.botName;

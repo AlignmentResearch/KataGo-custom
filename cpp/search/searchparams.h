@@ -61,6 +61,7 @@ struct SearchParams {
 
   float nnPolicyTemperature; //Scale neural net policy probabilities by this temperature, applies everywhere in the tree
   bool antiMirror; //Enable anti-mirroring logic
+  double simpleMovesBias; //Bias a bunch of things to favor "simple" moves
 
   //Threading-related
   uint32_t mutexPoolSize; //Size of mutex pool for synchronizing access to all search nodes

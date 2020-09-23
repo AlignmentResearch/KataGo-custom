@@ -465,6 +465,15 @@ NNOutput::~NNOutput() {
   }
 }
 
+void NNOutput::copyValueRelatedParametersFrom(const std::shared_ptr<NNOutput>& other) {
+  whiteWinProb = other->whiteWinProb;
+  whiteLossProb = other->whiteLossProb;
+  whiteNoResultProb = other->whiteNoResultProb;
+  whiteScoreMean = other->whiteScoreMean;
+  whiteScoreMeanSq = other->whiteScoreMeanSq;
+  whiteLead = other->whiteLead;
+  varTimeLeft = other->varTimeLeft;
+}
 
 void NNOutput::debugPrint(ostream& out, const Board& board) {
   out << "Win " << Global::strprintf("%.2fc",whiteWinProb*100) << endl;

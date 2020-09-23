@@ -54,9 +54,9 @@ double Search::getScoreStdev(double scoreMean, double scoreMeanSq) {
 
 //-----------------------------------------------------------------------------------------
 
-SearchNode::SearchNode(Search& search, Player prevPla, Rand& rand, Loc prevLoc)
+SearchNode::SearchNode(Search& search, Player prevPla, Rand& rand, Loc prevLoc, int tNumber, double prevPolicy, SearchNode* p)
   :lockIdx(),
-   nextPla(getOpp(prevPla)),prevMoveLoc(prevLoc),
+   nextPla(getOpp(prevPla)),prevMoveLoc(prevLoc),turnNumber(tNumber),prevPolicyProb(prevPolicy),parent(p),
    nnOutput(),
    nnOutputAge(0),
    children(NULL),numChildren(0),childrenCapacity(0),
@@ -317,6 +317,11 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
   if(movePla != rootPla)
     setPlayerAndClearHistory(movePla);
 
+  //If we are biasing towards simple moves, then clear the search every turn to avoid time-inconsistency of the hacks we use
+  //And the fact that we need ownership maps
+  if(searchParams.simpleMovesBias > 0)
+    clearSearch();
+
   if(rootNode != NULL) {
     bool foundChild = false;
     int foundChildIdx = -1;
@@ -345,9 +350,9 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
       //Delete the root and replace it with the child
       SearchNode* child = rootNode->children[foundChildIdx];
       rootNode->children[foundChildIdx] = NULL;
+      child->parent = NULL;
       delete rootNode;
       rootNode = child;
-      rootNode->prevMoveLoc = Board::NULL_LOC;
     }
     else {
       clearSearch();
@@ -627,7 +632,15 @@ void Search::beginSearch(bool pondering) {
   SearchThread dummyThread(-1, *this, NULL);
 
   if(rootNode == NULL) {
-    rootNode = new SearchNode(*this, getOpp(rootPla), dummyThread.rand, Board::NULL_LOC);
+    rootNode = new SearchNode(
+      *this,
+      getOpp(rootPla),
+      dummyThread.rand,
+      (rootHistory.moveHistory.size() > 0 ? rootHistory.moveHistory[rootHistory.moveHistory.size()-1].loc : Board::NULL_LOC),
+      rootHistory.initialTurnNumber + rootHistory.moveHistory.size(),
+      1.0, //dummy
+      NULL
+    );
   }
   else {
     //If the root node has any existing children, then prune things down if there are moves that should not be allowed at the root.
@@ -786,17 +799,8 @@ void Search::computeRootValues() {
       bool includeOwnerMap = true;
       // bool isRoot = true;
       MiscNNInputParams nnInputParams;
-      nnInputParams.drawEquivalentWinsForWhite = searchParams.drawEquivalentWinsForWhite;
-      nnInputParams.conservativePass = searchParams.conservativePass;
-      nnInputParams.nnPolicyTemperature = searchParams.nnPolicyTemperature;
-      nnInputParams.avoidMYTDaggerHack = searchParams.avoidMYTDaggerHackPla == pla;
-      if(searchParams.playoutDoublingAdvantage != 0) {
-        Player playoutDoublingAdvantagePla = getPlayoutDoublingAdvantagePla();
-        nnInputParams.playoutDoublingAdvantage = (
-          getOpp(pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage
-        );
-      }
-      nnEvaluator->evaluate(
+      setNNInputParams(pla,nnInputParams);
+      performNNEval(
         board, hist, pla,
         nnInputParams,
         nnResultBuf, skipCache, includeOwnerMap
@@ -888,6 +892,58 @@ int64_t Search::getRootVisits() const {
   int64_t n = rootNode->stats.visits;
   rootNode->statsLock.clear(std::memory_order_release);
   return n;
+}
+
+void Search::setNNInputParams(Player pla, MiscNNInputParams& nnInputParams) const {
+  nnInputParams.drawEquivalentWinsForWhite = searchParams.drawEquivalentWinsForWhite;
+  nnInputParams.conservativePass = searchParams.conservativePass;
+  nnInputParams.nnPolicyTemperature = searchParams.nnPolicyTemperature;
+  nnInputParams.avoidMYTDaggerHack = searchParams.avoidMYTDaggerHackPla == pla;
+  if(searchParams.playoutDoublingAdvantage != 0) {
+    Player playoutDoublingAdvantagePla = getPlayoutDoublingAdvantagePla();
+    double playoutDoublingAdvantage = getOpp(pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage;
+    nnInputParams.playoutDoublingAdvantage = playoutDoublingAdvantage;
+  }
+}
+
+static const Hash128 ZOBRIST_SIMPLE_MOVES_BIAS =
+  Hash128(0x133375f90684995eULL, 0xa1550dbaeac54516ULL);
+
+void Search::performNNEval(
+  Board& board,
+  const BoardHistory& history,
+  Player pla,
+  const MiscNNInputParams& nnInputParams,
+  NNResultBuf& nnResultBuf,
+  bool skipCacheThisIteration,
+  bool includeOwnerMap
+) {
+  includeOwnerMap |= (searchParams.simpleMovesBias > 0);
+  nnEvaluator->evaluate(
+    board, history, pla,
+    nnInputParams,
+    nnResultBuf, skipCacheThisIteration, includeOwnerMap
+  );
+  if(searchParams.simpleMovesBias > 0 && pla == rootPla) {
+    NNResultBuf simpleBuf;
+    MiscNNInputParams newNNInputParams = nnInputParams;
+    newNNInputParams.playoutDoublingAdvantage = std::max(-3.0, nnInputParams.playoutDoublingAdvantage - 1.5 * searchParams.simpleMovesBias);
+    nnEvaluator->evaluate(
+      board, history, pla,
+      newNNInputParams,
+      simpleBuf, skipCacheThisIteration, includeOwnerMap
+    );
+
+    //Copy nnOutput as we're about to hack a blend of the two
+    shared_ptr<NNOutput> newNNOutput = std::make_shared<NNOutput>(*(simpleBuf.result));
+    newNNOutput->nnHash = newNNOutput->nnHash ^ ZOBRIST_SIMPLE_MOVES_BIAS;
+
+    //Copy over all the winrate and score parameters, but preserve ownership and policy
+    newNNOutput->copyValueRelatedParametersFrom(nnResultBuf.result);
+
+    //Replace the old pointer
+    nnResultBuf.result = newNNOutput;
+  }
 }
 
 void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int policySize, float* policyProbs) {
@@ -1787,6 +1843,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   }
 
   //Also add in the direct evaluation of this node.
+  double thisNodeEvalDesiredWeight;
   {
     //Since we've scaled all the child weights in some arbitrary way, adjust and make sure
     //that the direct evaluation of the node still has precisely 1/N weight.
@@ -1813,6 +1870,50 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySqSum += utility * utility * desiredWeight;
     weightSum += desiredWeight;
     weightSqSum += desiredWeight * desiredWeight;
+
+    thisNodeEvalDesiredWeight = desiredWeight;
+  }
+
+  if(searchParams.simpleMovesBias > 0 && rootNode != NULL && (&node) != rootNode) {
+    double rootPlaUtilityDelta = 0;
+
+    if(node.nextPla == getOpp(rootPla)) {
+      //Root player takes a penalty when playing moves with low policy
+      rootPlaUtilityDelta = 0.04 * searchParams.simpleMovesBias * (1.0 + log(1e-30 + node.prevPolicyProb));
+      //Root player takes a small penalty for tenuki
+      assert(node.parent != NULL);
+      if(node.parent->prevMoveLoc != Board::NULL_LOC && node.parent->prevMoveLoc != Board::PASS_LOC && node.prevMoveLoc != Board::PASS_LOC)
+        rootPlaUtilityDelta -= 0.002 * searchParams.simpleMovesBias *
+          std::max(0.0, -5.0 + sqrt(Location::euclideanDistanceSquared(node.parent->prevMoveLoc, node.prevMoveLoc,rootBoard.x_size)));
+    }
+
+    //Move-related penalties fade the later you go in the search
+    rootPlaUtilityDelta /= sqrt(node.turnNumber - rootNode->turnNumber);
+
+    //Root player takes a penalty when they lose things that they probably owned, and takes a bonus when they secure things
+    //that they probably own.
+    {
+      const float* rootWhiteOwnerMap = rootNode->nnOutput->whiteOwnerMap;
+      const float* currentWhiteOwnerMap = node.nnOutput->whiteOwnerMap;
+      double securityGainedSum = 0.0;
+      for(int y = 0; y<rootBoard.y_size; y++) {
+        for(int x = 0; x<rootBoard.x_size; x++) {
+          int pos = NNPos::xyToPos(x,y,nnXLen);
+          double oldOwnership01 = (rootPla == P_WHITE ? rootWhiteOwnerMap[pos] : -rootWhiteOwnerMap[pos]) * 0.5 + 1.0;
+          double newOwnership01 = (rootPla == P_WHITE ? currentWhiteOwnerMap[pos] : -currentWhiteOwnerMap[pos]) * 0.5 + 1.0;
+          securityGainedSum += oldOwnership01 * (newOwnership01 - oldOwnership01);
+        }
+      }
+      double utilityDeltaThisNodeEval = 0.40 * searchParams.simpleMovesBias * securityGainedSum / sqrt(rootBoard.x_size * rootBoard.y_size);
+      rootPlaUtilityDelta += utilityDeltaThisNodeEval * thisNodeEvalDesiredWeight;
+    }
+
+
+    double utilityDelta = rootPla == P_WHITE ? rootPlaUtilityDelta : -rootPlaUtilityDelta;
+    double oldUtility = utilitySum / weightSum;
+    double newUtility = oldUtility + utilityDelta;
+    utilitySqSum = weightSum * (newUtility * newUtility + std::max(utilitySqSum / weightSum  - oldUtility * oldUtility, 0.0));
+    utilitySum = newUtility * weightSum;
   }
 
   while(node.statsLock.test_and_set(std::memory_order_acquire));
@@ -1899,21 +2000,12 @@ void Search::initNodeNNOutput(
 ) {
   bool includeOwnerMap = isRoot || alwaysIncludeOwnerMap;
   MiscNNInputParams nnInputParams;
-  nnInputParams.drawEquivalentWinsForWhite = searchParams.drawEquivalentWinsForWhite;
-  nnInputParams.conservativePass = searchParams.conservativePass;
-  nnInputParams.nnPolicyTemperature = searchParams.nnPolicyTemperature;
-  nnInputParams.avoidMYTDaggerHack = searchParams.avoidMYTDaggerHackPla == thread.pla;
-  if(searchParams.playoutDoublingAdvantage != 0) {
-    Player playoutDoublingAdvantagePla = getPlayoutDoublingAdvantagePla();
-    nnInputParams.playoutDoublingAdvantage = (
-      getOpp(thread.pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage
-    );
-  }
+  setNNInputParams(thread.pla,nnInputParams);
   if(isRoot && searchParams.rootNumSymmetriesToSample > 1) {
     vector<shared_ptr<NNOutput>> ptrs;
     for(int i = 0; i<searchParams.rootNumSymmetriesToSample; i++) {
       bool skipCacheThisIteration = skipCache || i > 0; //Skip cache on subsequent iterations to get new random draws for orientation
-      nnEvaluator->evaluate(
+      performNNEval(
         thread.board, thread.history, thread.pla,
         nnInputParams,
         thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
@@ -1923,7 +2015,7 @@ void Search::initNodeNNOutput(
     node.nnOutput = std::shared_ptr<NNOutput>(new NNOutput(ptrs));
   }
   else {
-    nnEvaluator->evaluate(
+    performNNEval(
       thread.board, thread.history, thread.pla,
       nnInputParams,
       thread.nnResultBuf, skipCache, includeOwnerMap
@@ -2057,7 +2149,15 @@ void Search::playoutDescend(
   SearchNode* child;
   if(bestChildIdx == node.numChildren) {
     node.numChildren++;
-    child = new SearchNode(*this,thread.pla,thread.rand,moveLoc);
+    child = new SearchNode(
+      *this,
+      thread.pla,
+      thread.rand,
+      moveLoc,
+      1 + thread.history.initialTurnNumber + thread.history.moveHistory.size(),
+      node.nnOutput->policyProbs[getPos(moveLoc)],
+      &node
+    );
     node.children[bestChildIdx] = child;
   }
   else {

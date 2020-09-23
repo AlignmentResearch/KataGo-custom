@@ -69,6 +69,9 @@ struct SearchNode {
   //Constant during search--------------------------------------------------------------
   Player nextPla;
   Loc prevMoveLoc;
+  int turnNumber;
+  double prevPolicyProb;
+  SearchNode* parent;
 
   //Mutable---------------------------------------------------------------------------
   //All of these values are protected under the mutex indicated by lockIdx
@@ -89,7 +92,7 @@ struct SearchNode {
   int32_t virtualLosses;
 
   //--------------------------------------------------------------------------------
-  SearchNode(Search& search, Player prevPla, Rand& rand, Loc prevMoveLoc);
+  SearchNode(Search& search, Player prevPla, Rand& rand, Loc prevMoveLoc, int turnNumber, double prevPolicyProb, SearchNode* parent);
   ~SearchNode();
 
   SearchNode(const SearchNode&) = delete;
@@ -333,6 +336,17 @@ private:
   bool isAllowedRootMove(Loc moveLoc) const;
 
   void computeRootValues();
+
+  void setNNInputParams(Player pla, MiscNNInputParams& nnInputParams) const;
+  void performNNEval(
+    Board& board,
+    const BoardHistory& history,
+    Player pla,
+    const MiscNNInputParams& nnInputParams,
+    NNResultBuf& nnResultBuf,
+    bool skipCacheThisIteration,
+    bool includeOwnerMap
+  );
 
   double getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const;
   double getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const;

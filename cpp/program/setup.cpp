@@ -530,6 +530,14 @@ vector<SearchParams> Setup::loadParams(
     else if(cfg.contains("antiMirror"))   params.antiMirror = cfg.getBool("antiMirror");
     else                                  params.antiMirror = false;
 
+    if(cfg.contains("simpleMovesBias"+idxStr))
+      params.simpleMovesBias = cfg.getDouble("simpleMovesBias"+idxStr,0.0,2.0);
+    else if(cfg.contains("simpleMovesBias"))
+      params.simpleMovesBias = cfg.getDouble("simpleMovesBias",0.0,2.0);
+    else
+      params.simpleMovesBias = 0.0;
+
+
     if(cfg.contains("mutexPoolSize"+idxStr)) params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize"+idxStr, 1, 1 << 24);
     else if(cfg.contains("mutexPoolSize"))   params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize",        1, 1 << 24);
     else                                     params.mutexPoolSize = 16384;

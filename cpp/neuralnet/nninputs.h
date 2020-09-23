@@ -135,6 +135,8 @@ struct NNOutput {
 
   inline float* getPolicyProbsMaybeNoised() { return noisedPolicyProbs != NULL ? noisedPolicyProbs : policyProbs; }
   void debugPrint(std::ostream& out, const Board& board);
+
+  void copyValueRelatedParametersFrom(const std::shared_ptr<NNOutput>& other);
 };
 
 namespace SymmetryHelpers {

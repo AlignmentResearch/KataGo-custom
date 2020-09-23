@@ -47,6 +47,7 @@ SearchParams::SearchParams()
    playoutDoublingAdvantagePla(C_EMPTY),
    nnPolicyTemperature(1.0f),
    antiMirror(false),
+   simpleMovesBias(0.0),
    mutexPoolSize(8192),
    numVirtualLossesPerThread(3),
    numThreads(1),

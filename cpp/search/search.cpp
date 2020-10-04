@@ -1445,14 +1445,7 @@ double Search::getExploreSelectionValue(
     totalChildVisits = childVisits;
 
   //Virtual losses to direct threads down different paths
-  if(childVirtualLosses > 0) {
-    //totalChildVisits += childVirtualLosses; //Should get better thread dispersal without this
-    childVisits += childVirtualLosses;
-    double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
-    double virtualLossUtility = (parent.nextPla == P_WHITE ? -utilityRadius : utilityRadius);
-    double virtualLossVisitFrac = (double)childVirtualLosses / childVisits;
-    childUtility = childUtility + (virtualLossUtility - childUtility) * virtualLossVisitFrac;
-  }
+  childVisits += childVirtualLosses;
 
   if(isDuringSearch && (&parent == rootNode)) {
     //Hack to get the root to funnel more visits down child branches

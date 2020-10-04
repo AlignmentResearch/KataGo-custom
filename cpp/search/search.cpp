@@ -1589,6 +1589,12 @@ void Search::selectBestChildToDescend(
   //for floating point error.
   assert(policyProbMassVisited <= 1.0001);
 
+  //For explore purposes, expand visit count based on visits we're imminently getting, except for this thread's own contribution to it (so subtract that off).
+  while(node.statsLock.test_and_set(std::memory_order_acquire));
+  int64_t parentVirtualLosses = node.virtualLosses;
+  node.statsLock.clear(std::memory_order_release);
+  totalChildVisits += std::max(parentVirtualLosses-searchParams.numVirtualLossesPerThread, (int64_t)0);
+
   //First play urgency
   double parentUtility;
   double fpuValue = getFpuValueForChildrenAssumeVisited(node, thread.pla, isRoot, policyProbMassVisited, parentUtility);

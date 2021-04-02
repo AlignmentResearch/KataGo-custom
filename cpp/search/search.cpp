@@ -2273,6 +2273,7 @@ void Search::addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLosse
   addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
 }
 
+// TODO: change playoutDescend to build the attack
 void Search::playoutDescend(
   SearchThread& thread, SearchNode& node,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],

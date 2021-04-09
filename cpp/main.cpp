@@ -95,6 +95,8 @@ static int handleSubcommand(const string& subcommand, int argc, const char* argv
     return MainCmds::runownershiptests(argc-1,&argv[1]);
   else if(subcommand == "runoutputtests")
     return MainCmds::runoutputtests(argc-1,&argv[1]);
+  else if(subcommand == "runsinglesearchtest")
+    return MainCmds::runsinglesearchtest(argc-1,&argv[1]);
   else if(subcommand == "runsearchtests")
     return MainCmds::runsearchtests(argc-1,&argv[1]);
   else if(subcommand == "runsearchtestsv3")

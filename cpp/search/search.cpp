@@ -21,11 +21,14 @@ ReportedSearchValues::~ReportedSearchValues()
 
 NodeStats::NodeStats()
   :visits(0),winValueSum(0.0),noResultValueSum(0.0),scoreMeanSum(0.0),scoreMeanSqSum(0.0),leadSum(0.0),utilitySum(0.0),utilitySqSum(0.0),weightSum(0.0),weightSqSum(0.0)
+  // !!dv
+  ,minimaxValue(0.0)
 {}
 NodeStats::~NodeStats()
 {}
 
 double NodeStats::getResultUtilitySum(const SearchParams& searchParams) const {
+  // !!dv
   return (
     (2.0*winValueSum - weightSum + noResultValueSum) * searchParams.winLossUtilityFactor +
     noResultValueSum * searchParams.noResultUtilityForWhite
@@ -102,6 +105,7 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
    logger(lg),
    weightFactorBuf(),
    weightBuf(),
+   minimaxBuf(), // !!dv
    weightSqBuf(),
    winValuesBuf(),
    noResultValuesBuf(),
@@ -120,6 +124,7 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
   weightFactorBuf.reserve(NNPos::MAX_NN_POLICY_SIZE);
 
   weightBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+  minimaxBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
   weightSqBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   winValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   noResultValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
@@ -396,8 +401,9 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
   return true;
 }
 
-
-double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const {
+// !!dv
+double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double minimaxValue) const {
+// double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const {
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
   double scoreStdev = getScoreStdev(scoreMean, scoreMeanSq);
@@ -406,7 +412,9 @@ double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, doubl
   return staticScoreValue * searchParams.staticScoreUtilityFactor + dynamicScoreValue * searchParams.dynamicScoreUtilityFactor;
 }
 
-double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const {
+//  !!dv
+double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double minimaxValue, double delta) const {
+// double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const {
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
   double scoreStdev = getScoreStdev(scoreMean, scoreMeanSq);
@@ -421,7 +429,8 @@ double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, d
 
 double Search::getUtilityFromNN(const NNOutput& nnOutput) const {
   double resultUtility = getResultUtilityFromNN(nnOutput);
-  return resultUtility + getScoreUtility(nnOutput.whiteScoreMean, nnOutput.whiteScoreMeanSq, 1.0);
+  // return resultUtility + getScoreUtility(nnOutput.whiteScoreMean, nnOutput.whiteScoreMeanSq, 1.0);
+  return resultUtility + getScoreUtility(nnOutput.whiteScoreMean, nnOutput.whiteScoreMeanSq, 1.0, 1.0); // !!dv
 }
 
 uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativeProbs, int numRelativeProbs, double temperature) {
@@ -910,6 +919,7 @@ void Search::recursivelyRemoveSubtreeValueBiasBeforeDeleteSynchronous(SearchNode
   if(node->subtreeValueBiasTableEntry != nullptr) {
     node->subtreeValueBiasTableEntry->deltaUtilitySum -= node->lastSubtreeValueBiasDeltaSum * searchParams.subtreeValueBiasFreeProp;
     node->subtreeValueBiasTableEntry->weightSum -= node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
+    // node->subtreeValueBiasTableEntry->minimaxValue -= node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
   }
 }
 
@@ -947,6 +957,7 @@ void Search::recursivelyRecomputeStats(SearchNode& node, SearchThread& thread, b
     double scoreMeanSum = node.stats.scoreMeanSum;
     double scoreMeanSqSum = node.stats.scoreMeanSqSum;
     double weightSum = node.stats.weightSum;
+    double minimaxValue = node.stats.minimaxValue; // !!dv
     int64_t numVisits = node.stats.visits;
     node.statsLock.clear(std::memory_order_release);
 
@@ -958,7 +969,9 @@ void Search::recursivelyRecomputeStats(SearchNode& node, SearchThread& thread, b
       assert(isRoot);
     }
     else {
-      double scoreUtility = getScoreUtility(scoreMeanSum, scoreMeanSqSum, weightSum);
+      // double scoreUtility = getScoreUtility(scoreMeanSum, scoreMeanSqSum, weightSum);
+      // !!dv
+      double scoreUtility = getScoreUtility(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue);
 
       double newUtility = resultUtilitySum / weightSum + scoreUtility;
       double newUtilitySum = newUtility * weightSum;
@@ -1023,6 +1036,8 @@ void Search::computeRootValues() {
       while(node.statsLock.test_and_set(std::memory_order_acquire));
       double scoreMeanSum = node.stats.scoreMeanSum;
       double weightSum = node.stats.weightSum;
+      // !!dv
+      double minimaxValue = node.stats.minimaxValue;
       int64_t numVisits = node.stats.visits;
       node.statsLock.clear(std::memory_order_release);
       if(numVisits > 0 && weightSum > 0) {
@@ -1658,6 +1673,7 @@ double Search::getExploreSelectionValue(
   double scoreMeanSum = child->stats.scoreMeanSum;
   double scoreMeanSqSum = child->stats.scoreMeanSqSum;
   double weightSum = child->stats.weightSum;
+  double minimaxValue = child->stats.minimaxValue; // !!dv
   int32_t childVirtualLosses = child->virtualLosses;
   child->statsLock.clear(std::memory_order_release);
 
@@ -1673,7 +1689,8 @@ double Search::getExploreSelectionValue(
     //Tiny adjustment for passing
     double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
     if(endingScoreBonus != 0)
-      childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+      // childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+      childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
   }
 
   //When multithreading, totalChildVisits could be out of sync with childVisits, so if they provably are, then fix that up
@@ -1764,6 +1781,8 @@ int64_t Search::getReducedPlaySelectionVisits(
   double scoreMeanSum = child->stats.scoreMeanSum;
   double scoreMeanSqSum = child->stats.scoreMeanSqSum;
   double weightSum = child->stats.weightSum;
+  //  !!dv
+  double minimaxValue = child->stats.minimaxValue;
   child->statsLock.clear(std::memory_order_release);
 
   //Child visits may be 0 if this function is called in a multithreaded context, such as during live analysis
@@ -1775,7 +1794,8 @@ int64_t Search::getReducedPlaySelectionVisits(
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
   double childUtility = utilitySum / weightSum;
   if(endingScoreBonus != 0)
-    childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    // childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
 
   double childVisitsWeRetrospectivelyWanted = getExploreSelectionValueInverse(
     bestChildExploreSelectionValue, nnPolicyProb, totalChildVisits, childUtility, parent.nextPla
@@ -1790,6 +1810,7 @@ double Search::getFpuValueForChildrenAssumeVisited(const SearchNode& node, Playe
     while(node.statsLock.test_and_set(std::memory_order_acquire));
     double utilitySum = node.stats.utilitySum;
     double weightSum = node.stats.weightSum;
+    double minimaxValue = node.stats.minimaxValue; // !!dv
     node.statsLock.clear(std::memory_order_release);
 
     assert(weightSum > 0.0);
@@ -1943,6 +1964,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   vector<double>& utilitySqSums = thread.utilitySqBuf;
   vector<double>& selfUtilities = thread.selfUtilityBuf;
   vector<double>& weightSums = thread.weightBuf;
+  vector<double>& minimaxValues = thread.minimaxBuf; // !!dv
   vector<double>& weightSqSums = thread.weightSqBuf;
   vector<int64_t>& visits = thread.visitsBuf;
 
@@ -1968,6 +1990,9 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double weightSqSum = child->stats.weightSqSum;
     double utilitySum = child->stats.utilitySum;
     double utilitySqSum = child->stats.utilitySqSum;
+    
+    // * get the minimaxValue of child here
+    double minimaxValue = child->stats.minimaxValue; // !!dv
     child->statsLock.clear(std::memory_order_release);
 
     if(childVisits <= 0)
@@ -1984,6 +2009,9 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySums[numGoodChildren] = utilitySum;
     utilitySqSums[numGoodChildren] = utilitySqSum;
     selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
+    // TODO: record minimaxValue of each child here, should change based on which player it is
+    // minimaxValues[numGoodChildren] = node.nextPla == P_WHITE ? minimaxValue : 1.0-minimaxValue; // !!dv
+    minimaxValues[numGoodChildren] = 1.0-minimaxValue; // !!dv
     weightSums[numGoodChildren] = weightSum;
     weightSqSums[numGoodChildren] = weightSqSum;
     visits[numGoodChildren] = childVisits;
@@ -2021,6 +2049,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double utilitySum = 0.0;
   double utilitySqSum = 0.0;
   double weightSum = 0.0;
+  double minimaxValue = 0.0; // !!dv
   double weightSqSum = 0.0;
   for(int i = 0; i<numGoodChildren; i++) {
     if(visits[i] < amountToPrune)
@@ -2042,6 +2071,10 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySum += weightScaling * utilitySums[i];
     utilitySqSum += weightScaling * utilitySqSums[i];
     weightSum += desiredWeight;
+    // std::max(1, 9999) // or use this
+    if(minimaxValue < minimaxValues[i])
+      minimaxValue = minimaxValues[i]; // !!dv
+    // minimaxValue += desiredWeight; 
     weightSqSum += weightScaling * weightScaling * weightSqSums[i];
   }
 
@@ -2063,7 +2096,8 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double lead = (double)node.nnOutput->whiteLead;
     double utility =
       getResultUtility(winProb, noResultProb)
-      + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
+      // + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
+      + getScoreUtility(scoreMean, scoreMeanSq, 1.0, 1.0); // !!dv
 
     if(searchParams.subtreeValueBiasFactor != 0 && node.subtreeValueBiasTableEntry != nullptr) {
       SubtreeValueBiasEntry& entry = *(node.subtreeValueBiasTableEntry);
@@ -2110,10 +2144,13 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySum += utility * desiredWeight;
     utilitySqSum += utility * utility * desiredWeight;
     weightSum += desiredWeight;
+    // * Note: not adding the direct evaluation to the node here
+    // minimaxValue += desiredWeight; // !!dv
     weightSqSum += desiredWeight * desiredWeight;
   }
 
   while(node.statsLock.test_and_set(std::memory_order_acquire));
+  // * the final stat is set here
   node.stats.visits += numVisitsToAdd;
   //It's possible that these values are a bit wrong if there's a race and two threads each try to update this
   //each of them only having some of the latest updates for all the children. We just accept this and let the
@@ -2127,6 +2164,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.utilitySum = utilitySum;
   node.stats.utilitySqSum = utilitySqSum;
   node.stats.weightSum = weightSum;
+  node.stats.minimaxValue = minimaxValue; // !!dv
   node.stats.weightSqSum = weightSqSum;
   node.virtualLosses -= virtualLossesToSubtract;
   node.statsLock.clear(std::memory_order_release);
@@ -2148,7 +2186,8 @@ void Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft)
 void Search::addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal) {
   double utility =
     getResultUtility(winValue, noResultValue)
-    + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
+    // + getScoreUtility(scoreMean, scoreMeanSq, 1.0); 
+    + getScoreUtility(scoreMean, scoreMeanSq, 1.0, 1.0); // !!dv
 
   if(searchParams.subtreeValueBiasFactor != 0 && !isTerminal && node.subtreeValueBiasTableEntry != nullptr) {
     SubtreeValueBiasEntry& entry = *(node.subtreeValueBiasTableEntry);
@@ -2172,6 +2211,8 @@ void Search::addLeafValue(SearchNode& node, double winValue, double noResultValu
   node.stats.utilitySum += utility;
   node.stats.utilitySqSum += utility * utility;
   node.stats.weightSum += 1.0;
+  // !!dv
+  node.stats.minimaxValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
   node.stats.weightSqSum += 1.0;
   node.virtualLosses -= virtualLossesToSubtract;
   node.statsLock.clear(std::memory_order_release);
@@ -2291,7 +2332,7 @@ void Search::playoutDescend(
        thread.history.moveHistory.size() == rootHistory.moveHistory.size() + 1 &&
        node.prevMoveLoc == Board::PASS_LOC)
   ) {
-    if(thread.history.isNoResult) {
+    if(thread.history.isNoResult) { // TODO: check what thread.history.isNoResult means?
       double winValue = 0.0;
       double noResultValue = 1.0;
       double scoreMean = 0.0;

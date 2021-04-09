@@ -120,6 +120,7 @@ bool Search::getPlaySelectionValuesAlreadyLocked(
       while(node.statsLock.test_and_set(std::memory_order_acquire));
       double utilitySum = node.stats.utilitySum;
       double weightSum = node.stats.weightSum;
+      double minimaxValue = node.stats.minimaxValue; // !!dv
       node.statsLock.clear(std::memory_order_release);
       assert(weightSum > 0.0);
       parentUtility = utilitySum / weightSum;
@@ -282,6 +283,7 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
   double scoreMeanSum = child->stats.scoreMeanSum;
   double scoreMeanSqSum = child->stats.scoreMeanSqSum;
   double weightSum = child->stats.weightSum;
+  double minimaxValue = child->stats.minimaxValue; // !!dv
   double weightSqSum = child->stats.weightSqSum;
   child->statsLock.clear(std::memory_order_release);
 
@@ -298,7 +300,8 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
 
   double utilityNoBonus = utilitySum / weightSum;
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
-  double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+  // double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+  double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
   double utilityWithBonus = utilityNoBonus + utilityDiff;
   double selfUtility = parent.nextPla == P_WHITE ? utilityWithBonus : -utilityWithBonus;
 
@@ -395,6 +398,7 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   double scoreMeanSqSum = node.stats.scoreMeanSqSum;
   double leadSum = node.stats.leadSum;
   double weightSum = node.stats.weightSum;
+  double minimaxValue = node.stats.minimaxValue; // !!dv
   double utilitySum = node.stats.utilitySum;
   int64_t visits = node.stats.visits;
 
@@ -497,6 +501,7 @@ bool Search::shouldSuppressPassAlreadyLocked(const SearchNode* n) const {
     double scoreMeanSum = node.stats.scoreMeanSum;
     double leadSum = node.stats.leadSum;
     double weightSum = node.stats.weightSum;
+    double minimaxValue = node.stats.minimaxValue; // !!dv
     node.statsLock.clear(std::memory_order_release);
 
     if(numVisits <= 0 || weightSum <= 1e-10)
@@ -538,6 +543,7 @@ bool Search::shouldSuppressPassAlreadyLocked(const SearchNode* n) const {
     double scoreMeanSum = child->stats.scoreMeanSum;
     double leadSum = child->stats.leadSum;
     double weightSum = child->stats.weightSum;
+    double minimaxValue = child->stats.minimaxValue; // !!dv
     child->statsLock.clear(std::memory_order_release);
 
     //Too few visits - reject move
@@ -723,11 +729,13 @@ void Search::printRootEndingScoreValueBonus(ostream& out) const {
     double scoreMeanSum = child->stats.scoreMeanSum;
     double scoreMeanSqSum = child->stats.scoreMeanSqSum;
     double weightSum = child->stats.weightSum;
+    double minimaxValue = child->stats.minimaxValue; // !!dv
     child->statsLock.clear(std::memory_order_release);
 
     double utilityNoBonus = utilitySum / weightSum;
     double endingScoreBonus = getEndingWhiteScoreBonus(*rootNode,child);
-    double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    // double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
     double utilityWithBonus = utilityNoBonus + utilityDiff;
 
     out << Location::toString(child->prevMoveLoc,rootBoard) << " " << Global::strprintf(
@@ -831,6 +839,7 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   double scoreMeanSqSum = 0.0;
   double leadSum = 0.0;
   double weightSum = 0.0;
+  double minimaxValue = 0.0; // !!dv
   double weightSqSum = 0.0;
   double utilitySum = 0.0;
 
@@ -843,6 +852,7 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
     scoreMeanSqSum = child->stats.scoreMeanSqSum;
     leadSum = child->stats.leadSum;
     weightSum = child->stats.weightSum;
+    minimaxValue = child->stats.minimaxValue; // !!dv
     weightSqSum = child->stats.weightSqSum;
     utilitySum = child->stats.utilitySum;
     child->statsLock.clear(std::memory_order_release);
@@ -853,7 +863,8 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   data.numVisits = numVisits;
   if(weightSum <= 1e-30) {
     data.utility = fpuValue;
-    data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
+    // data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
+    data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0,1.0); // !!dv
     data.resultUtility = fpuValue - data.scoreUtility;
     data.winLossValue = searchParams.winLossUtilityFactor == 1.0 ? parentWinLossValue + (fpuValue - parentUtility) : 0.0;
     data.scoreMean = parentScoreMean;
@@ -963,6 +974,7 @@ void Search::getAnalysisData(
     double scoreMeanSqSum = node.stats.scoreMeanSqSum;
     double leadSum = node.stats.leadSum;
     double weightSum = node.stats.weightSum;
+    double minimaxValue = node.stats.minimaxValue; // !!dv
     node.statsLock.clear(std::memory_order_release);
     assert(weightSum > 0.0);
 
@@ -1176,6 +1188,7 @@ void Search::printTreeHelper(
       double scoreMeanSqSum = node.stats.scoreMeanSqSum;
       double utilitySqSum = node.stats.utilitySqSum;
       double weightSum = node.stats.weightSum;
+      double minimaxValue = node.stats.minimaxValue; // !!dv
       double weightSqSum = node.stats.weightSqSum;
       node.statsLock.clear(std::memory_order_release);
       sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f ", scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum);

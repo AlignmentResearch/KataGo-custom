@@ -2011,7 +2011,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
     // TODO: record minimaxValue of each child here, should change based on which player it is
     // minimaxValues[numGoodChildren] = node.nextPla == P_WHITE ? minimaxValue : 1.0-minimaxValue; // !!dv
-    minimaxValues[numGoodChildren] = 1.0-minimaxValue; // !!dv
+    minimaxValues[numGoodChildren] = 1.0 - minimaxValue; // !!dv
     weightSums[numGoodChildren] = weightSum;
     weightSqSums[numGoodChildren] = weightSqSum;
     visits[numGoodChildren] = childVisits;
@@ -2051,6 +2051,14 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double weightSum = 0.0;
   double minimaxValue = 0.0; // !!dv
   double weightSqSum = 0.0;
+
+  // * debug
+  // std::cout << "numGoodChildren: " << numGoodChildren << endl;
+  // std::cout << "minimaxValue: [ ";
+  // for (std::vector<double>::const_iterator i = minimaxValues.begin(); i != minimaxValues.end(); ++i)
+  //   {std::cout << minimaxValues[*i] << ' ';}
+  // std::cout << "]";
+
   for(int i = 0; i<numGoodChildren; i++) {
     if(visits[i] < amountToPrune)
       continue;
@@ -2072,6 +2080,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySqSum += weightScaling * utilitySqSums[i];
     weightSum += desiredWeight;
     // std::max(1, 9999) // or use this
+    // cout << "minimaxValue"
     if(minimaxValue < minimaxValues[i])
       minimaxValue = minimaxValues[i]; // !!dv
     // minimaxValue += desiredWeight; 
@@ -2213,6 +2222,11 @@ void Search::addLeafValue(SearchNode& node, double winValue, double noResultValu
   node.stats.weightSum += 1.0;
   // !!dv
   node.stats.minimaxValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
+  // * debug
+  cout << "node.stats.minimaxValue" << node.stats.minimaxValue << endl;
+  cout << "node.stats.winValueSum" << node.stats.winValueSum << endl;
+  // assert(node.stats.visits == 0);
+  assert(node.stats.visits == 1);
   node.stats.weightSqSum += 1.0;
   node.virtualLosses -= virtualLossesToSubtract;
   node.statsLock.clear(std::memory_order_release);

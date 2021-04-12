@@ -1183,15 +1183,18 @@ void Search::printTreeHelper(
       out << buf;
     }
 
-    if(options.printSqs_) {
+    // if(options.printSqs_) {
+    if(true) {
       while(node.statsLock.test_and_set(std::memory_order_acquire));
       double scoreMeanSqSum = node.stats.scoreMeanSqSum;
       double utilitySqSum = node.stats.utilitySqSum;
       double weightSum = node.stats.weightSum;
+      double winValueSum = node.stats.winValueSum;
       double minimaxValue = node.stats.minimaxValue; // !!dv
       double weightSqSum = node.stats.weightSqSum;
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f ", scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum);
+      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f WinValue %5.6f Mini %5.6f ", 
+      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum, winValueSum, minimaxValue);
       out << buf;
     }
 

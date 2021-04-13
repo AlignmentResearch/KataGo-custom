@@ -38,6 +38,10 @@ struct ReportedSearchValues {
   double utility;
   int64_t visits;
 
+  double minimaxValue;
+  double attackValue;
+  double effectiveWinValue;
+
   ReportedSearchValues();
   ~ReportedSearchValues();
 };
@@ -54,6 +58,8 @@ struct NodeStats {
   double weightSum;
   double weightSqSum;
   // !!dv
+  double attackValue;
+  double effectiveWinValue;
   double minimaxValue;
 
   NodeStats();
@@ -129,7 +135,6 @@ struct SearchThread {
 
   std::vector<double> weightFactorBuf;
   std::vector<double> weightBuf;
-  std::vector<double> minimaxBuf; // !!dv
   std::vector<double> weightSqBuf;
   std::vector<double> winValuesBuf;
   std::vector<double> noResultValuesBuf;
@@ -140,6 +145,10 @@ struct SearchThread {
   std::vector<double> utilitySqBuf;
   std::vector<double> selfUtilityBuf;
   std::vector<int64_t> visitsBuf;
+
+  std::vector<double> attackValuesBuf;
+  std::vector<double> effectiveWinValuesBuf;
+  std::vector<double> minimaxBuf; // !!dv
 
   double upperBoundVisitsLeft;
 

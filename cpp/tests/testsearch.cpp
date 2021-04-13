@@ -257,7 +257,7 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
       // cout << "runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);" << endl;
       // runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);
       cout << "----------------------------------------" << endl;
-      cout << "runBotOnSgf(bot, sgfStr, rules, 102, 7.5, opts);" << endl;
+      cout << "runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);" << endl;
       runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);
       std::cout << endl << endl;
     }

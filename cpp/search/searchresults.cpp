@@ -393,6 +393,8 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
 
   while(node.statsLock.test_and_set(std::memory_order_acquire));
   double winValueSum = node.stats.winValueSum;
+  double attackValue = node.stats.attackValue;
+  double effectiveWinValue = node.stats.effectiveWinValue; // !!dv
   double noResultValueSum = node.stats.noResultValueSum;
   double scoreMeanSum = node.stats.scoreMeanSum;
   double scoreMeanSqSum = node.stats.scoreMeanSqSum;
@@ -407,7 +409,11 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   if(weightSum <= 0.0)
     return false;
 
-  values.winValue = winValueSum / weightSum;
+  values.minimaxValue = minimaxValue;
+  values.attackValue = attackValue;
+  // values.effectiveWinValue = effectiveWinValue; // !!dv
+
+  values.winValue = winValueSum / weightSum;  
   values.lossValue = (weightSum - winValueSum - noResultValueSum) / weightSum;
   values.noResultValue = noResultValueSum / weightSum;
   double scoreMean = scoreMeanSum / weightSum;
@@ -422,6 +428,10 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
 
   //Perform a little normalization - due to tiny floating point errors, winValue and lossValue could be outside [0,1].
   //(particularly lossValue, as it was produced by subtractions from weightSum that could have lost precision).
+  if(values.minimaxValue < 0.0) values.minimaxValue = 0.0;
+  if(values.attackValue < 0.0) values.attackValue = 0.0;
+  if(values.effectiveWinValue < 0.0) values.effectiveWinValue = 0.0; // !!dv
+
   if(values.winValue < 0.0) values.winValue = 0.0;
   if(values.lossValue < 0.0) values.lossValue = 0.0;
   if(values.noResultValue < 0.0) values.noResultValue = 0.0;
@@ -1190,11 +1200,14 @@ void Search::printTreeHelper(
       double utilitySqSum = node.stats.utilitySqSum;
       double weightSum = node.stats.weightSum;
       double winValueSum = node.stats.winValueSum;
+      double attackValue = node.stats.attackValue;
+      double effectiveWinValue = node.stats.effectiveWinValue;
       double minimaxValue = node.stats.minimaxValue; // !!dv
       double weightSqSum = node.stats.weightSqSum;
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f WinValue %5.6f Mini %5.6f ", 
-      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum, winValueSum, minimaxValue);
+      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f WVSum %5.6f WVAvg %5.6f ", 
+      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum, winValueSum, winValueSum/weightSum);
+      sprintf(buf,"Attack %5.6f EffeMCTS %5.6f Mini %5.6f ", attackValue, effectiveWinValue, minimaxValue);
       out << buf;
     }
 

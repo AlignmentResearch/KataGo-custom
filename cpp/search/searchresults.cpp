@@ -65,6 +65,7 @@ bool Search::getPlaySelectionValuesAlreadyLocked(
   //Note: lcbBuf is signed from the player to move's perspective
   double lcbBuf[NNPos::MAX_NN_POLICY_SIZE], double radiusBuf[NNPos::MAX_NN_POLICY_SIZE]
 ) const {
+  
   locs.clear();
   playSelectionValues.clear();
   if(retVisitCounts != NULL)
@@ -120,7 +121,6 @@ bool Search::getPlaySelectionValuesAlreadyLocked(
       while(node.statsLock.test_and_set(std::memory_order_acquire));
       double utilitySum = node.stats.utilitySum;
       double weightSum = node.stats.weightSum;
-      double minimaxValue = node.stats.minimaxValue; // !!dv
       node.statsLock.clear(std::memory_order_release);
       assert(weightSum > 0.0);
       parentUtility = utilitySum / weightSum;
@@ -283,7 +283,6 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
   double scoreMeanSum = child->stats.scoreMeanSum;
   double scoreMeanSqSum = child->stats.scoreMeanSqSum;
   double weightSum = child->stats.weightSum;
-  double minimaxValue = child->stats.minimaxValue; // !!dv
   double weightSqSum = child->stats.weightSqSum;
   child->statsLock.clear(std::memory_order_release);
 
@@ -300,8 +299,7 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
 
   double utilityNoBonus = utilitySum / weightSum;
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
-  // double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
-  double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
+  double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
   double utilityWithBonus = utilityNoBonus + utilityDiff;
   double selfUtility = parent.nextPla == P_WHITE ? utilityWithBonus : -utilityWithBonus;
 
@@ -465,9 +463,35 @@ Loc Search::getChosenMoveLoc() {
 
   double temperature = interpolateEarly(
     searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
-  );
-
+  ); 
   uint32_t idxChosen = chooseIndexWithTemperature(nonSearchRand, playSelectionValues.data(), playSelectionValues.size(), temperature);
+
+  // std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
+  // lock_guard<std::mutex> lock(mutex);
+  
+  // SearchNode* node = rootNode;
+  // int numChildren = node->numChildren;
+  // int numGoodChildren = 0;
+  // for(int i = 0; i<numChildren; i++) {
+  //   const SearchNode* child = node->children[i];
+
+  //   while(child->statsLock.test_and_set(std::memory_order_acquire));
+  //   int64_t childVisits = child->stats.visits;
+  //   double weightSum = child->stats.weightSum;
+    
+  //   // * get the minimaxValue, attackValue of the child here
+  //   double minimaxValue = child->stats.minimaxValue; // !!dv
+  //   double attackValue = child->stats.attackValue;
+  //   double effectiveWinValue = child->stats.effectiveWinValue;
+  //   child->statsLock.clear(std::memory_order_release);
+
+  //   if(childVisits <= 0)
+  //     continue;
+  //   assert(weightSum > 0.0);
+  //   numGoodChildren++;
+  // }
+  // lock.unlock();
+  
   return locs[idxChosen];
 }
 
@@ -511,7 +535,6 @@ bool Search::shouldSuppressPassAlreadyLocked(const SearchNode* n) const {
     double scoreMeanSum = node.stats.scoreMeanSum;
     double leadSum = node.stats.leadSum;
     double weightSum = node.stats.weightSum;
-    double minimaxValue = node.stats.minimaxValue; // !!dv
     node.statsLock.clear(std::memory_order_release);
 
     if(numVisits <= 0 || weightSum <= 1e-10)
@@ -744,8 +767,7 @@ void Search::printRootEndingScoreValueBonus(ostream& out) const {
 
     double utilityNoBonus = utilitySum / weightSum;
     double endingScoreBonus = getEndingWhiteScoreBonus(*rootNode,child);
-    // double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
-    double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, minimaxValue, endingScoreBonus); // !!dv
+    double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
     double utilityWithBonus = utilityNoBonus + utilityDiff;
 
     out << Location::toString(child->prevMoveLoc,rootBoard) << " " << Global::strprintf(
@@ -765,7 +787,9 @@ void Search::appendPVForMove(vector<Loc>& buf, vector<int64_t>& visitsBuf, vecto
     return;
 
   for(int depth = 0; depth < maxDepth; depth++) {
-    bool success = getPlaySelectionValues(*n, scratchLocs, scratchValues, NULL, 1.0, false);
+    bool success = getPlaySelectionValues(*n, scratchLocs, scratchValues, NULL, 1.0, false); 
+    // * vector<Loc>& scratchLocs, vector<double>& scratchValues -- arrays; 
+    
     if(!success)
       return;
 
@@ -873,8 +897,7 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   data.numVisits = numVisits;
   if(weightSum <= 1e-30) {
     data.utility = fpuValue;
-    // data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
-    data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0,1.0); // !!dv
+    data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
     data.resultUtility = fpuValue - data.scoreUtility;
     data.winLossValue = searchParams.winLossUtilityFactor == 1.0 ? parentWinLossValue + (fpuValue - parentUtility) : 0.0;
     data.scoreMean = parentScoreMean;
@@ -984,7 +1007,6 @@ void Search::getAnalysisData(
     double scoreMeanSqSum = node.stats.scoreMeanSqSum;
     double leadSum = node.stats.leadSum;
     double weightSum = node.stats.weightSum;
-    double minimaxValue = node.stats.minimaxValue; // !!dv
     node.statsLock.clear(std::memory_order_release);
     assert(weightSum > 0.0);
 
@@ -1192,22 +1214,31 @@ void Search::printTreeHelper(
       sprintf(buf,"PSV %7.0f ", data.playSelectionValue);
       out << buf;
     }
-
-    // if(options.printSqs_) {
+    
+    // * printing values of interest for checking
     if(true) {
       while(node.statsLock.test_and_set(std::memory_order_acquire));
-      double scoreMeanSqSum = node.stats.scoreMeanSqSum;
-      double utilitySqSum = node.stats.utilitySqSum;
       double weightSum = node.stats.weightSum;
       double winValueSum = node.stats.winValueSum;
       double attackValue = node.stats.attackValue;
       double effectiveWinValue = node.stats.effectiveWinValue;
       double minimaxValue = node.stats.minimaxValue; // !!dv
+      node.statsLock.clear(std::memory_order_release);
+      sprintf(buf,"WVSum %5.6f WVAvg %5.6f Attack %5.6f EffeMCTS %5.6f Mini %5.6f ",
+      winValueSum, winValueSum/weightSum, attackValue, effectiveWinValue, minimaxValue);
+      out << buf;
+    }
+
+    if(options.printSqs_) {
+    // if(true) {
+      while(node.statsLock.test_and_set(std::memory_order_acquire));
+      double scoreMeanSqSum = node.stats.scoreMeanSqSum;
+      double utilitySqSum = node.stats.utilitySqSum;
+      double weightSum = node.stats.weightSum;
       double weightSqSum = node.stats.weightSqSum;
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f WVSum %5.6f WVAvg %5.6f ", 
-      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum, winValueSum, winValueSum/weightSum);
-      sprintf(buf,"Attack %5.6f EffeMCTS %5.6f Mini %5.6f ", attackValue, effectiveWinValue, minimaxValue);
+      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f", 
+      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum);
       out << buf;
     }
 

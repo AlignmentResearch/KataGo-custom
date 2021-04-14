@@ -2242,9 +2242,12 @@ void Search::addLeafValue(SearchNode& node, double winValue, double noResultValu
   node.stats.weightSum += 1.0;
   node.stats.weightSqSum += 1.0;
   
-  node.stats.attackValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
-  node.stats.effectiveWinValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
-  node.stats.minimaxValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue; // !!dv
+  // node.stats.attackValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
+  // node.stats.effectiveWinValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
+  // node.stats.minimaxValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue; // !!dv
+  node.stats.attackValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
+  node.stats.effectiveWinValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
+  node.stats.minimaxValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue; // !!dv
 
   // * debug
   // string player = node.nextPla == P_WHITE ? "Black" : "White";

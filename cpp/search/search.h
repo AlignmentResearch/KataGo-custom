@@ -394,11 +394,8 @@ private:
   );
   double recomputeSearchTimeLimit(const TimeControls& tc, double timeUsed, double searchFactor, int64_t rootVisits);
 
-  // double getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const;
-  // double getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const;
-  // !!dv
-  double getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double minimaxValue) const;
-  double getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double minimaxValue, double delta) const;
+  double getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const;
+  double getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const;
   double getUtilityFromNN(const NNOutput& nnOutput) const;
 
   //Parent must be locked

@@ -464,34 +464,45 @@ Loc Search::getChosenMoveLoc() {
   double temperature = interpolateEarly(
     searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
   ); 
-  uint32_t idxChosen = chooseIndexWithTemperature(nonSearchRand, playSelectionValues.data(), playSelectionValues.size(), temperature);
+  // uint32_t idxChosen = chooseIndexWithTemperature(nonSearchRand, playSelectionValues.data(), playSelectionValues.size(), temperature);
 
-  // std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
-  // lock_guard<std::mutex> lock(mutex);
+  // * implement the go attack here
+  vector<double> playAttackValues;
+  SearchNode& node = *rootNode;
+
+  std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
+  lock_guard<std::mutex> lock(mutex);
   
-  // SearchNode* node = rootNode;
-  // int numChildren = node->numChildren;
+  int numChildren = node.numChildren;
   // int numGoodChildren = 0;
-  // for(int i = 0; i<numChildren; i++) {
-  //   const SearchNode* child = node->children[i];
+  for(int i = 0; i<numChildren; i++) {
+    const SearchNode* child = node.children[i];
 
-  //   while(child->statsLock.test_and_set(std::memory_order_acquire));
-  //   int64_t childVisits = child->stats.visits;
-  //   double weightSum = child->stats.weightSum;
-    
-  //   // * get the minimaxValue, attackValue of the child here
-  //   double minimaxValue = child->stats.minimaxValue; // !!dv
-  //   double attackValue = child->stats.attackValue;
-  //   double effectiveWinValue = child->stats.effectiveWinValue;
-  //   child->statsLock.clear(std::memory_order_release);
 
-  //   if(childVisits <= 0)
-  //     continue;
-  //   assert(weightSum > 0.0);
-  //   numGoodChildren++;
-  // }
-  // lock.unlock();
-  
+    while(child->statsLock.test_and_set(std::memory_order_acquire));
+    int64_t childVisits = child->stats.visits;
+    double weightSum = child->stats.weightSum;
+    // * get the minimaxValue, attackValue of the child here
+    double minimaxValue = child->stats.minimaxValue; // !!dv
+    double attackValue = child->stats.attackValue;
+    double effectiveWinValue = child->stats.effectiveWinValue;
+    child->statsLock.clear(std::memory_order_release);
+    playAttackValues.push_back(attackValue);
+    if(childVisits <= 0)
+      continue;
+    assert(weightSum > 0.0);
+    // numGoodChildren++;
+  }
+  // Find the best child by attack values
+  uint32_t idxChosen = 0;
+  double mostAttackValue = -1e30;
+  for(int i = 0; i<numChildren; i++) {
+    double value = playAttackValues[i];
+    if(value > mostAttackValue) {
+      mostAttackValue = value;
+      idxChosen = i;
+    }
+  }
   return locs[idxChosen];
 }
 

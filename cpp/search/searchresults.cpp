@@ -487,13 +487,14 @@ Loc Search::getChosenMoveLoc() {
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
     child->statsLock.clear(std::memory_order_release);
-    playAttackValues.push_back(attackValue);
+    playAttackValues.push_back(1.0 - effectiveWinValue);
+    // playAttackValues.push_back(attackValue);
     if(childVisits <= 0)
       continue;
     assert(weightSum > 0.0);
     // numGoodChildren++;
   }
-  // Find the best child by attack values
+  // Find the best child by attack values, here its 1.0 - EffectiveMCTS
   uint32_t idxChosen = 0;
   double mostAttackValue = -1e30;
   for(int i = 0; i<numChildren; i++) {

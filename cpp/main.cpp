@@ -174,11 +174,13 @@ int main(int argc, const char* argv[]) {
 
 
 string Version::getKataGoVersion() {
-  return string("1.8.1");
+  // return string("1.8.1");  
+  return string("custom");
 }
 
 string Version::getKataGoVersionForHelp() {
-  return string("KataGo v1.8.1");
+  // return string("KataGo v1.8.1");  
+  return string("KataGo-custom");
 }
 
 string Version::getKataGoVersionFullInfo() {

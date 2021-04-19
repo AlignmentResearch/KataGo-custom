@@ -360,6 +360,9 @@ vector<SearchParams> Setup::loadParams(
     SearchParams params;
 
     string idxStr = Global::intToString(i);
+    // ! Yawen added
+    if(cfg.contains("visitsThreshold2Attack"+idxStr)) params.visitsThreshold2Attack = cfg.getInt64("visitsThreshold2Attack"+idxStr, (int64_t)0, (int64_t)10e8);
+    else if(cfg.contains("visitsThreshold2Attack"))   params.visitsThreshold2Attack = cfg.getInt64("visitsThreshold2Attack",        (int64_t)0, (int64_t)10e8);
 
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayouts"))   params.maxPlayouts = cfg.getInt64("maxPlayouts",        (int64_t)1, (int64_t)1 << 50);

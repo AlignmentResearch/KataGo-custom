@@ -502,16 +502,32 @@ Loc Search::getChosenMoveLoc() {
     winValueAvgVec.push_back(winValueSum/weightSum);
     // numGoodChildren++;
   }
-  uint32_t idxChosenAttackValue = std::max_element(playAttackValues.begin(), playAttackValues.end()) - playAttackValues.begin();
+
+  // * Find the best child by attack value above visitsThreshold2Attack
+  int idxChosenAttackValue = 0;
+  double chosenMaxAttackValue = -1e30;
+  for(int i = 0; i<numChildren; i++) {
+    double value = playAttackValues[i];
+    double visits = childVisitsVec[i];
+    if(value > chosenMaxAttackValue && visits >= searchParams.visitsThreshold2Attack) {
+      chosenMaxAttackValue = value;
+      idxChosenAttackValue = i;
+    }
+  }
+  
+  // uint32_t idxChosenAttackValue = std::max_element(playAttackValues.begin(), playAttackValues.end()) - playAttackValues.begin();
 
   Loc maxAttackValueLoc = locs[idxChosenAttackValue];
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
+  // select location
+  Loc chosenLoc = maxAttackValueLoc;
 
   // * print PSV, attackValue for checking
   Board new_board;
   moveSelectOut.str(""); // empty the string
   moveSelectOut << "\n---------------------------\n";
+  moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   for(int i = 0; i<locs.size(); i++) {
     moveSelectOut << "Move: " << Location::toString(locs[i], new_board);
     moveSelectOut << "\t\tN: " << childVisitsVec[i];
@@ -1367,7 +1383,6 @@ void Search::printTreeHelper(
 
 // !Yawen added
 void Search::printMoveSelect(ostream& out) const {
-  std::cout << moveSelectOut.str();
   out << moveSelectOut.str();
 }
 

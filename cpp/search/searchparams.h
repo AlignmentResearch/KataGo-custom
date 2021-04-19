@@ -5,6 +5,9 @@
 #include "../game/board.h"
 
 struct SearchParams {
+  // !Yawen added
+  int visitsThreshold2Attack;
+
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
   double staticScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at 0.

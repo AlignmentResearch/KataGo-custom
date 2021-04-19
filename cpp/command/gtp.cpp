@@ -1438,7 +1438,12 @@ int MainCmds::gtp(int argc, const char* const* argv) {
   else if(cfg.contains("logDir")) {
     MakeDir::make(cfg.getString("logDir"));
     Rand rand;
-    logger.addFile(cfg.getString("logDir") + "/" + DateTime::getCompactDateTimeString() + "-" + Global::uint32ToHexString(rand.nextUInt()) + ".log");
+    string logStr = cfg.getString("logDir") + "/" + DateTime::getCompactDateTimeString();
+    if(cfg.contains("player"))
+      logStr += "-custom-" + cfg.getString("player") + ".log";
+    else
+      logStr += "-custom-" + Global::uint32ToHexString(rand.nextUInt()) + ".log";
+    logger.addFile(logStr);
   }
 
   const bool logAllGTPCommunication = cfg.getBool("logAllGTPCommunication");

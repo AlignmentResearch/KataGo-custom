@@ -840,6 +840,10 @@ void PlayUtils::printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvalu
   out << "\n";
   out << "Tree:\n";
   search->printTree(out, search->rootNode, PrintTreeOptions().maxDepth(1).maxChildrenToShow(10),perspective);
+  
+  // ! Yawen added
+  out << "Move Selection:\n";
+  search->printMoveSelect(out);
 }
 
 Rules PlayUtils::genRandomRules(Rand& rand) {

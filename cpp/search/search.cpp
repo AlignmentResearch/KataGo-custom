@@ -2100,7 +2100,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     weightSum += desiredWeight;
     weightSqSum += weightScaling * weightScaling * weightSqSums[i];
   }
-
+    
   //Also add in the direct evaluation of this node.
   {
     //Since we've scaled all the child weights in some arbitrary way, adjust and make sure
@@ -2193,7 +2193,32 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.weightSum = weightSum;
   node.stats.weightSqSum = weightSqSum;
   node.virtualLosses -= virtualLossesToSubtract;
-  node.statsLock.clear(std::memory_order_release);
+  // * debug
+  // double total_visits = node.stats.visits;
+  // if (effectiveWinValue > winValueSum/weightSum){
+  //     cout << "effectiveWinValue: " << effectiveWinValue << " winValueSum: " << winValueSum << " weightSum: " << weightSum << " total_visits: " << total_visits << endl;
+  //     double tmp_a = node.nextPla == P_WHITE ? winValueSum/total_visits : 1.0 - winValueSum/total_visits;
+  //     double tmp_b = node.nextPla == P_WHITE ? winValueSum/weightSum : 1.0 - winValueSum/weightSum;
+    
+  //     cout << "winValueSum/total_visits: " << tmp_a << endl;
+  //     cout << "winValueSum/weightSum: " << tmp_b << endl;
+
+  //     int numChildren = node.numChildren;
+  //     for(int i = 0; i<numChildren; i++){
+  //         cout << "Children Win Value Sum:" << node.children[i]->stats.winValueSum;
+  //     }
+  //     cout << endl;
+      
+  //     // PrintTreeOptions options;
+  //     // options = options.maxDepth(1);
+  //     // options = options.minVisitsPropToExpand(0.1).maxDepth(5);
+  //     // SearchNode* tmp_node = &node;
+  //     // this->printTree(cout, tmp_node, options, node.nextPla);
+
+  //     assert(effectiveWinValue <= winValueSum/weightSum);
+  //   }
+
+  node.statsLock.clear(std::memory_order_release); 
 }
 
 void Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {

@@ -288,6 +288,12 @@ struct Search {
 
   //Choose a move at the root of the tree, with randomization, if possible.
   //Might return Board::NULL_LOC if there is no root.
+  
+  // * For attack
+  // !Yawen added
+  std::ostringstream moveSelectOut; // record the move selection process string for printing
+  int visitsThreshold2Attack;
+
   Loc getChosenMoveLoc();
   //Get the vector of values (e.g. modified visit counts) used to select a move.
   //Does take into account chosenMoveSubtract but does NOT apply temperature.
@@ -334,6 +340,9 @@ struct Search {
   void printPV(std::ostream& out, const SearchNode* node, int maxDepth) const;
   void printPVForMove(std::ostream& out, const SearchNode* node, Loc move, int maxDepth) const;
   void printTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const;
+
+  void printMoveSelect(std::ostream& out) const;
+
   void printRootPolicyMap(std::ostream& out) const;
   void printRootOwnershipMap(std::ostream& out, Player perspective) const;
   void printRootEndingScoreValueBonus(std::ostream& out) const;

@@ -510,32 +510,40 @@ Loc Search::getChosenMoveLoc() {
 
   // * print PSV, attackValue for checking
   Board new_board;
-  cout << "\n---------------------------\n";
+  moveSelectOut.str(""); // empty the string
+  moveSelectOut << "\n---------------------------\n";
   for(int i = 0; i<locs.size(); i++) {
-    cout << "Move: \t" << Location::toString(locs[i], new_board);
-    cout << "\tN: " << childVisitsVec[i];
-    cout << "\tPAV: " << playAttackValues[i];
-    cout << "\tPSV: " << playSelectionValues[i];
-    cout << "\tPSVTemp: " << playSelectionValues[i];
-    cout << "\tWVAvg: " << winValueAvgVec[i];
+    moveSelectOut << "Move: " << Location::toString(locs[i], new_board);
+    moveSelectOut << "\t\tN: " << childVisitsVec[i];
+    moveSelectOut << "\tPAV: " << playAttackValues[i];
+    moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
+    moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
+    moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
     if(i == idxChosenAttackValue)
-      cout << " (PAV)";
+      moveSelectOut << " (PAV)";
     if(i == idxChosenPSVDet)
-      cout << " (PSV)";
+      moveSelectOut << " (PSV)";
     if(i == idxChosenPSVTemp)
-      cout << " (PSVTemp)";
-    cout << endl;
+      moveSelectOut << " (PSVTemp)";
+    moveSelectOut << endl;
   }
-  // cout << "\nFinal Move Chosen --  ";
-  // cout << "maxAttackValueLoc: \[" << idxChosenAttackValue << "\] = " << Location::toString(maxAttackValueLoc, new_board);
-  // cout << "maxPlaySelectionValueLoc: \[" << idxChosenPSVDet << "\] = " << Location::toString(maxPlaySelectionValueLoc, new_board);
-  // cout << "PSVTempLoc: \[" << idxChosenPSVTemp << "\] = " << Location::toString(PSVTempLoc, new_board);
-  
-  // 1) 
-  // if N < 100 (or other num)
-  // attack value = winValue 
-  // 2) 
-  // 
+
+  if(idxChosenAttackValue != idxChosenPSVDet){
+    moveSelectOut << "\n--- Flag: Exploited maxAttackValue Move\n";
+    moveSelectOut << "Move: " << Location::toString(locs[idxChosenAttackValue], new_board);
+    moveSelectOut << "\tN: " << childVisitsVec[idxChosenAttackValue];
+    moveSelectOut << "\tPAV: " << playAttackValues[idxChosenAttackValue];
+    moveSelectOut << "\t\tPSV: " << playSelectionValues[idxChosenAttackValue];
+    moveSelectOut << "\tPSVTemp: " << playSelectionValues[idxChosenAttackValue];
+    moveSelectOut << "\tWVAvg: " << winValueAvgVec[idxChosenAttackValue];
+    if(idxChosenAttackValue == idxChosenAttackValue)
+      moveSelectOut << " (PAV)";
+    if(idxChosenAttackValue == idxChosenPSVDet)
+      moveSelectOut << " (PSV)";
+    if(idxChosenAttackValue == idxChosenPSVTemp)
+      moveSelectOut << " (PSVTemp)";
+    moveSelectOut << endl;
+  }
 
   return maxAttackValueLoc;
 }
@@ -1357,6 +1365,11 @@ void Search::printTreeHelper(
   }
 }
 
+// !Yawen added
+void Search::printMoveSelect(ostream& out) const {
+  std::cout << moveSelectOut.str();
+  out << moveSelectOut.str();
+}
 
 vector<double> Search::getAverageTreeOwnership(int64_t minVisits, const SearchNode* node) const {
   if(node == NULL)

@@ -380,7 +380,6 @@ bool Search::getNodeRawNNValues(const SearchNode& node, ReportedSearchValues& va
   return true;
 }
 
-
 bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values) const {
   std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
   unique_lock<std::mutex> lock(mutex);
@@ -453,8 +452,13 @@ Loc Search::getChosenMoveLoc() {
   if(rootNode == NULL)
     return Board::NULL_LOC;
 
+  // * Original move according to the playSelectionValues
   vector<Loc> locs;
   vector<double> playSelectionValues;
+
+  vector<int> childVisitsVec;
+  vector<double> winValueAvgVec;
+
   bool suc = getPlaySelectionValues(locs,playSelectionValues,0.0);
   if(!suc)
     return Board::NULL_LOC;
@@ -464,9 +468,11 @@ Loc Search::getChosenMoveLoc() {
   double temperature = interpolateEarly(
     searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
   ); 
-  // uint32_t idxChosen = chooseIndexWithTemperature(nonSearchRand, playSelectionValues.data(), playSelectionValues.size(), temperature);
 
-  // * implement the go attack here
+  uint32_t idxChosenPSVDet = std::max_element(playSelectionValues.begin(), playSelectionValues.end()) - playSelectionValues.begin();
+  uint32_t idxChosenPSVTemp = chooseIndexWithTemperature(nonSearchRand, playSelectionValues.data(), playSelectionValues.size(), temperature);
+
+  // * New move according to the playAttackValues
   vector<double> playAttackValues;
   SearchNode& node = *rootNode;
 
@@ -478,33 +484,60 @@ Loc Search::getChosenMoveLoc() {
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = node.children[i];
 
-
     while(child->statsLock.test_and_set(std::memory_order_acquire));
+    // * get childVisits, weightSum, minimaxValue, attackValue, effectiveWinValue
     int64_t childVisits = child->stats.visits;
+    double winValueSum = child->stats.winValueSum;
     double weightSum = child->stats.weightSum;
-    // * get the minimaxValue, attackValue of the child here
+
     double minimaxValue = child->stats.minimaxValue; // !!dv
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
     child->statsLock.clear(std::memory_order_release);
-    playAttackValues.push_back(1.0 - effectiveWinValue);
-    // playAttackValues.push_back(attackValue);
     if(childVisits <= 0)
       continue;
     assert(weightSum > 0.0);
+    childVisitsVec.push_back(childVisits);
+    playAttackValues.push_back(1.0 - effectiveWinValue);
+    winValueAvgVec.push_back(winValueSum/weightSum);
     // numGoodChildren++;
   }
-  // Find the best child by attack values, here its 1.0 - EffectiveMCTS
-  uint32_t idxChosen = 0;
-  double mostAttackValue = -1e30;
-  for(int i = 0; i<numChildren; i++) {
-    double value = playAttackValues[i];
-    if(value > mostAttackValue) {
-      mostAttackValue = value;
-      idxChosen = i;
-    }
+  uint32_t idxChosenAttackValue = std::max_element(playAttackValues.begin(), playAttackValues.end()) - playAttackValues.begin();
+
+  Loc maxAttackValueLoc = locs[idxChosenAttackValue];
+  Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
+  Loc PSVTempLoc = locs[idxChosenPSVTemp];
+
+  // * print PSV, attackValue for checking
+  Board new_board;
+  cout << "\n---------------------------\n";
+  for(int i = 0; i<locs.size(); i++) {
+    cout << "Move: \t" << Location::toString(locs[i], new_board);
+    cout << "\tN: " << childVisitsVec[i];
+    cout << "\tPAV: " << playAttackValues[i];
+    cout << "\tPSV: " << playSelectionValues[i];
+    cout << "\tPSVTemp: " << playSelectionValues[i];
+    cout << "\tWVAvg: " << winValueAvgVec[i];
+    if(i == idxChosenAttackValue)
+      cout << " (PAV)";
+    if(i == idxChosenPSVDet)
+      cout << " (PSV)";
+    if(i == idxChosenPSVTemp)
+      cout << " (PSVTemp)";
+    cout << endl;
   }
-  return locs[idxChosen];
+  // cout << "\nFinal Move Chosen --  ";
+  // cout << "maxAttackValueLoc: \[" << idxChosenAttackValue << "\] = " << Location::toString(maxAttackValueLoc, new_board);
+  // cout << "maxPlaySelectionValueLoc: \[" << idxChosenPSVDet << "\] = " << Location::toString(maxPlaySelectionValueLoc, new_board);
+  // cout << "PSVTempLoc: \[" << idxChosenPSVTemp << "\] = " << Location::toString(PSVTempLoc, new_board);
+  
+  // 1) 
+  // if N < 100 (or other num)
+  // attack value = winValue 
+  // 2) 
+  // 
+
+  return maxAttackValueLoc;
 }
 
 //Hack to encourage well-behaved dame filling behavior under territory scoring

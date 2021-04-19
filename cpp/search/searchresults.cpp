@@ -504,8 +504,8 @@ Loc Search::getChosenMoveLoc() {
   }
 
   // * Find the best child by attack value above visitsThreshold2Attack
-  int idxChosenAttackValue = 0;
-  double chosenMaxAttackValue = -1e30;
+  int idxChosenAttackValue = idxChosenPSVDet;
+  double chosenMaxAttackValue = playAttackValues[idxChosenAttackValue];
   for(int i = 0; i<numChildren; i++) {
     double value = playAttackValues[i];
     double visits = childVisitsVec[i];
@@ -544,21 +544,23 @@ Loc Search::getChosenMoveLoc() {
     moveSelectOut << endl;
   }
 
-  if(idxChosenAttackValue != idxChosenPSVDet){
-    moveSelectOut << "\n--- Flag: Exploited maxAttackValue Move\n";
-    moveSelectOut << "Move: " << Location::toString(locs[idxChosenAttackValue], new_board);
-    moveSelectOut << "\tN: " << childVisitsVec[idxChosenAttackValue];
-    moveSelectOut << "\tPAV: " << playAttackValues[idxChosenAttackValue];
-    moveSelectOut << "\t\tPSV: " << playSelectionValues[idxChosenAttackValue];
-    moveSelectOut << "\tPSVTemp: " << playSelectionValues[idxChosenAttackValue];
-    moveSelectOut << "\tWVAvg: " << winValueAvgVec[idxChosenAttackValue];
-    if(idxChosenAttackValue == idxChosenAttackValue)
-      moveSelectOut << " (PAV)";
-    if(idxChosenAttackValue == idxChosenPSVDet)
-      moveSelectOut << " (PSV)";
-    if(idxChosenAttackValue == idxChosenPSVTemp)
-      moveSelectOut << " (PSVTemp)";
-    moveSelectOut << endl;
+  moveSelectOut << "\n--- Flag: Better attack value Moves to exploit\n";
+  for(int i = 0; i<locs.size(); i++) {
+    if(playAttackValues[i] >= playAttackValues[idxChosenPSVDet]){
+      moveSelectOut << "Move: " << Location::toString(locs[i], new_board);
+      moveSelectOut << "\tN: " << childVisitsVec[i];
+      moveSelectOut << "\tPAV: " << playAttackValues[i];
+      moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
+      moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
+      moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
+      if(i == idxChosenAttackValue)
+        moveSelectOut << " (PAV)";
+      if(i == idxChosenPSVDet)
+        moveSelectOut << " (PSV)";
+      if(i == idxChosenPSVTemp)
+        moveSelectOut << " (PSVTemp)";
+      moveSelectOut << endl;
+    }
   }
 
   return maxAttackValueLoc;

@@ -107,7 +107,12 @@ static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHi
     // ! Yawen added 
     // * getting json tree 
     cout << "\n ------ getJsonTree ------ " << endl;
-    search->getJsonTree(cout, search->rootNode, options, P_WHITE);
+    std::ifstream ifs("key.json");
+    json jf = json::parse(ifs);
+    search->getJsonTree(cout, search->rootNode, options, search->rootNode->nextPla, jf);
+    
+    std::ofstream file("key2.json");
+    file << jf;
 
     if(opts.printRootPolicy) {
       search->printRootPolicyMap(cout);
@@ -260,8 +265,8 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
       // cout << "runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);" << endl;
       // runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);
       cout << "----------------------------------------" << endl;
-      cout << "runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);" << endl;
-      runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);
+      cout << "runBotOnSgf(bot, sgfStr, rules, 102, 7.5, opts);" << endl;
+      runBotOnSgf(bot, sgfStr, rules, 102, 7.5, opts);
       std::cout << endl << endl;
     }
 

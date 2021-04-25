@@ -344,7 +344,7 @@ struct Search {
   void printTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const;
   
   // ! Yawen added
-  void getJsonTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const;
+  void getJsonTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective, json& ret) const;
   void printMoveSelect(std::ostream& out) const;
 
   void printRootPolicyMap(std::ostream& out) const;

@@ -1387,7 +1387,9 @@ void Search::printTreeHelper(
 }
 
 // !Yawen added
-void Search::getJsonTree(ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const {
+void Search::getJsonTree(ostream& out, const SearchNode* node, PrintTreeOptions options, 
+    Player perspective, json& ret
+) const {
   if(node == NULL)
     return;
   string prefix;
@@ -1412,13 +1414,8 @@ void Search::getJsonTree(ostream& out, const SearchNode* node, PrintTreeOptions 
   }
   perspective = (perspective != P_BLACK && perspective != P_WHITE) ? node->nextPla : perspective;
   
-  json ret;
   bool suc = getJsonTreeHelper(out, node, options, 0, 0, data, perspective, ret);
 
-  if (suc) {
-    std::ofstream file("key.json");
-    file << ret;
-  }
 }
 
 bool Search::getJsonTreeHelper(
@@ -1540,7 +1537,7 @@ bool Search::getJsonTreeHelper(
     if(depth < options.maxDepth_)
     {
       json moveInfo;
-      getJsonTreeHelper(out, child, options, origVisits, depth+1, analysisData[i], node.nextPla, moveInfo);
+      getJsonTreeHelper(out, child, options, origVisits, depth+1, analysisData[i], child->nextPla, moveInfo);
       moveInfos.push_back(moveInfo);
     }
   }

@@ -842,8 +842,19 @@ void PlayUtils::printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvalu
   search->printTree(out, search->rootNode, PrintTreeOptions().maxDepth(1).maxChildrenToShow(10),perspective);
   
   // ! Yawen added
+  // * print move selections
   out << "Move Selection:\n";
   search->printMoveSelect(out);
+
+  // // * getting json tree 
+  // std::ifstream ifs("key.json");
+  // json jf = json::parse(ifs);
+  // cout << "\n ------ getJsonTree ------ " << endl;
+  // search->getJsonTree(cout, search->rootNode, PrintTreeOptions().maxDepth(1), 
+  //     search->rootNode->nextPla, jf);
+
+  // std::ofstream file("key2.json");
+  // file << jf;
 }
 
 Rules PlayUtils::genRandomRules(Rand& rand) {

@@ -103,8 +103,9 @@ static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHi
     cout << "Tree:\n";
 
     search->printTree(cout, search->rootNode, options, P_WHITE);
+    cout << "\n ------ getJsonTree ------ " << endl;
+    search->getJsonTree(cout, search->rootNode, options, P_WHITE);
 
-    // printTreeStruct(cout, search->rootNode, board, 4);
 
     if(opts.printRootPolicy) {
       search->printRootPolicyMap(cout);
@@ -226,8 +227,8 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
 
     // * specify the search test options
     opts.numMovesInARow = 1;
-    opts.printRootPolicy = true;
-    opts.printEndingScoreValueBonus = true;
+    opts.printRootPolicy = false;
+    opts.printEndingScoreValueBonus = false;
     opts.printPlaySelectionValues = true;
     opts.noClearBot = false;
     opts.noClearCache = false;
@@ -270,7 +271,7 @@ static void runBasicPositions(NNEvaluator* nnEval, Logger& logger)
 {
   {
     SearchParams params;
-    params.maxVisits = 200;
+    params.maxVisits = 15;
     AsyncBot* bot = new AsyncBot(params, nnEval, &logger, getSearchRandSeed());
     Rules rules = Rules::getTrompTaylorish();
     TestSearchOptions opts;

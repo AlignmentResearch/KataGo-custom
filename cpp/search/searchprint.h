@@ -7,6 +7,7 @@ struct PrintTreeOptions {
   PrintTreeOptions();
 
   PrintTreeOptions maxDepth(int);
+  PrintTreeOptions maxPVDepth(int);
   PrintTreeOptions maxChildrenToShow(int);
   PrintTreeOptions minVisitsToShow(int64_t);
   PrintTreeOptions minVisitsToExpand(int64_t);
@@ -39,6 +40,9 @@ inline PrintTreeOptions::PrintTreeOptions()
    printSqs_(false),
    branch_()
 {}
+
+// ! Yawen added 
+inline PrintTreeOptions PrintTreeOptions::maxPVDepth(int d) { PrintTreeOptions other = *this; other.maxPVDepth_ = d; return other;}
 
 inline PrintTreeOptions PrintTreeOptions::maxDepth(int d) { PrintTreeOptions other = *this; other.maxDepth_ = d; return other;}
 inline PrintTreeOptions PrintTreeOptions::maxChildrenToShow(int c) { PrintTreeOptions other = *this; other.maxChildrenToShow_ = c; return other;}

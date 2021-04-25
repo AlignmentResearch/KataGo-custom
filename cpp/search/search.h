@@ -510,7 +510,7 @@ private:
   // ! Yawen added
   bool getJsonTreeHelper(
     std::ostream& out, const SearchNode* node, const PrintTreeOptions& options,
-    std::string& prefix, int64_t origVisits, int depth, const AnalysisData& data, 
+    int64_t origVisits, int depth, const AnalysisData& data, 
     Player perspective, json& ret
   ) const;
 

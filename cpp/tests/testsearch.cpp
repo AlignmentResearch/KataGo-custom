@@ -103,9 +103,11 @@ static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHi
     cout << "Tree:\n";
 
     search->printTree(cout, search->rootNode, options, P_WHITE);
+    
+    // ! Yawen added 
+    // * getting json tree 
     cout << "\n ------ getJsonTree ------ " << endl;
     search->getJsonTree(cout, search->rootNode, options, P_WHITE);
-
 
     if(opts.printRootPolicy) {
       search->printRootPolicyMap(cout);
@@ -233,7 +235,7 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
     opts.noClearBot = false;
     opts.noClearCache = false;
     opts.printMore = false;
-    opts.printMoreMoreMore = true;
+    opts.printMoreMoreMore = false;
     opts.printAfterBegun = true;
     opts.ignorePosition = false;
 

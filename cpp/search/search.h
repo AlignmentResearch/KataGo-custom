@@ -20,6 +20,8 @@
 
 #include "../external/nlohmann_json/json.hpp"
 
+using nlohmann::json;
+
 struct SearchNode;
 struct SearchThread;
 struct Search;
@@ -340,7 +342,9 @@ struct Search {
   void printPV(std::ostream& out, const SearchNode* node, int maxDepth) const;
   void printPVForMove(std::ostream& out, const SearchNode* node, Loc move, int maxDepth) const;
   void printTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const;
-
+  
+  // ! Yawen added
+  void getJsonTree(std::ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const;
   void printMoveSelect(std::ostream& out) const;
 
   void printRootPolicyMap(std::ostream& out) const;
@@ -501,6 +505,13 @@ private:
   void printTreeHelper(
     std::ostream& out, const SearchNode* node, const PrintTreeOptions& options,
     std::string& prefix, int64_t origVisits, int depth, const AnalysisData& data, Player perspective
+  ) const;
+
+  // ! Yawen added
+  bool getJsonTreeHelper(
+    std::ostream& out, const SearchNode* node, const PrintTreeOptions& options,
+    std::string& prefix, int64_t origVisits, int depth, const AnalysisData& data, 
+    Player perspective, json& ret
   ) const;
 
   double getAverageTreeOwnershipHelper(std::vector<double>& accum, int64_t minVisits, double desiredWeight, const SearchNode* node) const;

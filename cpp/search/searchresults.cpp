@@ -10,6 +10,9 @@
 #include "../core/fancymath.h"
 #include "../program/playutils.h"
 
+#include "../external/nlohmann_json/json.hpp"
+#include <fstream>
+
 using namespace std;
 using nlohmann::json;
 
@@ -1381,6 +1384,200 @@ void Search::printTreeHelper(
       prefix.erase(oldLen);
     }
   }
+}
+
+// !Yawen added
+void Search::getJsonTree(ostream& out, const SearchNode* node, PrintTreeOptions options, Player perspective) const {
+  if(node == NULL)
+    return;
+  string prefix;
+  AnalysisData data;
+  {
+    vector<Loc> scratchLocs;
+    vector<double> scratchValues;
+    //Use dummy values for parent
+    double policyProb = NAN;
+    double fpuValue = 0;
+    double parentUtility = 0;
+    double parentWinLossValue = 0;
+    double parentScoreMean = 0;
+    double parentScoreStdev = 0;
+    double parentLead = 0;
+    data = getAnalysisDataOfSingleChild(
+      node, scratchLocs, scratchValues,
+      (node == rootNode ? Board::NULL_LOC : node->prevMoveLoc), policyProb, fpuValue, parentUtility, parentWinLossValue,
+      parentScoreMean, parentScoreStdev, parentLead, options.maxPVDepth_
+    );
+    data.weightFactor = NAN;
+  }
+  perspective = (perspective != P_BLACK && perspective != P_WHITE) ? node->nextPla : perspective;
+  
+  json ret;
+  // bool success = getChildJson(out, node, options, prefix, 0, 0, data, perspective, ret);
+  bool success = getJsonTreeHelper(out, node, options, prefix, 0, 0, data, perspective, ret);
+  if(success){
+    std::ofstream file("key.json");
+    file << ret;
+  }
+}
+
+bool Search::getJsonTreeHelper(
+  ostream& out, const SearchNode* n, const PrintTreeOptions& options,
+  string& prefix, int64_t origVisits, int depth, const AnalysisData& data, 
+  Player perspective, json& ret
+) const {
+  if(n == NULL)
+    return true;
+
+  const SearchNode& node = *n;
+
+  Player perspectiveToUse = (perspective != P_BLACK && perspective != P_WHITE) ? n->nextPla : perspective;
+  double perspectiveFactor = perspectiveToUse == P_BLACK ? -1.0 : 1.0;
+
+  if(depth == 0)
+    origVisits = data.numVisits;
+
+  // ! hardcore some options for getting analysis data
+  const Board& board = rootBoard;
+  const BoardHistory& hist = rootHistory;
+  int analysisPVLen = 8;
+  int ownershipMinVisits = 2;
+  bool preventEncore = true;
+  bool includePolicy = true;
+  bool includeOwnership = true;
+  bool includeMovesOwnership = false;
+  bool includePVVisits = true;
+
+  double winrate = 0.5 * (1.0 + data.winLossValue);
+  double utility = data.utility;
+  double lcb = PlayUtils::getHackedLCBForWinrate(this, data, rootPla);
+  double utilityLcb = data.lcb;
+  double scoreMean = data.scoreMean;
+  double lead = data.lead;
+
+  // * subjective
+  if(perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && rootPla == P_BLACK)) {
+    winrate = 1.0 - winrate;
+    lcb = 1.0 - lcb;
+    utility = -utility;
+    scoreMean = -scoreMean;
+    lead = -lead;
+    utilityLcb = -utilityLcb;
+  }
+
+  // * getting the attack value
+  while(node.statsLock.test_and_set(std::memory_order_acquire));
+  double weightSum = node.stats.weightSum;
+  double winValueSum = node.stats.winValueSum;
+  double attackValue = node.stats.attackValue;
+  double effectiveWinValue = node.stats.effectiveWinValue;
+  double minimaxValue = node.stats.minimaxValue; // !!dv
+  node.statsLock.clear(std::memory_order_release);
+
+  json moveInfo;
+  string moveStr = Location::toString(data.move, board);
+  moveInfo["move"] = moveStr;
+  moveInfo["visits"] = data.numVisits;
+  moveInfo["utility"] = utility;
+  moveInfo["winrate"] = winrate;
+  moveInfo["scoreMean"] = lead;
+  moveInfo["scoreSelfplay"] = scoreMean;
+  moveInfo["scoreLead"] = lead;
+  moveInfo["scoreStdev"] = data.scoreStdev;
+  moveInfo["prior"] = data.policyPrior;
+  moveInfo["lcb"] = lcb;
+  moveInfo["utilityLcb"] = utilityLcb;
+  moveInfo["order"] = data.order;
+  moveInfo["weightSum"] = weightSum;
+  moveInfo["winValueSum"] = winValueSum;
+  moveInfo["attackValue"] = attackValue;
+  moveInfo["effectiveWinValue"] = effectiveWinValue;
+  moveInfo["minimaxValue"] = minimaxValue;
+
+  json pv = json::array();
+  int pvLen =
+    (preventEncore && data.pvContainsPass()) ? data.getPVLenUpToPhaseEnd(board, hist, rootPla) : (int)data.pv.size();
+  for(int j = 0; j < pvLen; j++)
+    pv.push_back(Location::toString(data.pv[j], board));
+  moveInfo["pv"] = pv;
+
+  if(includePVVisits) {
+    assert(data.pvVisits.size() >= pvLen);
+    json pvVisits = json::array();
+    for(int j = 0; j < pvLen; j++)
+      pvVisits.push_back(data.pvVisits[j]);
+    moveInfo["pvVisits"] = pvVisits;
+  }
+
+  // if(includeMovesOwnership)
+  //   moveInfo["ownership"] = getJsonOwnershipMap(rootPla, perspective, board, data.node, ownershipMinVisits);
+  
+  ret[moveStr] = moveInfo;
+
+  if(depth >= options.branch_.size()) {
+    if(depth >= options.maxDepth_ + options.branch_.size())
+      return true;
+    if(data.numVisits < options.minVisitsToExpand_)
+      return true;
+    if((double)data.numVisits < origVisits * options.minVisitsPropToExpand_)
+      return true;
+  }
+  if(depth == options.branch_.size()) {
+    out << "---" << PlayerIO::playerToString(node.nextPla) << "(" << (node.nextPla == perspectiveToUse ? "^" : "v") << ")---" << endl;
+  }
+
+  vector<AnalysisData> analysisData;
+  getAnalysisData(node,analysisData,0,true,options.maxPVDepth_);
+
+  int numChildren = analysisData.size();
+
+  //Apply filtering conditions, but include children that don't match the filtering condition
+  //but where there are children afterward that do, in case we ever use something more complex
+  //than plain visits as a filter criterion. Do this by finding the last child that we want as the threshold.
+  int lastIdxWithEnoughVisits = numChildren-1;
+  while(true) {
+    if(lastIdxWithEnoughVisits <= 0)
+      break;
+
+    int64_t childVisits = analysisData[lastIdxWithEnoughVisits].numVisits;
+    bool hasEnoughVisits = childVisits >= options.minVisitsToShow_
+      && (double)childVisits >= origVisits * options.minVisitsPropToShow_;
+    if(hasEnoughVisits)
+      break;
+    lastIdxWithEnoughVisits--;
+  }
+
+  int numChildrenToRecurseOn = numChildren;
+  if(options.maxChildrenToShow_ < numChildrenToRecurseOn)
+    numChildrenToRecurseOn = options.maxChildrenToShow_;
+  if(lastIdxWithEnoughVisits+1 < numChildrenToRecurseOn)
+    numChildrenToRecurseOn = lastIdxWithEnoughVisits+1;
+
+
+  for(int i = 0; i<numChildren; i++) {
+    const SearchNode* child = analysisData[i].node;
+    Loc moveLoc = child->prevMoveLoc;
+
+    // if((depth >= options.branch_.size() && i < numChildrenToRecurseOn) ||
+    //    (depth < options.branch_.size() && moveLoc == options.branch_[depth]))
+    if(depth < 2)
+    {
+      size_t oldLen = prefix.length();
+      string locStr = Location::toString(moveLoc,rootBoard);
+      if(locStr == "pass")
+        prefix += "pss";
+      else
+        prefix += locStr;
+      prefix += " ";
+      while(prefix.length() < oldLen+4)
+        prefix += " ";
+      getJsonTreeHelper(
+        out,child,options,prefix,origVisits,depth+1,analysisData[i], perspective, ret);
+      prefix.erase(oldLen);
+    }
+  }
+
+  return true;
 }
 
 // !Yawen added

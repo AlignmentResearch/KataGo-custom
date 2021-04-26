@@ -524,7 +524,7 @@ Loc Search::getChosenMoveLoc() {
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
   // select location
-  Loc chosenLoc = maxAttackValueLoc;
+  Loc chosenLoc = PSVTempLoc; // ! for KataGo-raw, the chosenLoc is the PSVTempLoc
   // * record the chosenLocStr
   chosenLocStr = Location::toString(chosenLoc, rootBoard);
 

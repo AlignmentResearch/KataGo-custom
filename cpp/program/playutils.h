@@ -145,6 +145,7 @@ namespace PlayUtils {
   );
 
   void printGenmoveLog(std::ostream& out, const AsyncBot* bot, const NNEvaluator* nnEval, Loc moveLoc, double timeTaken, Player perspective);
+  void recordJsonData(std::ostream& out, std::string& jsonPath, const AsyncBot* bot, Player perspective);
 
   Rules genRandomRules(Rand& rand);
 

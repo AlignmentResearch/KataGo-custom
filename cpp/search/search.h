@@ -293,6 +293,7 @@ struct Search {
   
   // * For attack
   // !Yawen added
+  std::string chosenLocStr;
   std::ostringstream moveSelectOut; // record the move selection process string for printing
   int visitsThreshold2Attack;
 

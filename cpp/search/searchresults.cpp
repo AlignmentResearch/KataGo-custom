@@ -525,14 +525,16 @@ Loc Search::getChosenMoveLoc() {
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
   // select location
   Loc chosenLoc = maxAttackValueLoc;
+  // * record the chosenLocStr
+  chosenLocStr = Location::toString(chosenLoc, rootBoard);
 
+  // ! Yawen added
   // * print PSV, attackValue for checking
-  Board new_board;
   moveSelectOut.str(""); // empty the string
   moveSelectOut << "\n---------------------------\n";
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   for(int i = 0; i<locs.size(); i++) {
-    moveSelectOut << "Move: " << Location::toString(locs[i], new_board);
+    moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
     moveSelectOut << "\t\tN: " << childVisitsVec[i];
     moveSelectOut << "\tPAV: " << playAttackValues[i];
     moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
@@ -550,7 +552,7 @@ Loc Search::getChosenMoveLoc() {
   moveSelectOut << "\n--- Flag: Better attack value Moves to exploit\n";
   for(int i = 0; i<locs.size(); i++) {
     if(playAttackValues[i] >= playAttackValues[idxChosenPSVDet]){
-      moveSelectOut << "Move: " << Location::toString(locs[i], new_board);
+      moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
       moveSelectOut << "\tN: " << childVisitsVec[i];
       moveSelectOut << "\tPAV: " << playAttackValues[i];
       moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
@@ -566,7 +568,7 @@ Loc Search::getChosenMoveLoc() {
     }
   }
 
-  return maxAttackValueLoc;
+  return chosenLoc;
 }
 
 //Hack to encourage well-behaved dame filling behavior under territory scoring
@@ -1415,13 +1417,12 @@ void Search::getJsonTree(ostream& out, const SearchNode* node, PrintTreeOptions 
   perspective = (perspective != P_BLACK && perspective != P_WHITE) ? node->nextPla : perspective;
   
   bool suc = getJsonTreeHelper(out, node, options, 0, 0, data, perspective, ret);
-
 }
 
 bool Search::getJsonTreeHelper(
   ostream& out, const SearchNode* n, const PrintTreeOptions& options,
   int64_t origVisits, int depth, const AnalysisData& data, 
-  Player perspective, json& ret
+  Player perspective, json& moveJson
 ) const {
 
   // ! hardcore some options for getting analysis data
@@ -1462,6 +1463,7 @@ bool Search::getJsonTreeHelper(
   while(node.statsLock.test_and_set(std::memory_order_acquire));
   double weightSum = node.stats.weightSum;
   double winValueSum = node.stats.winValueSum;
+  double winValueAvg = winValueSum/weightSum;
   double attackValue = node.stats.attackValue;
   double effectiveWinValue = node.stats.effectiveWinValue;
   double minimaxValue = node.stats.minimaxValue; // !!dv
@@ -1470,6 +1472,7 @@ bool Search::getJsonTreeHelper(
   // * getting each inter
   string moveStr = depth == 0 ? "Root" : Location::toString(data.move, board);
   json inter;
+  inter["prevMoveIdx"] = data.move;
   inter["prevMove"] = moveStr;
   inter["perspective"] = perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && rootPla == P_BLACK) ? "black" : "white";
   inter["visits"] = data.numVisits;
@@ -1478,8 +1481,9 @@ bool Search::getJsonTreeHelper(
   inter["scoreLead"] = lead;
   inter["scoreStdev"] = data.scoreStdev;
   inter["weightSum"] = weightSum;
-  inter["winValueSum"] = winValueSum;
-  inter["winValueAvg"] = winValueSum/weightSum;
+  inter["winValueSum(white)"] = winValueSum;
+  inter["winValueAvg(white)"] = winValueAvg;
+  inter["winValueAvg(black)"] = 1.0 - winValueAvg;
   inter["attackValue"] = attackValue;
   inter["effectiveWinValue"] = effectiveWinValue;
   inter["minimaxValue"] = minimaxValue;
@@ -1542,7 +1546,7 @@ bool Search::getJsonTreeHelper(
     }
   }
   inter["moveInfos"] = moveInfos;
-  ret[moveStr] = inter;
+  moveJson[moveStr] = inter;
   return true;
 }
 

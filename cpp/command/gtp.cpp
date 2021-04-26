@@ -10,8 +10,10 @@
 #include "../program/play.h"
 #include "../command/commandline.h"
 #include "../main.h"
+#include "../external/nlohmann_json/json.hpp"
 
 using namespace std;
+using nlohmann::json;
 
 static const vector<string> knownCommands = {
   //Basic GTP commands
@@ -299,6 +301,10 @@ struct GTPEngine {
   GTPEngine(const GTPEngine&) = delete;
   GTPEngine& operator=(const GTPEngine&) = delete;
 
+  // ! Yawen added
+  int gameIdxTrack;
+  string jsonTrackDir;
+
   const string nnModelFile;
   const bool assumeMultipleStartingBlackMovesAreHandicap;
   const int analysisPVLen;
@@ -344,7 +350,8 @@ struct GTPEngine {
     bool avoidDagger,
     double genmoveWRN, double analysisWRN,
     bool genmoveAntiMir, bool analysisAntiMir,
-    Player persp, int pvLen
+    Player persp, int pvLen,
+    string jsonDir, int gameIdx // ! Yawen added
   )
     :nnModelFile(modelFile),
      assumeMultipleStartingBlackMovesAreHandicap(assumeMultiBlackHandicap),
@@ -371,7 +378,9 @@ struct GTPEngine {
      desiredDynamicPDAForWhite(0.0),
      avoidMYTDaggerHack(avoidDagger),
      perspective(persp),
-     genmoveTimeSum(0.0)
+     genmoveTimeSum(0.0),
+     jsonTrackDir(jsonDir), // ! Yawen added
+     gameIdxTrack(gameIdx)
   {
   }
 
@@ -391,6 +400,16 @@ struct GTPEngine {
 
   void clearStatsForNewGame() {
     //Currently nothing
+  }
+
+  // ! Yawen added
+  // plus one for every game finished
+  void gameIdxPlusOne() {
+    gameIdxTrack += 1;
+  }
+
+  string getJsonFilePath(const Player& pla) {
+    return jsonTrackDir + "/game-" + to_string(gameIdxTrack) + "-" + PlayerIO::playerToString(pla) + ".json";
   }
 
   //Specify -1 for the sizes for a default
@@ -911,6 +930,12 @@ struct GTPEngine {
     if(logSearchInfo) {
       ostringstream sout;
       PlayUtils::printGenmoveLog(sout,bot,nnEval,moveLoc,timeTaken,perspective);
+      
+      // ! Yawen added
+      // TODO: adding storing json here
+      string jsonFilePath = getJsonFilePath(pla);
+      PlayUtils::recordJsonData(sout, jsonFilePath, bot, pla);
+
       logger.write(sout.str());
     }
     if(debug) {
@@ -1446,6 +1471,14 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     logger.addFile(logStr);
   }
 
+  // ! Yawen added
+  // * adding jsonDir monitoring folder file here
+  string jsonDir = "";
+  if(cfg.contains("jsonDir")) {
+    MakeDir::make(cfg.getString("jsonDir"));
+    jsonDir = cfg.getString("jsonDir");
+  }
+
   const bool logAllGTPCommunication = cfg.getBool("logAllGTPCommunication");
   const bool logSearchInfo = cfg.getBool("logSearchInfo");
   bool loggingToStderr = false;
@@ -1542,6 +1575,7 @@ int MainCmds::gtp(int argc, const char* const* argv) {
 
   Player perspective = Setup::parseReportAnalysisWinrates(cfg,C_EMPTY);
 
+  // ! Yawen added
   GTPEngine* engine = new GTPEngine(
     nnModelFile,initialParams,initialRules,
     assumeMultipleStartingBlackMovesAreHandicap,preventEncore,
@@ -1550,7 +1584,9 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     avoidMYTDaggerHack,
     genmoveWideRootNoise,analysisWideRootNoise,
     genmoveAntiMirror,analysisAntiMirror,
-    perspective,analysisPVLen
+    perspective,analysisPVLen, 
+    jsonDir, 0 // * counting from 0
+    // TODO: read gameIdx and input the right gameIdx here
   );
   engine->setOrResetBoardSize(cfg,logger,seedRand,defaultBoardXSize,defaultBoardYSize);
 
@@ -2463,6 +2499,9 @@ int MainCmds::gtp(int argc, const char* const* argv) {
         response = "W+" + Global::strprintf("%.1f",finalWhiteMinusBlackScore);
       else
         ASSERT_UNREACHABLE;
+      
+      // ! Yawen added
+      engine->gameIdxPlusOne(); // game finished, idx plus one
     }
 
     else if(command == "final_status_list") {

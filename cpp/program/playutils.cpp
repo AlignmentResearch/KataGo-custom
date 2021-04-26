@@ -1,6 +1,7 @@
 #include "../program/playutils.h"
 #include "../core/timer.h"
 
+#include <string>
 #include <sstream>
 
 using namespace std;
@@ -845,16 +846,29 @@ void PlayUtils::printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvalu
   // * print move selections
   out << "Move Selection:\n";
   search->printMoveSelect(out);
+}
 
-  // // * getting json tree 
-  // std::ifstream ifs("key.json");
-  // json jf = json::parse(ifs);
-  // cout << "\n ------ getJsonTree ------ " << endl;
-  // search->getJsonTree(cout, search->rootNode, PrintTreeOptions().maxDepth(1), 
-  //     search->rootNode->nextPla, jf);
-
-  // std::ofstream file("key2.json");
-  // file << jf;
+void PlayUtils::recordJsonData(ostream& out, string& jsonPath, const AsyncBot* bot, Player perspective) {
+  const Search* search = bot->getSearch();
+  const vector<Move>* hist = &(bot->getRootHist().moveHistory);
+  int moveNum = hist->size();
+  
+  // * Storing json into the data_logs
+  std::ifstream ifs(jsonPath);
+  json jf;
+  if (ifs){
+    jf = json::parse(ifs);
+    out << "\n ---- MoveNum: " << moveNum << " Updating " << jsonPath << " ---- " << endl;
+  }
+  else{
+    out << "\n ---- MoveNum: " << moveNum << " Initializing " << jsonPath << " ---- " << endl;
+  }
+  json dummy;
+  search->getJsonTree(cout, search->rootNode, PrintTreeOptions().maxDepth(1), perspective, dummy);
+  dummy["move"] = search->chosenLocStr;
+  jf["MoveNum-" + to_string(moveNum)] = dummy;
+  std::ofstream file(jsonPath);
+  file << jf;
 }
 
 Rules PlayUtils::genRandomRules(Rand& rand) {

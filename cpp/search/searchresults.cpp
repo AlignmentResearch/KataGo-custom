@@ -524,7 +524,7 @@ Loc Search::getChosenMoveLoc() {
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
   // select location
-  Loc chosenLoc = maxAttackValueLoc;
+  Loc chosenLoc = PSVTempLoc; // ! for KataGo-raw, the chosenLoc is the PSVTempLoc
   // * record the chosenLocStr
   chosenLocStr = Location::toString(chosenLoc, rootBoard);
 
@@ -549,24 +549,24 @@ Loc Search::getChosenMoveLoc() {
     moveSelectOut << endl;
   }
 
-  moveSelectOut << "\n--- Flag: Better attack value Moves to exploit\n";
-  for(int i = 0; i<locs.size(); i++) {
-    if(playAttackValues[i] >= playAttackValues[idxChosenPSVDet]){
-      moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
-      moveSelectOut << "\tN: " << childVisitsVec[i];
-      moveSelectOut << "\tPAV: " << playAttackValues[i];
-      moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
-      moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
-      moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
-      if(i == idxChosenAttackValue)
-        moveSelectOut << " (PAV)";
-      if(i == idxChosenPSVDet)
-        moveSelectOut << " (PSV)";
-      if(i == idxChosenPSVTemp)
-        moveSelectOut << " (PSVTemp)";
-      moveSelectOut << endl;
-    }
-  }
+  // moveSelectOut << "\n--- Flag: Better attack value Moves to exploit\n";
+  // for(int i = 0; i<locs.size(); i++) {
+  //   if(playAttackValues[i] >= playAttackValues[idxChosenPSVDet]){
+  //     moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
+  //     moveSelectOut << "\tN: " << childVisitsVec[i];
+  //     moveSelectOut << "\tPAV: " << playAttackValues[i];
+  //     moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
+  //     moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
+  //     moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
+  //     if(i == idxChosenAttackValue)
+  //       moveSelectOut << " (PAV)";
+  //     if(i == idxChosenPSVDet)
+  //       moveSelectOut << " (PSV)";
+  //     if(i == idxChosenPSVTemp)
+  //       moveSelectOut << " (PSVTemp)";
+  //     moveSelectOut << endl;
+  //   }
+  // }
 
   return chosenLoc;
 }

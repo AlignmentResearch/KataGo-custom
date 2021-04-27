@@ -1468,9 +1468,9 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     Rand rand;
     string logStr = cfg.getString("logDir") + "/" + DateTime::getCompactDateTimeString();
     if(cfg.contains("player"))
-      logStr += "-custom-" + cfg.getString("player") + ".log";
+      logStr += "-raw-" + cfg.getString("player") + ".log";
     else
-      logStr += "-custom-" + Global::uint32ToHexString(rand.nextUInt()) + ".log";
+      logStr += "-raw-" + Global::uint32ToHexString(rand.nextUInt()) + ".log";
     logger.addFile(logStr);
   }
 

@@ -848,27 +848,27 @@ void PlayUtils::printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvalu
   search->printMoveSelect(out);
 }
 
-void PlayUtils::recordJsonData(ostream& out, string& jsonPath, const AsyncBot* bot, Player perspective) {
+// ! Yawen added
+void PlayUtils::recordJsonData(ostream& out, string& jsonPath, const AsyncBot* bot, Player perspective, json& jf) {
   const Search* search = bot->getSearch();
   const vector<Move>* hist = &(bot->getRootHist().moveHistory);
   int moveNum = hist->size();
   
   // * Storing json into the data_logs
-  std::ifstream ifs(jsonPath);
-  json jf;
-  if (ifs){
-    jf = json::parse(ifs);
-    out << "\n ---- MoveNum: " << moveNum << " Updating " << jsonPath << " ---- " << endl;
-  }
-  else{
-    out << "\n ---- MoveNum: " << moveNum << " Initializing " << jsonPath << " ---- " << endl;
-  }
+  // std::ifstream ifs(jsonPath); // 
+  // json jf;
+  // if (ifs){
+  //   jf = json::parse(ifs);
+  out << "\n ---- MoveNum: " << moveNum << " Updating " << jsonPath << " ---- " << endl;
+  // }
+  // else{
+  //   out << "\n ---- MoveNum: " << moveNum << " Initializing " << jsonPath << " ---- " << endl;
+  // }
   json dummy;
   search->getJsonTree(cout, search->rootNode, PrintTreeOptions().maxDepth(1), perspective, dummy);
   dummy["move"] = search->chosenLocStr;
   jf["MoveNum-" + to_string(moveNum)] = dummy;
-  std::ofstream file(jsonPath);
-  file << jf;
+  // jf = dummy;
 }
 
 Rules PlayUtils::genRandomRules(Rand& rand) {

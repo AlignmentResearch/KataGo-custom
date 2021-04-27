@@ -304,6 +304,7 @@ struct GTPEngine {
   // ! Yawen added
   int gameIdxTrack;
   string jsonTrackDir;
+  json jsonDataTrack;
 
   const string nnModelFile;
   const bool assumeMultipleStartingBlackMovesAreHandicap;
@@ -380,7 +381,8 @@ struct GTPEngine {
      perspective(persp),
      genmoveTimeSum(0.0),
      jsonTrackDir(jsonDir), // ! Yawen added
-     gameIdxTrack(gameIdx)
+     gameIdxTrack(gameIdx),
+     jsonDataTrack()
   {
   }
 
@@ -932,9 +934,10 @@ struct GTPEngine {
       PlayUtils::printGenmoveLog(sout,bot,nnEval,moveLoc,timeTaken,perspective);
       
       // ! Yawen added
-      // TODO: adding storing json here
-      string jsonFilePath = getJsonFilePath(pla);
-      PlayUtils::recordJsonData(sout, jsonFilePath, bot, pla);
+      std::string jsonFilePath = getJsonFilePath(pla);
+      PlayUtils::recordJsonData(sout, jsonFilePath, bot, pla, jsonDataTrack);
+      std::ofstream file(jsonFilePath);
+      file << jsonDataTrack; // game finished, storing the data json file 
 
       logger.write(sout.str());
     }
@@ -2501,6 +2504,7 @@ int MainCmds::gtp(int argc, const char* const* argv) {
         ASSERT_UNREACHABLE;
       
       // ! Yawen added
+      engine->jsonDataTrack.clear();
       engine->gameIdxPlusOne(); // game finished, idx plus one
     }
 

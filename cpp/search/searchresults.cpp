@@ -1427,7 +1427,7 @@ bool Search::getJsonTreeHelper(
 
   // ! hardcore some options for getting analysis data
   const Board& board = rootBoard;
-  const BoardHistory& hist = rootHistory;
+  // const BoardHistory& hist = rootHistory;
   bool preventEncore = true;
   bool includePVVisits = true;
 
@@ -1499,8 +1499,8 @@ bool Search::getJsonTreeHelper(
   }
   
   json pv = json::array();
-  int pvLen =
-    (preventEncore && data.pvContainsPass()) ? data.getPVLenUpToPhaseEnd(board, hist, rootPla) : (int)data.pv.size();
+  int pvLen = data.pv.size();
+    // (preventEncore && data.pvContainsPass()) ? data.getPVLenUpToPhaseEnd(board, hist, rootPla) : (int)data.pv.size();
   for(int j = 0; j < pvLen; j++)
     if (depth == 0 && j == 0)
       pv.push_back("Root");
@@ -1533,7 +1533,7 @@ bool Search::getJsonTreeHelper(
   json moveInfos = json::array();
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = analysisData[i].node;
-    Loc moveLoc = child->prevMoveLoc;
+    // Loc moveLoc = child->prevMoveLoc;
 
     // TODO: implementing filtering information like depth and child.numVisits
     // if((depth >= options.branch_.size() && i < numChildrenToRecurseOn) ||
@@ -1541,7 +1541,8 @@ bool Search::getJsonTreeHelper(
     if(depth < options.maxDepth_)
     {
       json moveInfo;
-      getJsonTreeHelper(out, child, options, origVisits, depth+1, analysisData[i], child->nextPla, moveInfo);
+      Player nextPerspective = perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && rootPla == P_BLACK) ? P_WHITE : P_BLACK;
+      getJsonTreeHelper(out, child, options, origVisits, depth+1, analysisData[i], nextPerspective, moveInfo);
       moveInfos.push_back(moveInfo);
     }
   }

@@ -1052,6 +1052,17 @@ void Board::mergeChains(Loc loc1, Loc loc2)
   Loc head2 = chain_head[loc2];
 
   assert(head1 != head2);
+  
+  // * debug
+  if (chain_data[head1].owner != chain_data[head2].owner){
+    std::cout << "chain_data[head1].owner: " << PlayerIO::playerToString(chain_data[head1].owner) << endl;
+    std::cout << "Location::toString(loc1): " << Location::toString(loc1, 19, 19) << endl;
+    std::cout << "Location::toString(head1): " << Location::toString(head1, 19, 19) << endl;
+    std::cout << "chain_data[head2].owner: " << PlayerIO::playerToString(chain_data[head2].owner) << endl;
+    std::cout << "Location::toString(loc2): " << Location::toString(loc2, 19, 19) << endl;
+    std::cout << "Location::toString(head2): " << Location::toString(head2, 19, 19) << endl;
+    }
+  
   assert(chain_data[head1].owner == chain_data[head2].owner);
 
   //Make sure head2 is the smaller chain.

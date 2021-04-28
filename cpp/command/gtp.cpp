@@ -935,7 +935,14 @@ struct GTPEngine {
       
       // ! Yawen added
       std::string jsonFilePath = getJsonFilePath(pla);
-      PlayUtils::recordJsonData(sout, jsonFilePath, bot, pla, jsonDataTrack);
+      if (bot->getSearch()->getRootPla() != pla){
+        std::cout << "bot->getSearch()->getRootPla(): " << PlayerIO::playerToString(bot->getSearch()->getRootPla()) << endl; 
+        std::cout << "pla: " << PlayerIO::playerToString((pla)) << endl; 
+        std::cout << "perspective: " << PlayerIO::playerToString((perspective)) << endl; 
+      }
+      // assert(bot->getSearch()->getRootPla() == pla);
+      // assert(pla == perspective);
+      PlayUtils::recordJsonData(sout, jsonFilePath, bot, perspective, jsonDataTrack);
       std::ofstream file(jsonFilePath);
       file << jsonDataTrack; // game finished, storing the data json file 
 

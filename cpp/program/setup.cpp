@@ -367,6 +367,9 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("optimismThreshold4Backup"+idxStr)) params.optimismThreshold4Backup = cfg.getInt64("optimismThreshold4Backup"+idxStr, (int64_t)0, (int64_t)10e8);
     else if(cfg.contains("optimismThreshold4Backup"))   params.optimismThreshold4Backup = cfg.getInt64("optimismThreshold4Backup",        (int64_t)0, (int64_t)10e8);
 
+    if(cfg.contains("attackExpand"+idxStr)) params.attackExpand = cfg.getBool("attackExpand"+idxStr);
+    else if(cfg.contains("attackExpand"))   params.attackExpand = cfg.getBool("attackExpand");
+
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayouts"))   params.maxPlayouts = cfg.getInt64("maxPlayouts",        (int64_t)1, (int64_t)1 << 50);
     if(cfg.contains("maxVisits"+idxStr)) params.maxVisits = cfg.getInt64("maxVisits"+idxStr, (int64_t)1, (int64_t)1 << 50);

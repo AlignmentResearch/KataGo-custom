@@ -532,6 +532,7 @@ Loc Search::getChosenMoveLoc() {
   // * print PSV, attackValue for checking
   moveSelectOut.str(""); // empty the string
   moveSelectOut << "\n---------------------------\n";
+  moveSelectOut << "searchParams.attackExpand: " << searchParams.attackExpand << endl;
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   moveSelectOut << "searchParams.optimismThreshold4Backup: " << searchParams.optimismThreshold4Backup << endl;
   for(int i = 0; i<locs.size(); i++) {

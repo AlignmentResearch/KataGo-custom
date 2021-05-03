@@ -297,6 +297,7 @@ struct Search {
   std::ostringstream moveSelectOut; // record the move selection process string for printing
   int visitsThreshold2Attack;
   int optimismThreshold4Backup;
+  bool attackExpand;
 
   Loc getChosenMoveLoc();
   //Get the vector of values (e.g. modified visit counts) used to select a move.

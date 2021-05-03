@@ -1946,12 +1946,9 @@ void Search::selectBestChildToDescend2(
   assert(thread.pla == node.nextPla);
 
   // TODO: things to add
-  /* 
-  if node.nextPla == rootNode player
-    do the attack expansion
-  else
-    regular expansion
-  */
+  bool attackExpand = false;
+  if (node.nextPla == rootPla)
+    attackExpand = true;
 
   double maxSelectionValue = POLICY_ILLEGAL_SELECTION_VALUE;
   bestChildIdx = -1;
@@ -2570,10 +2567,10 @@ void Search::playoutDescend(
   int bestChildIdx;
   Loc bestChildMoveLoc;
   // TODO: core and the only function to change
-  if (true)
-    selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
-  else
+  if (searchParams.attackExpand)
     selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+  else
+    selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
 
   //The absurdly rare case that the move chosen is not legal
   //(this should only happen either on a bug or where the nnHash doesn't have full legality information or when there's an actual hash collision).
@@ -2586,7 +2583,10 @@ void Search::playoutDescend(
       (*thread.logStream) << "WARNING: Chosen move not legal so regenerated nn output, nnhash=" << node.nnOutput->nnHash << endl;
 
     //As isReInit is true, we don't return, just keep going, since we didn't count this as a true visit in the node stats
-    selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+    if (searchParams.attackExpand)
+      selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+    else
+      selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
     if(bestChildIdx >= 0) {
       //We should absolutely be legal this time
       assert(thread.history.isLegal(thread.board,bestChildMoveLoc,thread.pla));

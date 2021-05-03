@@ -8,6 +8,7 @@ struct SearchParams {
   // !Yawen added
   int optimismThreshold4Backup;
   int visitsThreshold2Attack;
+  bool attackExpand;
 
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing

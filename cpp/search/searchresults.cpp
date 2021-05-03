@@ -533,6 +533,7 @@ Loc Search::getChosenMoveLoc() {
   moveSelectOut.str(""); // empty the string
   moveSelectOut << "\n---------------------------\n";
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
+  moveSelectOut << "searchParams.optimismThreshold4Backup: " << searchParams.optimismThreshold4Backup << endl;
   for(int i = 0; i<locs.size(); i++) {
     moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
     moveSelectOut << "\t\tN: " << childVisitsVec[i];

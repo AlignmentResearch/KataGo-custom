@@ -649,6 +649,7 @@ double Search::recomputeSearchTimeLimit(
   return tcRec;
 }
 
+// TODO: change this for expansion depending on attack value
 void Search::runWholeSearch(
   Logger& logger,
   std::atomic<bool>& shouldStopNow,
@@ -1996,6 +1997,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double minimaxValue = child->stats.minimaxValue; // !!dv
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
+    
     child->statsLock.clear(std::memory_order_release);
 
     if(childVisits <= 0)
@@ -2058,6 +2060,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double maxDecisionValue = 0.0;
   double minimaxValue = 0.0; 
   double attackValue = 0.0;
+  // double miniAttackValue = 0.0;
   double effectiveWinValue = 0.0; // !!dv
 
   // * debug
@@ -2083,14 +2086,27 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     // * attackValue and effectiveWinValue
     // * set decisionValue definition to playSelectionValue
     // double decisionValue = 0.5; // * debug
-    double decisionValue = playSelectionValues[i];
-    if(maxDecisionValue < decisionValue){ 
-      maxDecisionValue = decisionValue; // !!dv
-      effectiveWinValue = attackValues[i];
+
+    // * Playing pessimistically if totalChildVisits < searchParams.optimismThreshold4Backup
+    if (totalChildVisits < searchParams.optimismThreshold4Backup){
+      double decisionValue = minimaxValues[i];
+      if(maxDecisionValue < decisionValue){ 
+        maxDecisionValue = decisionValue; // !!dv
+        effectiveWinValue = attackValues[i];
+      } // * Playing pessimistically means assuming the opponent will select the max minimaxValue move, so set the effeWinValue as the attackValue of this node
+      attackValue = std::max(attackValue, effectiveWinValues[i]);
+      minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
     }
-    attackValue = std::max(attackValue, effectiveWinValues[i]);
-    minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
-    
+    else {
+      double decisionValue = playSelectionValues[i];
+      if(maxDecisionValue < decisionValue){ 
+        maxDecisionValue = decisionValue; // !!dv
+        effectiveWinValue = attackValues[i];
+      }
+      attackValue = std::max(attackValue, effectiveWinValues[i]);
+      minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
+    }
+
     noResultValueSum += desiredWeight * noResultValues[i];
     scoreMeanSum += desiredWeight * scoreMeans[i];
     scoreMeanSqSum += desiredWeight * scoreMeanSqs[i];
@@ -2384,6 +2400,7 @@ void Search::addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLosse
   addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
 }
 
+// TODO: core function to change in terms of expansion
 void Search::playoutDescend(
   SearchThread& thread, SearchNode& node,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],

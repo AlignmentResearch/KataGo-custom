@@ -7,6 +7,7 @@
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
   :visitsThreshold2Attack(0), // ! Yawen added for softattack
+   optimismThreshold4Backup(-1), // ! Yawen added for softattack
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),

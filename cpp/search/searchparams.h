@@ -6,6 +6,7 @@
 
 struct SearchParams {
   // !Yawen added
+  int optimismThreshold4Backup;
   int visitsThreshold2Attack;
 
   //Utility function parameters

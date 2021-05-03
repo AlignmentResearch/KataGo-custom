@@ -1934,8 +1934,123 @@ void Search::selectBestChildToDescend(
       bestChildMoveLoc = bestNewMoveLoc;
     }
   }
-
 }
+
+// ! Yawen added
+//Assumes node is locked
+void Search::selectBestChildToDescend2(
+  SearchThread& thread, const SearchNode& node, int& bestChildIdx, Loc& bestChildMoveLoc,
+  bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
+  bool isRoot) const
+{
+  assert(thread.pla == node.nextPla);
+
+  // TODO: things to add
+  /* 
+  if node.nextPla == rootNode player
+    do the attack expansion
+  else
+    regular expansion
+  */
+
+  double maxSelectionValue = POLICY_ILLEGAL_SELECTION_VALUE;
+  bestChildIdx = -1;
+  bestChildMoveLoc = Board::NULL_LOC;
+
+  int numChildren = node.numChildren;
+
+  double policyProbMassVisited = 0.0;
+  int64_t maxChildVisits = 0;
+  int64_t totalChildVisits = 0;
+  float* policyProbs = node.nnOutput->getPolicyProbsMaybeNoised();
+  for(int i = 0; i<numChildren; i++) {
+    const SearchNode* child = node.children[i];
+    Loc moveLoc = child->prevMoveLoc;
+    int movePos = getPos(moveLoc);
+    float nnPolicyProb = policyProbs[movePos];
+    policyProbMassVisited += nnPolicyProb;
+
+    while(child->statsLock.test_and_set(std::memory_order_acquire));
+    int64_t childVisits = child->stats.visits;
+    child->statsLock.clear(std::memory_order_release);
+
+    totalChildVisits += childVisits;
+    if(childVisits > maxChildVisits)
+      maxChildVisits = childVisits;
+  }
+  //Probability mass should not sum to more than 1, giving a generous allowance
+  //for floating point error.
+  assert(policyProbMassVisited <= 1.0001);
+
+  //First play urgency
+  double parentUtility;
+  double fpuValue = getFpuValueForChildrenAssumeVisited(node, thread.pla, isRoot, policyProbMassVisited, parentUtility);
+
+  std::fill(posesWithChildBuf,posesWithChildBuf+NNPos::MAX_NN_POLICY_SIZE,false);
+
+  //Try all existing children
+  for(int i = 0; i<numChildren; i++) {
+    const SearchNode* child = node.children[i];
+    Loc moveLoc = child->prevMoveLoc;
+    bool isDuringSearch = true;
+    double selectionValue = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
+    if(selectionValue > maxSelectionValue) {
+      maxSelectionValue = selectionValue;
+      bestChildIdx = i;
+      bestChildMoveLoc = moveLoc;
+    }
+
+    posesWithChildBuf[getPos(moveLoc)] = true;
+  }
+
+  const std::vector<int>& avoidMoveUntilByLoc = thread.pla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
+
+  //Try the new child with the best policy value
+  Loc bestNewMoveLoc = Board::NULL_LOC;
+  float bestNewNNPolicyProb = -1.0f;
+  for(int movePos = 0; movePos<policySize; movePos++) {
+    bool alreadyTried = posesWithChildBuf[movePos];
+    if(alreadyTried)
+      continue;
+
+    Loc moveLoc = NNPos::posToLoc(movePos,thread.board.x_size,thread.board.y_size,nnXLen,nnYLen);
+    if(moveLoc == Board::NULL_LOC)
+      continue;
+
+    //Special logic for the root
+    if(isRoot) {
+      assert(thread.board.pos_hash == rootBoard.pos_hash);
+      assert(thread.pla == rootPla);
+      if(!isAllowedRootMove(moveLoc))
+        continue;
+    }
+    if(avoidMoveUntilByLoc.size() > 0) {
+      assert(avoidMoveUntilByLoc.size() >= Board::MAX_ARR_SIZE);
+      int untilDepth = avoidMoveUntilByLoc[moveLoc];
+      if(thread.history.moveHistory.size() - rootHistory.moveHistory.size() < untilDepth)
+        continue;
+    }
+
+    float nnPolicyProb = policyProbs[movePos];
+    if(searchParams.antiMirror && mirroringPla != C_EMPTY) {
+      maybeApplyAntiMirrorPolicy(nnPolicyProb, moveLoc, policyProbs, node.nextPla, &thread, this);
+    }
+
+    if(nnPolicyProb > bestNewNNPolicyProb) {
+      bestNewNNPolicyProb = nnPolicyProb;
+      bestNewMoveLoc = moveLoc;
+    }
+  }
+  if(bestNewMoveLoc != Board::NULL_LOC) {
+    double selectionValue = getNewExploreSelectionValue(node,bestNewNNPolicyProb,totalChildVisits,fpuValue,maxChildVisits,&thread);
+    if(selectionValue > maxSelectionValue) {
+      maxSelectionValue = selectionValue;
+      bestChildIdx = numChildren;
+      bestChildMoveLoc = bestNewMoveLoc;
+    }
+  }
+}
+
 void Search::updateStatsAfterPlayout(SearchNode& node, SearchThread& thread, int32_t virtualLossesToSubtract, bool isRoot) {
   recomputeNodeStats(node,thread,1,virtualLossesToSubtract,isRoot);
 }
@@ -2454,7 +2569,11 @@ void Search::playoutDescend(
   //Find the best child to descend down
   int bestChildIdx;
   Loc bestChildMoveLoc;
-  selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+  // TODO: core and the only function to change
+  if (true)
+    selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+  else
+    selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
 
   //The absurdly rare case that the move chosen is not legal
   //(this should only happen either on a bug or where the nnHash doesn't have full legality information or when there's an actual hash collision).

@@ -477,6 +477,13 @@ private:
     bool isRoot
   ) const;
 
+  // ! Yawen added
+  void selectBestChildToDescend2(
+    SearchThread& thread, const SearchNode& node, int& bestChildIdx, Loc& bestChildMoveLoc,
+    bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
+    bool isRoot
+  ) const;
+
   void addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal);
   void addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLossesToSubtract);
 

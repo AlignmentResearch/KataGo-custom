@@ -1747,6 +1747,105 @@ double Search::getExploreSelectionValue(
   return getExploreSelectionValue(nnPolicyProb,totalChildVisits,childVisits,childUtility,parent.nextPla);
 }
 
+double Search::getExploreAttackValue(
+  const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
+  int64_t totalChildVisits, double fpuValue, double parentUtility,
+  bool isDuringSearch, int64_t maxChildVisits, SearchThread* thread
+) const {
+  (void)parentUtility;
+  Loc moveLoc = child->prevMoveLoc;
+  int movePos = getPos(moveLoc);
+  float nnPolicyProb = parentPolicyProbs[movePos];
+
+  while(child->statsLock.test_and_set(std::memory_order_acquire));
+  int64_t childVisits = child->stats.visits;
+  double utilitySum = child->stats.utilitySum;
+  double attackUtility = child->stats.attackUtility; // !Yawen added
+  double effectiveUtility = child->stats.effectiveUtility; // !Yawen added
+  double minimaxUtility = child->stats.minimaxUtility; // !Yawen added
+  double scoreMeanSum = child->stats.scoreMeanSum;
+  double scoreMeanSqSum = child->stats.scoreMeanSqSum;
+  double weightSum = child->stats.weightSum;
+  int32_t childVirtualLosses = child->virtualLosses;
+  child->statsLock.clear(std::memory_order_release);
+
+  //It's possible that childVisits is actually 0 here with multithreading because we're visiting this node while a child has
+  //been expanded but its thread not yet finished its first visit
+  double childUtility;
+  if(childVisits <= 0)
+    childUtility = fpuValue;
+  else {
+    assert(weightSum > 0.0);
+    // childUtility = utilitySum / weightSum;
+    // assert(childUtility >= 0.0);
+    
+    // * debug
+    // std::cout << "move: " << Location::toString(moveLoc,19,19);
+    // std::cout << (child->nextPla == P_BLACK ? " (black) " : " (white) ");
+    // std::cout << " -- childUtility: " << childUtility;
+    // std::cout << "; attackUtility: " << (child->nextPla == P_BLACK ? - attackUtility : attackUtility);
+    // std::cout << "; effectiveUtility: " << (child->nextPla == P_BLACK ? - effectiveUtility : effectiveUtility);
+    // std::cout << "; minimaxUtility: " << (child->nextPla == P_BLACK ? - minimaxUtility : minimaxUtility) << endl;
+
+    childUtility = effectiveUtility; // !Yawen added
+
+    //Tiny adjustment for passing
+    double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
+    if(endingScoreBonus != 0)
+      childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+  }
+
+  //When multithreading, totalChildVisits could be out of sync with childVisits, so if they provably are, then fix that up
+  if(totalChildVisits < childVisits)
+    totalChildVisits = childVisits;
+
+  //Virtual losses to direct threads down different paths
+  if(childVirtualLosses > 0) {
+    //totalChildVisits += childVirtualLosses; //Should get better thread dispersal without this
+    childVisits += childVirtualLosses;
+    double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
+    double virtualLossUtility = (parent.nextPla == P_WHITE ? -utilityRadius : utilityRadius);
+    double virtualLossVisitFrac = (double)childVirtualLosses / childVisits;
+    childUtility = childUtility + (virtualLossUtility - childUtility) * virtualLossVisitFrac;
+  }
+
+  if(isDuringSearch && (&parent == rootNode)) {
+    //Futile visits pruning - skip this move if the amount of time we have left to search is too small
+    if(searchParams.futileVisitsThreshold > 0) {
+      double requiredVisits = searchParams.futileVisitsThreshold * maxChildVisits;
+      if(childVisits + thread->upperBoundVisitsLeft < requiredVisits)
+        return FUTILE_VISITS_PRUNE_VALUE;
+    }
+    //Hack to get the root to funnel more visits down child branches
+    if(searchParams.rootDesiredPerChildVisitsCoeff > 0.0) {
+      if(childVisits < sqrt(nnPolicyProb * totalChildVisits * searchParams.rootDesiredPerChildVisitsCoeff)) {
+        return 1e20;
+      }
+    }
+    //Hack for hintloc - must search this move almost as often as the most searched move
+    if(rootHintLoc != Board::NULL_LOC && moveLoc == rootHintLoc) {
+      for(int i = 0; i<parent.numChildren; i++) {
+        const SearchNode* c = parent.children[i];
+        while(c->statsLock.test_and_set(std::memory_order_acquire));
+        int64_t cVisits = c->stats.visits;
+        c->statsLock.clear(std::memory_order_release);
+        if(childVisits+1 < cVisits * 0.8)
+          return 1e20;
+      }
+    }
+
+    if(searchParams.wideRootNoise > 0.0) {
+      maybeApplyWideRootNoise(childUtility, nnPolicyProb, searchParams, thread, parent);
+    }
+  }
+  if(isDuringSearch && searchParams.antiMirror && mirroringPla != C_EMPTY) {
+    maybeApplyAntiMirrorPolicy(nnPolicyProb, moveLoc, parentPolicyProbs, parent.nextPla, thread, this);
+    maybeApplyAntiMirrorForcedExplore(childUtility, moveLoc, parentPolicyProbs, childVisits, totalChildVisits, parent.nextPla, thread, this, parent);
+  }
+
+  return getExploreSelectionValue(nnPolicyProb,totalChildVisits,childVisits,childUtility,parent.nextPla);
+}
+
 double Search::getNewExploreSelectionValue(
   const SearchNode& parent, float nnPolicyProb,
   int64_t totalChildVisits, double fpuValue,
@@ -1997,7 +2096,15 @@ void Search::selectBestChildToDescend2(
     const SearchNode* child = node.children[i];
     Loc moveLoc = child->prevMoveLoc;
     bool isDuringSearch = true;
-    double selectionValue = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
+    double selectionValue;
+    if (node.nextPla == P_BLACK) {// ! Yawen added 
+      // TODO: change here to node.nextPla == attackPla
+      selectionValue = getExploreAttackValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
+      // double selectionValue1 = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
+      // cout << "node.nextPla: black " << selectionValue1 << " " << selectionValue << endl;
+    }
+    else
+      selectionValue = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
     if(selectionValue > maxSelectionValue) {
       maxSelectionValue = selectionValue;
       bestChildIdx = i;

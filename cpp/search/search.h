@@ -459,6 +459,14 @@ private:
     int64_t totalChildVisits, double fpuValue, double parentUtility,
     bool isDuringSearch, int64_t maxChildVisits, SearchThread* thread
   ) const;
+  
+  // ! Yawen added
+  double getExploreAttackValue(
+    const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
+    int64_t totalChildVisits, double fpuValue, double parentUtility,
+    bool isDuringSearch, int64_t maxChildVisits, SearchThread* thread
+  ) const;
+  
   double getNewExploreSelectionValue(
     const SearchNode& parent, float nnPolicyProb,
     int64_t totalChildVisits, double fpuValue,

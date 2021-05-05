@@ -484,6 +484,7 @@ Loc Search::getChosenMoveLoc() {
 
   // * New move according to the playAttackValues
   vector<double> playAttackValues;
+  vector<double> playAttackUtilities;
   SearchNode& node = *rootNode;
 
   std::mutex& mutex = mutexPool->getMutex(node.lockIdx);

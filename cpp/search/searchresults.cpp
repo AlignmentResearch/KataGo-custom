@@ -1262,7 +1262,7 @@ void Search::printTreeHelper(
   //Output for this node
   {
     out << prefix;
-    char buf[128];
+    char buf[256];
 
     out << ": ";
 

@@ -22,6 +22,9 @@ ReportedSearchValues::~ReportedSearchValues()
 NodeStats::NodeStats()
   :visits(0),winValueSum(0.0),noResultValueSum(0.0),scoreMeanSum(0.0),scoreMeanSqSum(0.0),leadSum(0.0),utilitySum(0.0),utilitySqSum(0.0),weightSum(0.0),weightSqSum(0.0)
   // !!dv
+  ,attackUtility(0.0)
+  ,effectiveUtility(0.0)
+  ,minimaxUtility(0.0)
   ,attackValue(0.0)
   ,effectiveWinValue(0.0)
   ,minimaxValue(0.0)
@@ -120,6 +123,9 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
    attackValuesBuf(),
    effectiveWinValuesBuf(),
    minimaxBuf(), // !!dv
+   attackUtilityBuf(),
+   effectiveUtilityBuf(),
+   minimaxUtilityBuf(), // !!dv
    upperBoundVisitsLeft(1e30)
 {
   if(logger != NULL)
@@ -141,7 +147,9 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
   minimaxBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
   attackValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   effectiveWinValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
-
+  attackUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+  effectiveUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+  minimaxUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
 }
 SearchThread::~SearchThread() {
   if(logStream != NULL)
@@ -1945,7 +1953,6 @@ void Search::selectBestChildToDescend2(
 {
   assert(thread.pla == node.nextPla);
 
-  // TODO: things to add
   bool attackExpand = false;
   if (node.nextPla == rootPla)
     attackExpand = true;
@@ -2070,6 +2077,9 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   vector<double>& weightSqSums = thread.weightSqBuf;
   vector<int64_t>& visits = thread.visitsBuf;
 
+  vector<double>& attackUtilities = thread.attackUtilityBuf; // ! Yawen added
+  vector<double>& effectiveUtilities = thread.effectiveUtilityBuf; // ! Yawen added
+  vector<double>& minimaxUtilities = thread.minimaxUtilityBuf;
   vector<double>& attackValues = thread.attackValuesBuf;
   vector<double>& effectiveWinValues = thread.effectiveWinValuesBuf;
   vector<double>& minimaxValues = thread.minimaxBuf; // !!dv
@@ -2106,6 +2116,9 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double utilitySqSum = child->stats.utilitySqSum;
     
     // * get the minimaxValue, attackValue of the child here
+    double minimaxUtility = child->stats.minimaxUtility; // !!dv
+    double attackUtility = child->stats.attackUtility; // ! Yawen added
+    double effectiveUtility = child->stats.effectiveUtility; // ! Yawen added
     double minimaxValue = child->stats.minimaxValue; // !!dv
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
@@ -2117,10 +2130,15 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     assert(weightSum > 0.0);
 
     double childUtility = utilitySum / weightSum;
+
     assert(numGoodChildren < 362);
     minimaxValues[numGoodChildren] = 1.0 - minimaxValue; // !!dv
     attackValues[numGoodChildren] = 1.0 - attackValue;
     effectiveWinValues[numGoodChildren] = 1.0 - effectiveWinValue;
+
+    minimaxUtilities[numGoodChildren] = - minimaxUtility; // !!dv
+    attackUtilities[numGoodChildren] = - attackUtility; // ! Yawen added
+    effectiveUtilities[numGoodChildren] = - effectiveUtility; // ! Yawen added
 
     winValues[numGoodChildren] = winValueSum / weightSum;
     noResultValues[numGoodChildren] = noResultValueSum / weightSum;
@@ -2169,18 +2187,13 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double weightSum = 0.0;
   double weightSqSum = 0.0;
   
-  double maxDecisionValue = 0.0;
+  double minimaxUtility = - 99.0; 
+  double attackUtility = - 99.0; // ! Yawen added
+  double effectiveUtility = - 99.0; // ! Yawen added
   double minimaxValue = 0.0; 
   double attackValue = 0.0;
-  // double miniAttackValue = 0.0;
   double effectiveWinValue = 0.0; // !!dv
-
-  // * debug
-  // std::cout << "numGoodChildren: " << numGoodChildren << endl;
-  // std::cout << "minimaxValue: [ ";
-  // for (std::vector<double>::const_iterator i = minimaxValues.begin(); i != minimaxValues.end(); ++i)
-  //   {std::cout << minimaxValues[*i] << ' ';}
-  // std::cout << "]";
+  double maxDecisionValue = 0.0;
 
   for(int i = 0; i<numGoodChildren; i++) {
     if(visits[i] < amountToPrune)
@@ -2205,19 +2218,21 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       if(maxDecisionValue < decisionValue){ 
         maxDecisionValue = decisionValue; // !!dv
         effectiveWinValue = attackValues[i];
+        effectiveUtility = attackUtilities[i];
       } // * Playing pessimistically means assuming the opponent will select the max minimaxValue move, so set the effeWinValue as the attackValue of this node
-      attackValue = std::max(attackValue, effectiveWinValues[i]);
-      minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
     }
     else {
       double decisionValue = playSelectionValues[i];
       if(maxDecisionValue < decisionValue){ 
         maxDecisionValue = decisionValue; // !!dv
         effectiveWinValue = attackValues[i];
+        effectiveUtility = attackUtilities[i];
       }
-      attackValue = std::max(attackValue, effectiveWinValues[i]);
-      minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
     }
+    attackUtility = std::max(attackUtility, effectiveUtilities[i]);
+    minimaxUtility = std::max(minimaxUtility, minimaxUtilities[i]); // !!dv
+    attackValue = std::max(attackValue, effectiveWinValues[i]);
+    minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
 
     noResultValueSum += desiredWeight * noResultValues[i];
     scoreMeanSum += desiredWeight * scoreMeans[i];
@@ -2295,10 +2310,6 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     utilitySqSum += utility * utility * desiredWeight;
     weightSum += desiredWeight;
     weightSqSum += desiredWeight * desiredWeight;
-    // * Note: not adding the direct evaluation to the node here
-    // minimaxValue += desiredWeight; // !!dv
-    // attackValue += winProb * desiredWeight;
-    // effectiveWinValue += winProb * desiredWeight;
   }
 
   while(node.statsLock.test_and_set(std::memory_order_acquire));
@@ -2312,6 +2323,10 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.attackValue = attackValue;
   node.stats.effectiveWinValue = effectiveWinValue;
   node.stats.minimaxValue = minimaxValue; // !!dv
+  node.stats.attackUtility = attackUtility; // ! Yawen added
+  node.stats.effectiveUtility = effectiveUtility; // ! Yawen added
+  node.stats.minimaxUtility = minimaxUtility; // !!dv
+
   node.stats.noResultValueSum = noResultValueSum;
   node.stats.scoreMeanSum = scoreMeanSum;
   node.stats.scoreMeanSqSum = scoreMeanSqSum;
@@ -2395,22 +2410,15 @@ void Search::addLeafValue(SearchNode& node, double winValue, double noResultValu
   node.stats.weightSum += 1.0;
   node.stats.weightSqSum += 1.0;
   
-  // node.stats.attackValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
-  // node.stats.effectiveWinValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
-  // node.stats.minimaxValue += node.nextPla == P_WHITE ? winValue : 1.0 - winValue; // !!dv
+  node.stats.attackUtility = node.nextPla == P_WHITE ? utility : - utility;
+  node.stats.effectiveUtility = node.nextPla == P_WHITE ? utility : - utility;
+  node.stats.minimaxUtility = node.nextPla == P_WHITE ? utility : - utility; // !!dv
+  // node.stats.attackUtility = utility;
+  // node.stats.effectiveUtility = utility;
+  // node.stats.minimaxUtility = utility; // !!dv
   node.stats.attackValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
   node.stats.effectiveWinValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue;
   node.stats.minimaxValue = node.nextPla == P_WHITE ? winValue : 1.0 - winValue; // !!dv
-
-  // * debug
-  // string player = node.nextPla == P_WHITE ? "Black" : "White";
-  // string next_player = node.nextPla == P_WHITE ? "White" : "Black";
-  // std::cout << "----- " + player + " plays " + Location::toString(node.prevMoveLoc, 19, 19) + " -----" << endl;
-  // std::cout << next_player + "'s move:" << endl;
-  // std::cout << "node.stats.minimaxValue: " << node.stats.minimaxValue << " (subjective)" << endl;
-  // std::cout << "node.stats.winValueSum: " << node.stats.winValueSum << " (objective)" << endl;
-  // std::cout << "node.stats.attackValue: " << node.stats.attackValue << " (subjective)" << endl;
-  // std::cout << "node.stats.effectiveWinValue: " << node.stats.effectiveWinValue << " (subjective)" << endl;
   
   node.virtualLosses -= virtualLossesToSubtract;
   node.statsLock.clear(std::memory_order_release);
@@ -2512,7 +2520,6 @@ void Search::addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLosse
   addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
 }
 
-// TODO: core function to change in terms of expansion
 void Search::playoutDescend(
   SearchThread& thread, SearchNode& node,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
@@ -2566,7 +2573,6 @@ void Search::playoutDescend(
   //Find the best child to descend down
   int bestChildIdx;
   Loc bestChildMoveLoc;
-  // TODO: core and the only function to change
   if (searchParams.attackExpand)
     selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
   else

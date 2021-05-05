@@ -395,12 +395,16 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   double winValueSum = node.stats.winValueSum;
   double attackValue = node.stats.attackValue;
   double effectiveWinValue = node.stats.effectiveWinValue; // !!dv
+  double minimaxValue = node.stats.minimaxValue; // !!dv
+  double attackUtility = node.stats.attackUtility;
+  double effectiveUtility = node.stats.effectiveUtility; // !!dv
+  double minimaxUtility = node.stats.minimaxUtility; // !!dv
+
   double noResultValueSum = node.stats.noResultValueSum;
   double scoreMeanSum = node.stats.scoreMeanSum;
   double scoreMeanSqSum = node.stats.scoreMeanSqSum;
   double leadSum = node.stats.leadSum;
   double weightSum = node.stats.weightSum;
-  double minimaxValue = node.stats.minimaxValue; // !!dv
   double utilitySum = node.stats.utilitySum;
   int64_t visits = node.stats.visits;
 
@@ -411,7 +415,10 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
 
   values.minimaxValue = minimaxValue;
   values.attackValue = attackValue;
-  // values.effectiveWinValue = effectiveWinValue; // !!dv
+  values.effectiveWinValue = effectiveWinValue; // !!dv
+  values.minimaxUtility = minimaxUtility;
+  values.attackUtility = attackUtility;
+  values.effectiveUtility = effectiveUtility; // !!dv
 
   values.winValue = winValueSum / weightSum;  
   values.lossValue = (weightSum - winValueSum - noResultValueSum) / weightSum;
@@ -496,35 +503,46 @@ Loc Search::getChosenMoveLoc() {
     double minimaxValue = child->stats.minimaxValue; // !!dv
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
+    double minimaxUtility = child->stats.minimaxUtility; // !!dv
+    double attackUtility = child->stats.attackUtility;
+    double effectiveUtility = child->stats.effectiveUtility;
     child->statsLock.clear(std::memory_order_release);
     if(childVisits <= 0)
       continue;
     assert(weightSum > 0.0);
     childVisitsVec.push_back(childVisits);
     playAttackValues.push_back(1.0 - effectiveWinValue);
+    playAttackUtilities.push_back(- effectiveUtility);
     winValueAvgVec.push_back(winValueSum/weightSum);
     // numGoodChildren++;
   }
 
   // * Find the best child by attack value above visitsThreshold2Attack
   int idxChosenAttackValue = idxChosenPSVDet;
+  int idxChosenAttackUtility = idxChosenPSVDet;
   double chosenMaxAttackValue = playAttackValues[idxChosenAttackValue];
+  double chosenMaxAttackUtility = playAttackUtilities[idxChosenAttackUtility];
   for(int i = 0; i<numChildren; i++) {
     double value = playAttackValues[i];
+    double utility = playAttackUtilities[i];
     double visits = childVisitsVec[i];
     if(value > chosenMaxAttackValue && visits >= searchParams.visitsThreshold2Attack) {
       chosenMaxAttackValue = value;
       idxChosenAttackValue = i;
     }
+    if(utility > chosenMaxAttackUtility && visits >= searchParams.visitsThreshold2Attack) {
+      idxChosenAttackUtility = utility;
+      idxChosenAttackUtility = i;
+    }
   }
-  
-  // uint32_t idxChosenAttackValue = std::max_element(playAttackValues.begin(), playAttackValues.end()) - playAttackValues.begin();
 
   Loc maxAttackValueLoc = locs[idxChosenAttackValue];
+  Loc maxAttackUtilityLoc = locs[idxChosenAttackUtility];
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
   // select location
-  Loc chosenLoc = maxAttackValueLoc;
+  // Loc chosenLoc = maxAttackValueLoc;
+  Loc chosenLoc = maxAttackUtilityLoc;
   // * record the chosenLocStr
   chosenLocStr = Location::toString(chosenLoc, rootBoard);
 
@@ -541,6 +559,7 @@ Loc Search::getChosenMoveLoc() {
     moveSelectOut << "\tPAV: " << playAttackValues[i];
     moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
     moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
+    moveSelectOut << "\tPAU: " << playAttackUtilities[i];
     moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
     if(i == idxChosenAttackValue)
       moveSelectOut << " (PAV)";
@@ -548,6 +567,8 @@ Loc Search::getChosenMoveLoc() {
       moveSelectOut << " (PSV)";
     if(i == idxChosenPSVTemp)
       moveSelectOut << " (PSVTemp)";
+    if(i == idxChosenAttackUtility)
+      moveSelectOut << " (PAU)";
     moveSelectOut << endl;
   }
 
@@ -559,6 +580,7 @@ Loc Search::getChosenMoveLoc() {
       moveSelectOut << "\tPAV: " << playAttackValues[i];
       moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
       moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
+      moveSelectOut << "\tPAU: " << playAttackUtilities[i];
       moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
       if(i == idxChosenAttackValue)
         moveSelectOut << " (PAV)";
@@ -566,6 +588,8 @@ Loc Search::getChosenMoveLoc() {
         moveSelectOut << " (PSV)";
       if(i == idxChosenPSVTemp)
         moveSelectOut << " (PSVTemp)";
+      if(i == idxChosenAttackUtility)
+        moveSelectOut << " (PAU)";
       moveSelectOut << endl;
     }
   }
@@ -840,7 +864,6 @@ void Search::printRootEndingScoreValueBonus(ostream& out) const {
     double scoreMeanSum = child->stats.scoreMeanSum;
     double scoreMeanSqSum = child->stats.scoreMeanSqSum;
     double weightSum = child->stats.weightSum;
-    double minimaxValue = child->stats.minimaxValue; // !!dv
     child->statsLock.clear(std::memory_order_release);
 
     double utilityNoBonus = utilitySum / weightSum;
@@ -1301,9 +1324,12 @@ void Search::printTreeHelper(
       double attackValue = node.stats.attackValue;
       double effectiveWinValue = node.stats.effectiveWinValue;
       double minimaxValue = node.stats.minimaxValue; // !!dv
+      double attackUtility = node.stats.attackUtility;
+      double effectiveUtility = node.stats.effectiveUtility;
+      double minimaxUtility = node.stats.minimaxUtility; // !!dv
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"WVSum %5.6f WVAvg %5.6f Attack %5.6f EffeMCTS %5.6f Mini %5.6f ",
-      winValueSum, winValueSum/weightSum, attackValue, effectiveWinValue, minimaxValue);
+      sprintf(buf,"WVSum %5.6f WVAvg %5.6f Attack %5.6f EffeMCTS %5.6f Mini %5.6f AttackU %5.6f EffeMCTSU %5.6f MinimaxU %5.6f ",
+      winValueSum, winValueSum/weightSum, attackValue, effectiveWinValue, minimaxValue, attackUtility, effectiveUtility, minimaxUtility);
       out << buf;
     }
 
@@ -1469,6 +1495,9 @@ bool Search::getJsonTreeHelper(
   double attackValue = node.stats.attackValue;
   double effectiveWinValue = node.stats.effectiveWinValue;
   double minimaxValue = node.stats.minimaxValue; // !!dv
+  double attackUtility = node.stats.attackUtility;
+  double effectiveUtility = node.stats.effectiveUtility;
+  double minimaxUtility = node.stats.minimaxUtility; // !!dv
   node.statsLock.clear(std::memory_order_release);
 
   // * getting each inter
@@ -1489,6 +1518,9 @@ bool Search::getJsonTreeHelper(
   inter["attackValue"] = attackValue;
   inter["effectiveWinValue"] = effectiveWinValue;
   inter["minimaxValue"] = minimaxValue;
+  inter["attackUtility"] = attackUtility;
+  inter["effectiveUtility"] = effectiveUtility;
+  inter["minimaxUtility"] = minimaxUtility;
   
   if (depth > 0){
     inter["scoreMean"] = lead;

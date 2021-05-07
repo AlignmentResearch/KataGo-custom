@@ -1474,10 +1474,17 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     MakeDir::make(cfg.getString("logDir"));
     Rand rand;
     string logStr = cfg.getString("logDir") + "/" + DateTime::getCompactDateTimeString();
-    if(cfg.contains("player"))
-      logStr += "-custom-" + cfg.getString("player") + ".log";
+    string version;
+    if(cfg.contains("attackPla")){
+      assert(cfg.getString("attackPla") == cfg.getString("player"));
+      version = cfg.getString("attackPla") == cfg.getString("player") ? "-custom-" : "-raw-";
+    }
     else
-      logStr += "-custom-" + Global::uint32ToHexString(rand.nextUInt()) + ".log";
+      version = "-raw-";
+    if(cfg.contains("player"))
+      logStr += version + cfg.getString("player") + ".log";
+    else
+      logStr += version + Global::uint32ToHexString(rand.nextUInt()) + ".log";
     logger.addFile(logStr);
   }
 

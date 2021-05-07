@@ -6,9 +6,10 @@
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :visitsThreshold2Attack(0), // ! Yawen added for softattack
-   optimismThreshold4Backup(-1), // ! Yawen added for softattack
-   attackExpand(false), // ! Yawen added for softattack
+  :visitsThreshold2Attack(65536), // ! Yawen added for softattack
+   optimismThreshold4Backup(-1), // ! Yawen added for softbackup
+   attackExpand(false), // ! Yawen added for attack expand
+   isMinimaxOptim4Backup(false), // ! Yawen added for softbackup
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),

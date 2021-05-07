@@ -532,18 +532,24 @@ Loc Search::getChosenMoveLoc() {
       idxChosenAttackValue = i;
     }
     if(utility > chosenMaxAttackUtility && visits >= searchParams.visitsThreshold2Attack) {
-      idxChosenAttackUtility = utility;
+      chosenMaxAttackUtility = utility;
       idxChosenAttackUtility = i;
     }
   }
 
+  Loc chosenLoc;
   Loc maxAttackValueLoc = locs[idxChosenAttackValue];
   Loc maxAttackUtilityLoc = locs[idxChosenAttackUtility];
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
-  // select location
-  // Loc chosenLoc = maxAttackValueLoc;
-  Loc chosenLoc = maxAttackUtilityLoc;
+  if (searchParams.attackPla == C_EMPTY){
+    chosenLoc = PSVTempLoc;
+  }
+  else{
+    assert(searchParams.attackPla == rootPla);
+    chosenLoc = maxAttackUtilityLoc;
+  }
+  
   // * record the chosenLocStr
   chosenLocStr = Location::toString(chosenLoc, rootBoard);
 
@@ -554,6 +560,7 @@ Loc Search::getChosenMoveLoc() {
   moveSelectOut << "searchParams.attackExpand: " << searchParams.attackExpand << endl;
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   moveSelectOut << "searchParams.optimismThreshold4Backup: " << searchParams.optimismThreshold4Backup << endl;
+  moveSelectOut << "searchParams.isMinimaxOptim4Backup: " << searchParams.isMinimaxOptim4Backup << endl;
   for(int i = 0; i<locs.size(); i++) {
     moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
     moveSelectOut << "\t\tN: " << childVisitsVec[i];

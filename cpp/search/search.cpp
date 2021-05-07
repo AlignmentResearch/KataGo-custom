@@ -2097,12 +2097,10 @@ void Search::selectBestChildToDescend2(
     Loc moveLoc = child->prevMoveLoc;
     bool isDuringSearch = true;
     double selectionValue;
-    if (node.nextPla == P_BLACK) {// ! Yawen added 
-      // TODO: change here to node.nextPla == attackPla
+
+    assert(searchParams.attackPla != C_EMPTY);
+    if (node.nextPla == searchParams.attackPla) // ! Yawen added 
       selectionValue = getExploreAttackValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
-      // double selectionValue1 = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
-      // cout << "node.nextPla: black " << selectionValue1 << " " << selectionValue << endl;
-    }
     else
       selectionValue = getExploreSelectionValue(node,policyProbs,child,totalChildVisits,fpuValue,parentUtility,isDuringSearch,maxChildVisits,&thread);
     if(selectionValue > maxSelectionValue) {
@@ -2190,6 +2188,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   vector<double>& attackValues = thread.attackValuesBuf;
   vector<double>& effectiveWinValues = thread.effectiveWinValuesBuf;
   vector<double>& minimaxValues = thread.minimaxBuf; // !!dv
+  vector<double> winValuesSub = thread.winValuesBuf;
 
   int64_t totalChildVisits = 0;
   int64_t maxChildVisits = 0;
@@ -2248,13 +2247,15 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     effectiveUtilities[numGoodChildren] = - effectiveUtility; // ! Yawen added
 
     winValues[numGoodChildren] = winValueSum / weightSum;
+    winValuesSub[numGoodChildren] = node.nextPla == P_WHITE ? winValues[numGoodChildren] : 1.0 - winValues[numGoodChildren];
+    selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
+    
     noResultValues[numGoodChildren] = noResultValueSum / weightSum;
     scoreMeans[numGoodChildren] = scoreMeanSum / weightSum;
     scoreMeanSqs[numGoodChildren] = scoreMeanSqSum / weightSum;
     leads[numGoodChildren] = leadSum / weightSum;
     utilitySums[numGoodChildren] = utilitySum;
     utilitySqSums[numGoodChildren] = utilitySqSum;
-    selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
     weightSums[numGoodChildren] = weightSum;
     weightSqSums[numGoodChildren] = weightSqSum;
     visits[numGoodChildren] = childVisits;
@@ -2321,12 +2322,18 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
 
     // * Playing pessimistically if totalChildVisits < searchParams.optimismThreshold4Backup
     if (totalChildVisits < searchParams.optimismThreshold4Backup){
-      double decisionValue = minimaxValues[i];
-      if(maxDecisionValue < decisionValue){ 
-        maxDecisionValue = decisionValue; // !!dv
-        effectiveWinValue = attackValues[i];
-        effectiveUtility = attackUtilities[i];
-      } // * Playing pessimistically means assuming the opponent will select the max minimaxValue move, so set the effeWinValue as the attackValue of this node
+      if(searchParams.isMinimaxOptim4Backup){
+        double decisionValue = minimaxValues[i]; // [ minimaxValues[i], minimaxValues[i], playSelectionValues[i] ]
+        if(maxDecisionValue < decisionValue){ 
+          maxDecisionValue = decisionValue; // !!dv
+          effectiveWinValue = minimaxValues[i]; // [ minimaxValues[i], attackValues[i], winValuesSub[i] ]
+          effectiveUtility = minimaxUtilities[i]; // [ minimaxValues[i], attackUtilities[i], selfUtilities[i] ]
+        } // * Playing pessimistically means assuming the opponent will select the max minimaxValue move, so set the effeWinValue as the attackValue of this node
+      }
+      else{
+        effectiveWinValue = winValuesSub[i]; // [ winValuesSub[i] ]
+        effectiveUtility = selfUtilities[i]; // [ selfUtilities[i] ]
+      }
     }
     else {
       double decisionValue = playSelectionValues[i];

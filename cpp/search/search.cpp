@@ -1778,14 +1778,6 @@ double Search::getExploreAttackValue(
     assert(weightSum > 0.0);
     // childUtility = utilitySum / weightSum;
     // assert(childUtility >= 0.0);
-    
-    // * debug
-    // std::cout << "move: " << Location::toString(moveLoc,19,19);
-    // std::cout << (child->nextPla == P_BLACK ? " (black) " : " (white) ");
-    // std::cout << " -- childUtility: " << childUtility;
-    // std::cout << "; attackUtility: " << (child->nextPla == P_BLACK ? - attackUtility : attackUtility);
-    // std::cout << "; effectiveUtility: " << (child->nextPla == P_BLACK ? - effectiveUtility : effectiveUtility);
-    // std::cout << "; minimaxUtility: " << (child->nextPla == P_BLACK ? - minimaxUtility : minimaxUtility) << endl;
 
     childUtility = effectiveUtility; // !Yawen added
 
@@ -2045,16 +2037,12 @@ void Search::selectBestChildToDescend(
 
 // ! Yawen added
 //Assumes node is locked
-void Search::selectBestChildToDescend2(
+void Search::selectBestChildToDescendAttack(
   SearchThread& thread, const SearchNode& node, int& bestChildIdx, Loc& bestChildMoveLoc,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
   bool isRoot) const
 {
   assert(thread.pla == node.nextPla);
-
-  bool attackExpand = false;
-  if (node.nextPla == rootPla)
-    attackExpand = true;
 
   double maxSelectionValue = POLICY_ILLEGAL_SELECTION_VALUE;
   bestChildIdx = -1;
@@ -2346,7 +2334,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     attackUtility = std::max(attackUtility, effectiveUtilities[i]);
     minimaxUtility = std::max(minimaxUtility, minimaxUtilities[i]); // !!dv
     attackValue = std::max(attackValue, effectiveWinValues[i]);
-    minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv
+    minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv 
 
     noResultValueSum += desiredWeight * noResultValues[i];
     scoreMeanSum += desiredWeight * scoreMeans[i];
@@ -2450,31 +2438,6 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.weightSum = weightSum;
   node.stats.weightSqSum = weightSqSum;
   node.virtualLosses -= virtualLossesToSubtract;
-  // * debug
-  // double total_visits = node.stats.visits;
-  // if (effectiveWinValue > winValueSum/weightSum){
-  //     cout << "effectiveWinValue: " << effectiveWinValue << " winValueSum: " << winValueSum << " weightSum: " << weightSum << " total_visits: " << total_visits << endl;
-  //     double tmp_a = node.nextPla == P_WHITE ? winValueSum/total_visits : 1.0 - winValueSum/total_visits;
-  //     double tmp_b = node.nextPla == P_WHITE ? winValueSum/weightSum : 1.0 - winValueSum/weightSum;
-    
-  //     cout << "winValueSum/total_visits: " << tmp_a << endl;
-  //     cout << "winValueSum/weightSum: " << tmp_b << endl;
-
-  //     int numChildren = node.numChildren;
-  //     for(int i = 0; i<numChildren; i++){
-  //         cout << "Children Win Value Sum:" << node.children[i]->stats.winValueSum;
-  //     }
-  //     cout << endl;
-      
-  //     // PrintTreeOptions options;
-  //     // options = options.maxDepth(1);
-  //     // options = options.minVisitsPropToExpand(0.1).maxDepth(5);
-  //     // SearchNode* tmp_node = &node;
-  //     // this->printTree(cout, tmp_node, options, node.nextPla);
-
-  //     assert(effectiveWinValue <= winValueSum/weightSum);
-  //   }
-
   node.statsLock.clear(std::memory_order_release); 
 }
 
@@ -2510,10 +2473,6 @@ void Search::addLeafValue(SearchNode& node, double winValue, double noResultValu
 
   while(node.statsLock.test_and_set(std::memory_order_acquire));
   node.stats.visits += 1;
-  // if (node.stats.visits != 1){
-  //   cout << "node.stats.visits == " << node.stats.visits << " -- " << node.prevMoveLoc << endl;
-  //   assert(node.stats.visits == 1);
-  // } // * debug
   node.stats.winValueSum += winValue;
   node.stats.noResultValueSum += noResultValue;
   node.stats.scoreMeanSum += scoreMean;
@@ -2688,7 +2647,7 @@ void Search::playoutDescend(
   int bestChildIdx;
   Loc bestChildMoveLoc;
   if (searchParams.attackExpand)
-    selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+    selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
   else
     selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
 
@@ -2704,7 +2663,7 @@ void Search::playoutDescend(
 
     //As isReInit is true, we don't return, just keep going, since we didn't count this as a true visit in the node stats
     if (searchParams.attackExpand)
-      selectBestChildToDescend2(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+      selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
     else
       selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
     if(bestChildIdx >= 0) {

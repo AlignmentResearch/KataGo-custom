@@ -48,21 +48,6 @@ static void printPolicyValueOwnership(const Board& board, const NNResultBuf& buf
   buf.result->debugPrint(cout,board);
 }
 
-// static void printTreeStruct(ostream& out, SearchNode* rootNode, Board board, int spaces)
-// {
-//   if(rootNode != NULL)
-//   {
-//     for(int i = 0; i < rootNode->numChildren; i++){
-//       for(int j = 0; j < spaces; j++){
-//           out << " ";
-//       }
-//       Loc tmp;
-//       tmp = rootNode->children[rootNode->numChildren-i]->prevMoveLoc;
-//       out << "   " << Location::toString(tmp, board) << endl;
-//     }
-//   }
-// }
-
 static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHistory hist, TestSearchOptions opts) {
 
   if(!opts.ignorePosition)
@@ -227,7 +212,13 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
   {
     SearchParams params;
     params.numThreads = 1;
-    params.maxVisits = 15;
+    params.maxVisits = 8;
+    params.optimismThreshold4Backup = -1;
+    params.visitsThreshold2Attack = 0;
+    params.attackExpand = true;
+    params.isMinimaxOptim4Backup = true;
+    params.attackPla = P_BLACK;
+
     AsyncBot* bot = new AsyncBot(params, nnEval, &logger, getSearchRandSeed());
     Rules rules = Rules::getTrompTaylorish();
     TestSearchOptions opts;
@@ -261,12 +252,12 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
       // cout << "----------------------------------------" << endl;
       // cout << "runBotOnSgf(bot, sgfStr, rules, 61, 7.5, opts);" << endl;
       // runBotOnSgf(bot, sgfStr, rules, 61, 7.5, opts);
-      // cout << "----------------------------------------" << endl;
-      // cout << "runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);" << endl;
-      // runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);
       cout << "----------------------------------------" << endl;
-      cout << "runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);" << endl;
-      runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);
+      cout << "runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);" << endl;
+      runBotOnSgf(bot, sgfStr, rules, 82, 7.5, opts);
+      // cout << "----------------------------------------" << endl;
+      // cout << "runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);" << endl;
+      // runBotOnSgf(bot, sgfStr, rules, 103, 7.5, opts);
       std::cout << endl << endl;
     }
 

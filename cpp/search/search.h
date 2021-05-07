@@ -497,7 +497,7 @@ private:
   ) const;
 
   // ! Yawen added
-  void selectBestChildToDescend2(
+  void selectBestChildToDescendAttack(
     SearchThread& thread, const SearchNode& node, int& bestChildIdx, Loc& bestChildMoveLoc,
     bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
     bool isRoot

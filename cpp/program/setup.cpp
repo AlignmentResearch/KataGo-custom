@@ -367,6 +367,9 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("optimismThreshold4Backup"+idxStr)) params.optimismThreshold4Backup = cfg.getInt64("optimismThreshold4Backup"+idxStr, (int64_t)0, (int64_t)10e8);
     else if(cfg.contains("optimismThreshold4Backup"))   params.optimismThreshold4Backup = cfg.getInt64("optimismThreshold4Backup",        (int64_t)0, (int64_t)10e8);
 
+    if(cfg.contains("softExpandThreshold"+idxStr)) params.softExpandThreshold = cfg.getInt64("softExpandThreshold"+idxStr, (int64_t)0, (int64_t)10e8);
+    else if(cfg.contains("softExpandThreshold"))   params.softExpandThreshold = cfg.getInt64("softExpandThreshold",        (int64_t)0, (int64_t)10e8);
+
     if(cfg.contains("isMinimaxOptim4Backup"+idxStr)) params.isMinimaxOptim4Backup = cfg.getBool("isMinimaxOptim4Backup"+idxStr);
     else if(cfg.contains("isMinimaxOptim4Backup"))   params.isMinimaxOptim4Backup = cfg.getBool("isMinimaxOptim4Backup");
 

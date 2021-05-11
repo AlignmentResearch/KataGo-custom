@@ -215,6 +215,7 @@ static void runSingleBasicPositions(NNEvaluator* nnEval, Logger& logger)
     params.maxVisits = 8;
     params.optimismThreshold4Backup = -1;
     params.visitsThreshold2Attack = 0;
+    params.softExpandThreshold = 0;
     params.attackExpand = true;
     params.isMinimaxOptim4Backup = true;
     params.attackPla = P_BLACK;

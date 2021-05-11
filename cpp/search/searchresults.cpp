@@ -558,6 +558,7 @@ Loc Search::getChosenMoveLoc() {
   moveSelectOut.str(""); // empty the string
   moveSelectOut << "\n---------------------------\n";
   moveSelectOut << "searchParams.attackExpand: " << searchParams.attackExpand << endl;
+  moveSelectOut << "searchParams.softExpandThreshold: " << searchParams.softExpandThreshold << endl;
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   moveSelectOut << "searchParams.optimismThreshold4Backup: " << searchParams.optimismThreshold4Backup << endl;
   moveSelectOut << "searchParams.isMinimaxOptim4Backup: " << searchParams.isMinimaxOptim4Backup << endl;

@@ -2646,8 +2646,10 @@ void Search::playoutDescend(
   //Find the best child to descend down
   int bestChildIdx;
   Loc bestChildMoveLoc;
-  if (searchParams.attackExpand)
+  if (searchParams.attackExpand && node.stats.visits >= searchParams.softExpandThreshold){
+    // std::cout << "node.stat.visits: " << node.stats.visits << endl;
     selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+  }
   else
     selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
 
@@ -2662,8 +2664,10 @@ void Search::playoutDescend(
       (*thread.logStream) << "WARNING: Chosen move not legal so regenerated nn output, nnhash=" << node.nnOutput->nnHash << endl;
 
     //As isReInit is true, we don't return, just keep going, since we didn't count this as a true visit in the node stats
-    if (searchParams.attackExpand)
+  if (searchParams.attackExpand && node.stats.visits >= searchParams.softExpandThreshold){
+      // std::cout << "node.stat.visits: " << node.stats.visits << endl;
       selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
+  }
     else
       selectBestChildToDescend(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
     if(bestChildIdx >= 0) {

@@ -8,6 +8,7 @@ struct SearchParams {
   // !Yawen added
   int optimismThreshold4Backup;
   int visitsThreshold2Attack;
+  int softExpandThreshold;
   bool attackExpand;
   bool isMinimaxOptim4Backup;
   Player attackPla;

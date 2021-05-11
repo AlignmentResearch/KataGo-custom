@@ -542,7 +542,7 @@ Loc Search::getChosenMoveLoc() {
   Loc maxAttackUtilityLoc = locs[idxChosenAttackUtility];
   Loc maxPlaySelectionValueLoc = locs[idxChosenPSVDet];
   Loc PSVTempLoc = locs[idxChosenPSVTemp];
-  if (searchParams.attackPla == C_EMPTY){
+  if (searchParams.attackPla == C_EMPTY){ // * if there is no attack player
     chosenLoc = PSVTempLoc;
   }
   else{

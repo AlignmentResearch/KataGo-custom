@@ -1482,9 +1482,13 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     else
       version = "-raw-";
     if(cfg.contains("player"))
-      logStr += version + cfg.getString("player") + ".log";
+      logStr += version + cfg.getString("player");
     else
-      logStr += version + Global::uint32ToHexString(rand.nextUInt()) + ".log";
+      logStr += version + Global::uint32ToHexString(rand.nextUInt());
+    if(cfg.contains("startGameIdx"))
+      logStr += "-" + cfg.getString("startGameIdx") + ".log";
+    else
+      logStr += ".log";
     logger.addFile(logStr);
   }
 
@@ -1495,6 +1499,9 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     MakeDir::make(cfg.getString("jsonDir"));
     jsonDir = cfg.getString("jsonDir");
   }
+
+  // * adding startGameIdx to indicate the game idx for the start
+  int startGameIdx = cfg.contains("startGameIdx") ? cfg.getInt("startGameIdx", 0, 1000) : 0;
 
   const bool logAllGTPCommunication = cfg.getBool("logAllGTPCommunication");
   const bool logSearchInfo = cfg.getBool("logSearchInfo");
@@ -1602,8 +1609,7 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     genmoveWideRootNoise,analysisWideRootNoise,
     genmoveAntiMirror,analysisAntiMirror,
     perspective,analysisPVLen, 
-    jsonDir, 0 // * counting from 0
-    // TODO: read gameIdx and input the right gameIdx here
+    jsonDir, startGameIdx // * counting from startGameIdx
   );
   engine->setOrResetBoardSize(cfg,logger,seedRand,defaultBoardXSize,defaultBoardYSize);
 

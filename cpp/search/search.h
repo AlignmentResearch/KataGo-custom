@@ -40,6 +40,7 @@ struct ReportedSearchValues {
   double utility;
   int64_t visits;
 
+  // ! Yawen added
   double minimaxUtility;
   double attackUtility;
   double effectiveUtility;
@@ -62,7 +63,7 @@ struct NodeStats {
   double utilitySqSum;
   double weightSum;
   double weightSqSum;
-  // !!dv
+  // ! Yawen added
   double attackUtility;
   double effectiveUtility;
   double minimaxUtility;
@@ -154,12 +155,13 @@ struct SearchThread {
   std::vector<double> selfUtilityBuf;
   std::vector<int64_t> visitsBuf;
 
+  // ! Yawen added
   std::vector<double> attackUtilityBuf;
   std::vector<double> effectiveUtilityBuf;
-  std::vector<double> minimaxUtilityBuf; // !!dv
+  std::vector<double> minimaxUtilityBuf; 
   std::vector<double> attackValuesBuf;
   std::vector<double> effectiveWinValuesBuf;
-  std::vector<double> minimaxBuf; // !!dv
+  std::vector<double> minimaxBuf; 
 
   double upperBoundVisitsLeft;
 

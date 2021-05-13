@@ -383,6 +383,7 @@ bool Search::getNodeRawNNValues(const SearchNode& node, ReportedSearchValues& va
   return true;
 }
 
+
 bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values) const {
   std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
   unique_lock<std::mutex> lock(mutex);
@@ -420,7 +421,7 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   values.attackUtility = attackUtility;
   values.effectiveUtility = effectiveUtility; // !!dv
 
-  values.winValue = winValueSum / weightSum;  
+  values.winValue = winValueSum / weightSum;
   values.lossValue = (weightSum - winValueSum - noResultValueSum) / weightSum;
   values.noResultValue = noResultValueSum / weightSum;
   double scoreMean = scoreMeanSum / weightSum;
@@ -567,7 +568,6 @@ Loc Search::getChosenMoveLoc() {
     moveSelectOut << "\t\tN: " << childVisitsVec[i];
     moveSelectOut << "\tPAV: " << playAttackValues[i];
     moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
-    moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
     moveSelectOut << "\tPAU: " << playAttackUtilities[i];
     moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
     if(i == idxChosenAttackValue)
@@ -581,14 +581,13 @@ Loc Search::getChosenMoveLoc() {
     moveSelectOut << endl;
   }
 
-  moveSelectOut << "\n--- Flag: Better attack value Moves to exploit\n";
+  moveSelectOut << "\n--- Flag: Better attack utility moves to exploit\n";
   for(int i = 0; i<locs.size(); i++) {
-    if(playAttackValues[i] >= playAttackValues[idxChosenPSVDet]){
+    if(playAttackUtilities[i] >= playAttackUtilities[idxChosenPSVDet]){
       moveSelectOut << "Move: " << Location::toString(locs[i], rootBoard);
       moveSelectOut << "\tN: " << childVisitsVec[i];
       moveSelectOut << "\tPAV: " << playAttackValues[i];
       moveSelectOut << "\t\tPSV: " << playSelectionValues[i];
-      moveSelectOut << "\tPSVTemp: " << playSelectionValues[i];
       moveSelectOut << "\tPAU: " << playAttackUtilities[i];
       moveSelectOut << "\tWVAvg: " << winValueAvgVec[i];
       if(i == idxChosenAttackValue)
@@ -687,7 +686,6 @@ bool Search::shouldSuppressPassAlreadyLocked(const SearchNode* n) const {
     double scoreMeanSum = child->stats.scoreMeanSum;
     double leadSum = child->stats.leadSum;
     double weightSum = child->stats.weightSum;
-    double minimaxValue = child->stats.minimaxValue; // !!dv
     child->statsLock.clear(std::memory_order_release);
 
     //Too few visits - reject move
@@ -897,9 +895,7 @@ void Search::appendPVForMove(vector<Loc>& buf, vector<int64_t>& visitsBuf, vecto
     return;
 
   for(int depth = 0; depth < maxDepth; depth++) {
-    bool success = getPlaySelectionValues(*n, scratchLocs, scratchValues, NULL, 1.0, false); 
-    // * vector<Loc>& scratchLocs, vector<double>& scratchValues -- arrays; 
-    
+    bool success = getPlaySelectionValues(*n, scratchLocs, scratchValues, NULL, 1.0, false);
     if(!success)
       return;
 
@@ -983,7 +979,6 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   double scoreMeanSqSum = 0.0;
   double leadSum = 0.0;
   double weightSum = 0.0;
-  double minimaxValue = 0.0; // !!dv
   double weightSqSum = 0.0;
   double utilitySum = 0.0;
 
@@ -996,7 +991,6 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
     scoreMeanSqSum = child->stats.scoreMeanSqSum;
     leadSum = child->stats.leadSum;
     weightSum = child->stats.weightSum;
-    minimaxValue = child->stats.minimaxValue; // !!dv
     weightSqSum = child->stats.weightSqSum;
     utilitySum = child->stats.utilitySum;
     child->statsLock.clear(std::memory_order_release);
@@ -1324,7 +1318,7 @@ void Search::printTreeHelper(
       sprintf(buf,"PSV %7.0f ", data.playSelectionValue);
       out << buf;
     }
-    
+
     // * printing values of interest for checking
     if(true) {
       while(node.statsLock.test_and_set(std::memory_order_acquire));
@@ -1343,15 +1337,13 @@ void Search::printTreeHelper(
     }
 
     if(options.printSqs_) {
-    // if(true) {
       while(node.statsLock.test_and_set(std::memory_order_acquire));
       double scoreMeanSqSum = node.stats.scoreMeanSqSum;
       double utilitySqSum = node.stats.utilitySqSum;
       double weightSum = node.stats.weightSum;
       double weightSqSum = node.stats.weightSqSum;
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f", 
-      scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum);
+      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f ", scoreMeanSqSum/weightSum, utilitySqSum/weightSum, weightSum, weightSqSum);
       out << buf;
     }
 

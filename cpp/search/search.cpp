@@ -415,6 +415,7 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
   return true;
 }
 
+
 double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const {
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
@@ -657,7 +658,6 @@ double Search::recomputeSearchTimeLimit(
   return tcRec;
 }
 
-// TODO: change this for expansion depending on attack value
 void Search::runWholeSearch(
   Logger& logger,
   std::atomic<bool>& shouldStopNow,
@@ -929,7 +929,6 @@ void Search::recursivelyRemoveSubtreeValueBiasBeforeDeleteSynchronous(SearchNode
   if(node->subtreeValueBiasTableEntry != nullptr) {
     node->subtreeValueBiasTableEntry->deltaUtilitySum -= node->lastSubtreeValueBiasDeltaSum * searchParams.subtreeValueBiasFreeProp;
     node->subtreeValueBiasTableEntry->weightSum -= node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
-    // node->subtreeValueBiasTableEntry->minimaxValue -= node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
   }
 }
 
@@ -2047,7 +2046,6 @@ void Search::selectBestChildToDescendAttack(
   double maxSelectionValue = POLICY_ILLEGAL_SELECTION_VALUE;
   bestChildIdx = -1;
   bestChildMoveLoc = Board::NULL_LOC;
-
   int numChildren = node.numChildren;
 
   double policyProbMassVisited = 0.0;
@@ -2192,8 +2190,6 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   // storing thread buffers to vectors
   int numChildren = node.numChildren;
   int numGoodChildren = 0;
-
-  // cout << "\n--- numChildren: " << numChildren << " ---\nChecking numGoodChildren" << endl;
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = node.children[i];
 
@@ -2236,7 +2232,6 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
 
     winValues[numGoodChildren] = winValueSum / weightSum;
     winValuesSub[numGoodChildren] = node.nextPla == P_WHITE ? winValues[numGoodChildren] : 1.0 - winValues[numGoodChildren];
-    selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
     
     noResultValues[numGoodChildren] = noResultValueSum / weightSum;
     scoreMeans[numGoodChildren] = scoreMeanSum / weightSum;
@@ -2244,6 +2239,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     leads[numGoodChildren] = leadSum / weightSum;
     utilitySums[numGoodChildren] = utilitySum;
     utilitySqSums[numGoodChildren] = utilitySqSum;
+    selfUtilities[numGoodChildren] = node.nextPla == P_WHITE ? childUtility : -childUtility;
     weightSums[numGoodChildren] = weightSum;
     weightSqSums[numGoodChildren] = weightSqSum;
     visits[numGoodChildren] = childVisits;
@@ -2306,8 +2302,6 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     winValueSum += desiredWeight * winValues[i];
     // * attackValue and effectiveWinValue
     // * set decisionValue definition to playSelectionValue
-    // double decisionValue = 0.5; // * debug
-
     // * Playing pessimistically if totalChildVisits < searchParams.optimismThreshold4Backup
     if (totalChildVisits < searchParams.optimismThreshold4Backup){
       if(searchParams.isMinimaxOptim4Backup){
@@ -2345,7 +2339,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     weightSum += desiredWeight;
     weightSqSum += weightScaling * weightScaling * weightSqSums[i];
   }
-    
+
   //Also add in the direct evaluation of this node.
   {
     //Since we've scaled all the child weights in some arbitrary way, adjust and make sure
@@ -2438,7 +2432,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.weightSum = weightSum;
   node.stats.weightSqSum = weightSqSum;
   node.virtualLosses -= virtualLossesToSubtract;
-  node.statsLock.clear(std::memory_order_release); 
+  node.statsLock.clear(std::memory_order_release);
 }
 
 void Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
@@ -2457,7 +2451,7 @@ void Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft)
 void Search::addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal) {
   double utility =
     getResultUtility(winValue, noResultValue)
-    + getScoreUtility(scoreMean, scoreMeanSq, 1.0); 
+    + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
 
   if(searchParams.subtreeValueBiasFactor != 0 && !isTerminal && node.subtreeValueBiasTableEntry != nullptr) {
     SubtreeValueBiasEntry& entry = *(node.subtreeValueBiasTableEntry);
@@ -2610,7 +2604,7 @@ void Search::playoutDescend(
        thread.history.moveHistory.size() == rootHistory.moveHistory.size() + 1 &&
        node.prevMoveLoc == Board::PASS_LOC)
   ) {
-    if(thread.history.isNoResult) { // TODO: check what thread.history.isNoResult means?
+    if(thread.history.isNoResult) {
       double winValue = 0.0;
       double noResultValue = 1.0;
       double scoreMean = 0.0;
@@ -2647,7 +2641,7 @@ void Search::playoutDescend(
   int bestChildIdx;
   Loc bestChildMoveLoc;
   if (searchParams.attackExpand && node.stats.visits >= searchParams.softExpandThreshold){
-    // std::cout << "node.stat.visits: " << node.stats.visits << endl;
+    // std::cout << "attackExpand -- node.stat.visits: " << node.stats.visits << endl;
     selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
   }
   else
@@ -2665,7 +2659,7 @@ void Search::playoutDescend(
 
     //As isReInit is true, we don't return, just keep going, since we didn't count this as a true visit in the node stats
   if (searchParams.attackExpand && node.stats.visits >= searchParams.softExpandThreshold){
-      // std::cout << "node.stat.visits: " << node.stats.visits << endl;
+      // std::cout << "attackExpand -- node.stat.visits: " << node.stats.visits << endl;
       selectBestChildToDescendAttack(thread,node,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
   }
     else

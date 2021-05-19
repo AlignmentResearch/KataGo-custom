@@ -548,7 +548,7 @@ Loc Search::getChosenMoveLoc() {
   }
   else{
     assert(searchParams.attackPla == rootPla);
-    chosenLoc = maxAttackUtilityLoc;
+    chosenLoc = maxAttackValueLoc;
   }
   
   // * record the chosenLocStr

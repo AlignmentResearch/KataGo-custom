@@ -311,6 +311,7 @@ struct Search {
   int softExpandThreshold;
   bool isMinimaxOptim4Backup;
   bool attackExpand;
+  bool motivGroundTruth;
 
   Loc getChosenMoveLoc();
   //Get the vector of values (e.g. modified visit counts) used to select a move.
@@ -516,6 +517,12 @@ private:
     SearchThread& thread, SearchNode& node,
     bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit
   );
+
+  // ! Yawen added
+  void initMotivNodeValue(
+    SearchThread& thread, SearchNode& node,
+    bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit
+  ); 
 
   void playoutDescend(
     SearchThread& thread, SearchNode& node,

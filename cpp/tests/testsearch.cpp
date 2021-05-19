@@ -77,6 +77,8 @@ static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHi
     const Search* search = bot->getSearch();
 
     Board::printBoard(cout, board, Board::NULL_LOC, &(hist.moveHistory));
+    
+    // Board::getMotivBoardValue(board);
 
     cout << "Root visits: " << search->getRootVisits() << "\n";
     cout << "NN rows: " << search->nnEvaluator->numRowsProcessed() << endl;

@@ -10,6 +10,7 @@ struct SearchParams {
   int visitsThreshold2Attack;
   int softExpandThreshold;
   bool attackExpand;
+  bool motivGroundTruth;
   bool isMinimaxOptim4Backup;
   Player attackPla;
 

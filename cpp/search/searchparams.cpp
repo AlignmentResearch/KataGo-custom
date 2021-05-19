@@ -7,9 +7,10 @@
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
   :visitsThreshold2Attack(65536), // ! Yawen added for softattack
-   optimismThreshold4Backup(-1), // ! Yawen added for softbackup
+   optimismThreshold4Backup(0), // ! Yawen added for softbackup
    softExpandThreshold(0),
    attackExpand(false), // ! Yawen added for attack expand
+   motivGroundTruth(false), // ! Yawen added for motivation board ground truth
    isMinimaxOptim4Backup(false), // ! Yawen added for softbackup
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),

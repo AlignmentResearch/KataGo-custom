@@ -273,6 +273,11 @@ struct Board
   static void printBoard(std::ostream& out, const Board& board, Loc markLoc, const std::vector<Move>* hist);
   static std::string toStringSimple(const Board& board, char lineDelimiter);
 
+  // ! Yawen added
+  int getNumIslands(std::vector< std::vector<char> > grid, std::vector< std::vector<bool> > visited, char color); // ! Yawen added
+  // static void getMotivBoardValue(Board& board);
+  // static void dfSearch(vector< vector<int> > grid, int i, int j, vector< vector<int> > visited);
+
   //Data--------------------------------------------
 
   int x_size;                  //Horizontal size of board

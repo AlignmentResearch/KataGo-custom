@@ -2582,9 +2582,163 @@ void Search::addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLosse
   double winProb = (double)node.nnOutput->whiteWinProb;
   double noResultProb = (double)node.nnOutput->whiteNoResultProb;
   double scoreMean = (double)node.nnOutput->whiteScoreMean;
-  double scoreMeanSq = (double)node.nnOutput->whiteScoreMeanSq;
   double lead = (double)node.nnOutput->whiteLead;
+  double scoreMeanSq = (double)node.nnOutput->whiteScoreMeanSq;
   addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
+}
+
+// ! Yawen added
+//Assumes node is locked
+void Search::initMotivNodeValue(
+  SearchThread& thread, SearchNode& node,
+  bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit
+) {
+
+  Board board = thread.board; 
+
+  int y_size = board.y_size;
+  int x_size = board.x_size;
+
+  typedef vector< vector<char> > MatrixChar;
+  typedef vector< vector<bool> > MatrixBool;
+  typedef vector<char> RowChar;
+  typedef vector<bool> RowBool;
+  MatrixChar grid;
+  MatrixBool visited;
+  
+
+  // Traversing current board and make a Matrix copy for counting numIslands
+  for(int y = 0; y < y_size; y++)
+  {
+    RowChar row_board(x_size);
+    RowBool row_visited(x_size);
+    for(int x = 0; x < x_size; x++)
+    {
+      Loc loc = Location::getLoc(x,y,board.x_size);
+      char s = PlayerIO::colorToChar(board.colors[loc]);
+
+      row_board[x] = s;
+      row_visited[x] = false;
+    }
+    grid.push_back(row_board);
+    visited.push_back(row_visited);
+  }
+
+  // compute the number of islands for black and white
+  int whiteNumIslands = board.getNumIslands(grid, visited, 'O');
+  // int blackNumIslands = board.getNumIslands(grid, visited, 'X');
+
+  static int rowX[] = { 0, 15, 17, 15, 16, 17, 18 };
+  static int colX[] = { 15, 18, 18, 17, 17, 17, 17 };
+  static int rowO[] = { 0, 15, 17, 15, 16, 17, 18 };
+  static int colO[] = { 18, 0, 0, 1, 1, 1, 1 };
+
+
+  for(int y = 0; y < y_size; y++)
+  {
+    RowChar row_board(x_size);
+    RowBool row_visited(x_size);
+    for(int x = 0; x < x_size; x++)
+    {
+      Loc loc = Location::getLoc(x,y,board.x_size);
+      char s = PlayerIO::colorToChar(board.colors[loc]);
+
+      row_board[x] = s;
+      row_visited[x] = false;
+    }
+    grid.push_back(row_board);
+    visited.push_back(row_visited);
+  }
+
+  
+  bool whiteWin = false;
+  // bool blackWin = false;
+
+  // if white connects to one and all key white stones remain, then white has a definite win
+  if (whiteNumIslands == 1){
+    bool allKeyWhiteRemains = true;
+    for (int k = 0; k < 7; ++k){
+      cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
+      if (grid[rowO[k]][colO[k]] != 'O')
+        allKeyWhiteRemains = false;
+    }
+    if (allKeyWhiteRemains)
+      whiteWin = true;
+  }
+
+  // Board::printBoard(cout, board, Board::NULL_LOC, &(thread.history.moveHistory));
+  //   for (int k = 0; k < 7; ++k)
+  //     cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
+  cout << "Board::getNumIslands(cout, board, P_WHITE) = " << whiteNumIslands << endl;
+  // cout << "Board::getNumIslands(cout, board, P_BLACK) = " << board.getNumIslands(grid, visited, 'X') << endl;
+  
+  // Setting node.nnOutput same as initNodeNNOutput
+  {
+    bool includeOwnerMap = isRoot || alwaysIncludeOwnerMap;
+    MiscNNInputParams nnInputParams;
+    nnInputParams.drawEquivalentWinsForWhite = searchParams.drawEquivalentWinsForWhite;
+    nnInputParams.conservativePass = searchParams.conservativePass;
+    nnInputParams.nnPolicyTemperature = searchParams.nnPolicyTemperature;
+    nnInputParams.avoidMYTDaggerHack = searchParams.avoidMYTDaggerHackPla == thread.pla;
+    if(searchParams.playoutDoublingAdvantage != 0) {
+      Player playoutDoublingAdvantagePla = getPlayoutDoublingAdvantagePla();
+      nnInputParams.playoutDoublingAdvantage = (
+        getOpp(thread.pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage
+      );
+    }
+    if(isRoot && searchParams.rootNumSymmetriesToSample > 1) {
+      vector<shared_ptr<NNOutput>> ptrs;
+      std::array<int, NNInputs::NUM_SYMMETRY_COMBINATIONS> symmetryIndexes;
+      std::iota(symmetryIndexes.begin(), symmetryIndexes.end(), 0);
+      for(int i = 0; i<searchParams.rootNumSymmetriesToSample; i++) {
+        std::swap(symmetryIndexes[i], symmetryIndexes[thread.rand.nextInt(i,NNInputs::NUM_SYMMETRY_COMBINATIONS-1)]);
+        nnInputParams.symmetry = symmetryIndexes[i];
+        bool skipCacheThisIteration = true; //Skip cache since there's no guarantee which symmetry is in the cache
+        nnEvaluator->evaluate(
+          thread.board, thread.history, thread.pla,
+          nnInputParams,
+          thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
+        );
+        ptrs.push_back(std::move(thread.nnResultBuf.result));
+      }
+      node.nnOutput = std::shared_ptr<NNOutput>(new NNOutput(ptrs));
+    }
+    else {
+      nnEvaluator->evaluate(
+        thread.board, thread.history, thread.pla,
+        nnInputParams,
+        thread.nnResultBuf, skipCache, includeOwnerMap
+      );
+      node.nnOutput = std::move(thread.nnResultBuf.result);
+    }
+
+    assert(node.nnOutput->noisedPolicyProbs == NULL);
+    maybeAddPolicyNoiseAndTempAlreadyLocked(thread,node,isRoot);
+    node.nnOutputAge = searchNodeAge;
+
+    //If this is a re-initialization of the nnOutput, we don't want to add any visits or anything.
+    //Also don't bother updating any of the stats. Technically we should do so because winValueSum
+    //and such will have changed potentially due to a new orientation of the neural net eval
+    //slightly affecting the evals, but this is annoying to recompute from scratch, and on the next
+    //visit updateStatsAfterPlayout should fix it all up anyways.
+    if(isReInit)
+      return;
+}
+
+  // if white wins the motivation board
+  if (whiteWin){
+    // Values in the search are from the perspective of white positive always
+    double winProb = 1.0;
+    double noResultProb = 0.0;
+    double scoreMean = (double)node.nnOutput->whiteScoreMean;
+    double scoreMeanSq = (double)node.nnOutput->whiteScoreMeanSq;
+    cout << "scoreMean: " << scoreMean << endl;
+    cout << "scoreMeanSq: " << scoreMeanSq << endl;
+    double lead = (double)node.nnOutput->whiteLead;
+    addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
+  }
+  else
+    addCurentNNOutputAsLeafValue(node,virtualLossesToSubtract);
 }
 
 void Search::playoutDescend(
@@ -2629,7 +2783,10 @@ void Search::playoutDescend(
 
   //Hit leaf node, finish
   if(node.nnOutput == nullptr) {
-    initNodeNNOutput(thread,node,isRoot,false,virtualLossesToSubtract,false);
+    if (searchParams.motivGroundTruth) // ! Yawen added
+      initMotivNodeValue(thread,node,isRoot,false,virtualLossesToSubtract,false);
+    else
+      initNodeNNOutput(thread,node,isRoot,false,virtualLossesToSubtract,false);
     return;
   }
 

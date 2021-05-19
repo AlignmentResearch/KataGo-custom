@@ -2623,3 +2623,117 @@ Board Board::parseBoard(int xSize, int ySize, const string& s, char lineDelimite
   }
   return board;
 }
+
+// --------------------------------------------------------------------------------
+// ! Yawen added
+
+int isSafe(const vector< vector<char> >& grid, int row, int col,
+           vector< vector<bool> >& visited, char color)
+{
+    // row number is in range, column
+    // number is in range and value is 1
+    // and not yet visited
+    return (row >= 0) && (row < grid.size()) && (col >= 0) && (col < grid[0].size()) && (grid[row][col] == color && !visited[row][col]);
+}
+
+
+// void dfs(vector< vector<char> >& grid, int row, int col, char color) {
+//   if ((row >= 0) && (row < grid.size()) && (col >= 0) && (col < grid[0].size()) 
+//         && (grid[row][col] == color)) {
+//           grid[row][col] = '.';
+//           dfs(grid, row + 1, col, color);
+//           dfs(grid, row, col + 1, color);
+//           dfs(grid, row - 1, col, color);
+//           dfs(grid, row, col - 1, color);
+//   }
+    
+// }
+
+void dfs(const vector< vector<char> >& grid, int row, int col, vector< vector<bool> >& visited, char color) {
+  // These arrays are used to get
+  // row and column numbers of 8
+  // neighbours of a given cell
+  static int rowNbr[] = { -1, 0, 0, 1 };
+  static int colNbr[] = { 0, -1, 1, 0 };
+
+  // Mark this cell as visited
+  visited[row][col] = true;
+
+  // Recur for all connected neighbours
+  for (int k = 0; k < 4; ++k)
+      if (isSafe(grid, row + rowNbr[k], col + colNbr[k], visited, color))
+          dfs(grid, row + rowNbr[k], col + colNbr[k], visited, color);
+}
+
+
+int Board::getNumIslands(vector< vector<char> > grid, vector< vector<bool> > visited, char color){  
+
+  // Initialize count as 0 and
+  // travese through the all cells of
+  // given matrix
+  int count = 0;
+  for (int i = 0; i < y_size; ++i)
+      for (int j = 0; j < x_size; ++j){
+
+          // If a cell with value 1 is not
+          if (grid[i][j] == color && !visited[i][j]) {
+              // visited yet, then new island found
+              // Visit all cells in this island.
+
+              dfs(grid, i, j, visited, color);
+
+              // and increment island count
+              ++count;
+          }
+      }
+
+  return count;
+}
+
+// void Board::getMotivBoardValue(Board& board) {
+//   int y_size = board.y_size;
+//   int x_size = board.x_size;
+
+//   // char color;
+//   // if (pla == P_WHITE)
+//   //   color = 'O';
+//   // else if (pla == P_BLACK)
+//   //   color = 'X';
+//   // else if (pla == C_EMPTY)
+//   //   color = '.';
+//   // else
+//   //   throw StringError("Expected player as P_WHITE, P_BLACK or C_EMPTY");
+
+//   typedef vector< vector<char> > MatrixChar;
+//   typedef vector< vector<bool> > MatrixBool;
+//   typedef vector<char> RowChar;
+//   typedef vector<bool> RowBool;
+//   MatrixChar grid;
+//   MatrixBool visited;
+
+//   // Traversing current board and make a Matrix copy for counting numIslands
+//   for(int y = 0; y < y_size; y++)
+//   {
+//     RowChar row_board(x_size);
+//     RowBool row_visited(x_size);
+//     for(int x = 0; x < x_size; x++)
+//     {
+//       Loc loc = Location::getLoc(x,y,board.x_size);
+//       char s = PlayerIO::colorToChar(board.colors[loc]);
+
+//       row_board[x] = s;
+//       row_visited[x] = false;
+//     }
+//     grid.push_back(row_board);
+//     visited.push_back(row_visited);
+//   }
+
+//   // 
+//   int whiteNumIslands = board.getNumIslands(grid, visited, 'O');
+//   int blackNumIslands = board.getNumIslands(grid, visited, 'X');
+
+//   // cout << "Board::getNumIslands(cout, board, P_WHITE) = " << board.getNumIslands(grid, visited, 'O') << endl;
+//   // cout << "Board::getNumIslands(cout, board, P_BLACK) = " << board.getNumIslands(grid, visited, 'X') << endl;
+//   // cout << "Board::getNumIslands(cout, board, C_EMPTY) = " << board.getNumIslands(grid, visited, '.') << endl;
+
+// }

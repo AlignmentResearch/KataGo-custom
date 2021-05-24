@@ -2587,6 +2587,16 @@ void Search::addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLosse
   addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
 }
 
+void Search::addMotivGroundTruthAsLeafValue(SearchNode& node, int32_t virtualLossesToSubtract, bool whiteWin) {
+  //Values in the search are from the perspective of white positive always
+  double winProb = whiteWin ? 1.0 : 0.0;
+  double noResultProb = 0.0;
+  double scoreMean = 0.0;
+  double lead = 0.0;
+  double scoreMeanSq = 0.0;
+  addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
+}
+
 // ! Yawen added
 //Assumes node is locked
 void Search::initMotivNodeValue(
@@ -2606,7 +2616,6 @@ void Search::initMotivNodeValue(
   MatrixChar grid;
   MatrixBool visited;
   
-
   // Traversing current board and make a Matrix copy for counting numIslands
   for(int y = 0; y < y_size; y++)
   {
@@ -2633,7 +2642,6 @@ void Search::initMotivNodeValue(
   static int rowO[] = { 0, 15, 17, 15, 16, 17, 18 };
   static int colO[] = { 18, 0, 0, 1, 1, 1, 1 };
 
-
   for(int y = 0; y < y_size; y++)
   {
     RowChar row_board(x_size);
@@ -2649,7 +2657,6 @@ void Search::initMotivNodeValue(
     grid.push_back(row_board);
     visited.push_back(row_visited);
   }
-
   
   bool whiteWin = false;
   // bool blackWin = false;
@@ -2670,7 +2677,6 @@ void Search::initMotivNodeValue(
   //   for (int k = 0; k < 7; ++k)
   //     cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
   cout << "Board::getNumIslands(cout, board, P_WHITE) = " << whiteNumIslands << endl;
-  // cout << "Board::getNumIslands(cout, board, P_BLACK) = " << board.getNumIslands(grid, visited, 'X') << endl;
   
   // Setting node.nnOutput same as initNodeNNOutput
   {
@@ -2726,19 +2732,8 @@ void Search::initMotivNodeValue(
 }
 
   // if white wins the motivation board
-  if (whiteWin){
-    // Values in the search are from the perspective of white positive always
-    double winProb = 1.0;
-    double noResultProb = 0.0;
-    double scoreMean = (double)node.nnOutput->whiteScoreMean;
-    double scoreMeanSq = (double)node.nnOutput->whiteScoreMeanSq;
-    cout << "scoreMean: " << scoreMean << endl;
-    cout << "scoreMeanSq: " << scoreMeanSq << endl;
-    double lead = (double)node.nnOutput->whiteLead;
-    addLeafValue(node,winProb,noResultProb,scoreMean,scoreMeanSq,lead,virtualLossesToSubtract,false);
-  }
-  else
-    addCurentNNOutputAsLeafValue(node,virtualLossesToSubtract);
+  addMotivGroundTruthAsLeafValue(node, virtualLossesToSubtract, whiteWin);
+  // addCurentNNOutputAsLeafValue(node,virtualLossesToSubtract);
 }
 
 void Search::playoutDescend(

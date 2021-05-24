@@ -510,6 +510,9 @@ private:
   void addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal);
   void addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLossesToSubtract);
 
+  // ! Yawen added
+  void addMotivGroundTruthAsLeafValue(SearchNode& node, int32_t virtualLossesToSubtract, bool whiteWin);
+
   void maybeRecomputeExistingNNOutput(
     SearchThread& thread, SearchNode& node, bool isRoot
   );

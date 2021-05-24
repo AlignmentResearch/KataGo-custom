@@ -1282,25 +1282,59 @@ void Search::printTreeHelper(
       out << buf;
     }
 
-    // bool hasNNValue = false;
-    // double nnResultValue;
-    // double nnTotalValue;
+    // getting NN direct evaluation
+    bool hasNNValue = false;
+    double nnwhiteWinProb;
+    double nnResultValue;
+    double nnTotalValue;
+    ReportedSearchValues values;
+    
+    std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
+    unique_lock<std::mutex> lock(mutex);
+    shared_ptr<NNOutput> nnOutput = node.nnOutput;
+    lock.unlock();
+    if(node.nnOutput != nullptr) {
+      // values.winValue = nnOutput->whiteWinProb;
+      // values.lossValue = nnOutput->whiteLossProb;
+      // values.noResultValue = nnOutput->whiteNoResultProb;
+
+      // double scoreMean = nnOutput->whiteScoreMean;
+      // double scoreMeanSq = nnOutput->whiteScoreMeanSq;
+      // double scoreStdev = getScoreStdev(scoreMean,scoreMeanSq);
+      // values.staticScoreValue = ScoreValue::expectedWhiteScoreValue(scoreMean,scoreStdev,0.0,2.0,rootBoard);
+      // values.dynamicScoreValue = ScoreValue::expectedWhiteScoreValue(scoreMean,scoreStdev,recentScoreCenter,searchParams.dynamicScoreCenterScale,rootBoard);
+      // values.expectedScore = scoreMean;
+      // values.expectedScoreStdev = scoreStdev;
+      // values.lead = nnOutput->whiteLead;
+
+      // //Sanity check
+      // assert(values.winValue >= 0.0);
+      // assert(values.lossValue >= 0.0);
+      // assert(values.noResultValue >= 0.0);
+      // assert(values.winValue + values.lossValue + values.noResultValue < 1.001);
+
+      // double winLossValue = values.winValue - values.lossValue;
+      // if(winLossValue > 1.0) winLossValue = 1.0;
+      // if(winLossValue < -1.0) winLossValue = -1.0;
+      // values.winLossValue = winLossValue;
+      
+      nnwhiteWinProb = nnOutput->whiteWinProb;
+      nnResultValue = getResultUtilityFromNN(*nnOutput);
+      nnTotalValue = getUtilityFromNN(*nnOutput);
+      hasNNValue = true;
+    }
+    
     // lock.lock();
+    // while(node.statsLock.test_and_set(std::memory_order_acquire));
     // if(node.nnOutput != nullptr) {
+    //   nnwhiteWinProb = *node.nnOutput.whiteWinProb;
     //   nnResultValue = getResultUtilityFromNN(*node.nnOutput);
     //   nnTotalValue = getUtilityFromNN(*node.nnOutput);
     //   hasNNValue = true;
     // }
     // lock.unlock();
-
-    // if(hasNNValue) {
-    //   sprintf(buf,"VW %6.2fc VS %6.2fc ", nnResultValue * 100.0, (nnTotalValue - nnResultValue) * 100.0);
-    //   out << buf;
-    // }
-    // else {
-    //   sprintf(buf,"VW ---.--c VS ---.--c ");
-    //   out << buf;
-    // }
+    // node.statsLock.clear(std::memory_order_release);
+    
 
     if(depth > 0 && !isnan(data.lcb)) {
       sprintf(buf,"LCB %7.2fc ", perspectiveFactor * data.lcb * 100.0);
@@ -1317,6 +1351,16 @@ void Search::printTreeHelper(
     }
     if(data.playSelectionValue >= 0 && depth > 0) {
       sprintf(buf,"PSV %7.0f ", data.playSelectionValue);
+      out << buf;
+    }
+
+    if(hasNNValue) {
+      // sprintf(buf,"nnWV(W) %6.2fc nnRW(W) %6.2fc nnS(W) %6.2fc ", nnwhiteWinProb * 100.0, nnResultValue * 100.0, (nnTotalValue - nnResultValue) * 100.0);
+      sprintf(buf,"nnWV(W) %5.6f nnRV(W) %5.6f nnSV(W) %5.6f ", nnwhiteWinProb, nnResultValue, (nnTotalValue - nnResultValue));
+      out << buf;
+    }
+    else {
+      sprintf(buf,"nnWV(W) -- nnRV(W) -- nnSV(W) -- ");
       out << buf;
     }
 
@@ -1502,6 +1546,52 @@ bool Search::getJsonTreeHelper(
   double minimaxUtility = node.stats.minimaxUtility; // !!dv
   node.statsLock.clear(std::memory_order_release);
 
+  // * getting NN direct evaluation
+  bool hasNNValue = false;
+  double nnwhiteWinProb;
+  double nnResultValue;
+  double nnTotalValue;
+  double nnScoreMean;
+  double nnScoreMeanSq;
+  double nnScoreStdev;
+
+  ReportedSearchValues values;
+  
+  std::mutex& mutex = mutexPool->getMutex(node.lockIdx);
+  unique_lock<std::mutex> lock(mutex);
+  shared_ptr<NNOutput> nnOutput = node.nnOutput;
+  lock.unlock();
+  if(node.nnOutput != nullptr) {
+    values.winValue = nnOutput->whiteWinProb;
+    values.lossValue = nnOutput->whiteLossProb;
+    values.noResultValue = nnOutput->whiteNoResultProb;
+
+    nnScoreMean = nnOutput->whiteScoreMean;
+    nnScoreMeanSq = nnOutput->whiteScoreMeanSq;
+    nnScoreStdev = getScoreStdev(nnScoreMean,nnScoreMeanSq);
+    values.staticScoreValue = ScoreValue::expectedWhiteScoreValue(nnScoreMean,nnScoreStdev,0.0,2.0,rootBoard);
+    values.dynamicScoreValue = ScoreValue::expectedWhiteScoreValue(nnScoreMean,nnScoreStdev,recentScoreCenter,searchParams.dynamicScoreCenterScale,rootBoard);
+    values.expectedScore = nnScoreMean;
+    values.expectedScoreStdev = nnScoreStdev;
+    values.lead = nnOutput->whiteLead;
+
+    //Sanity check
+    assert(values.winValue >= 0.0);
+    assert(values.lossValue >= 0.0);
+    assert(values.noResultValue >= 0.0);
+    assert(values.winValue + values.lossValue + values.noResultValue < 1.001);
+
+    double winLossValue = values.winValue - values.lossValue;
+    if(winLossValue > 1.0) winLossValue = 1.0;
+    if(winLossValue < -1.0) winLossValue = -1.0;
+    values.winLossValue = winLossValue;
+    
+    nnwhiteWinProb = nnOutput->whiteWinProb;
+    nnResultValue = getResultUtilityFromNN(*nnOutput);
+    nnTotalValue = getUtilityFromNN(*nnOutput);
+    hasNNValue = true;
+  }
+
   // * getting each inter
   string moveStr = depth == 0 ? "Root" : Location::toString(data.move, board);
   json inter;
@@ -1532,6 +1622,44 @@ bool Search::getJsonTreeHelper(
     inter["utilityLcb"] = utilityLcb;
     inter["order"] = data.order;
     inter["playSelectionValue"] = data.playSelectionValue;
+  }
+
+  if(hasNNValue) {
+    inter["nnWinValue(white)"] = values.winValue;
+    inter["nnLossValue(white)"] = values.lossValue;
+    inter["nnNoResultValue(white)"] = values.noResultValue;
+    inter["nnResultValue(white)"] = nnResultValue;
+    inter["nnTotalValue(white)"] = nnTotalValue;
+    inter["nnWinLossValue(white)"] = values.winLossValue;
+    
+    inter["nnScoreMean(white)"] = nnScoreMean;
+    inter["nnScoreMeanSq(white)"] = nnScoreMeanSq;
+    inter["nnScoreStdev(white)"] = nnScoreStdev;
+
+    inter["nnStaticScoreValue(white)"] = values.staticScoreValue;
+    inter["nnDynamicScoreValue(white)"] = values.dynamicScoreValue;
+    inter["nnExpectedScore(white)"] = values.expectedScore;
+    inter["nnExpectedScoreStdev(white)"] = values.expectedScoreStdev;
+    inter["nnLead(white)"] = values.lead;
+  }
+  else {
+    inter["nnWinValue(white)"] = NULL;
+    inter["nnLossValue(white)"] = NULL;
+    inter["nnNoResultValue(white)"] = NULL;
+    inter["nnResultValue(white)"] = NULL;
+    inter["nnTotalValue(white)"] = NULL;
+    inter["nnWinLossValue(white)"] = NULL;
+    
+    inter["nnScoreMean(white)"] = NULL;
+    inter["nnScoreMeanSq(white)"] = NULL;
+    inter["nnScoreStdev(white)"] = NULL;
+
+    inter["nnStaticScoreValue(white)"] = NULL;
+    inter["nnDynamicScoreValue(white)"] = NULL;
+    inter["nnExpectedScore(white)"] = NULL;
+    inter["nnExpectedScoreStdev(white)"] = NULL;
+    inter["nnLead(white)"] = NULL;
+
   }
   
   json pv = json::array();

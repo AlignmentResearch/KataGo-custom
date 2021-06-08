@@ -69,6 +69,8 @@ static int handleSubcommand(const string& subcommand, int argc, const char* argv
     return MainCmds::contribute(argc-1,&argv[1]);
   if(subcommand == "evalsgf")
     return MainCmds::evalsgf(argc-1,&argv[1]);
+  else if(subcommand == "evalsgflong")
+    return MainCmds::evalsgflong(argc-1,&argv[1]);
   else if(subcommand == "gatekeeper")
     return MainCmds::gatekeeper(argc-1,&argv[1]);
   else if(subcommand == "genconfig")

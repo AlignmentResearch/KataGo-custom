@@ -2690,50 +2690,121 @@ int Board::getNumIslands(vector< vector<char> > grid, vector< vector<bool> > vis
   return count;
 }
 
-// void Board::getMotivBoardValue(Board& board) {
-//   int y_size = board.y_size;
-//   int x_size = board.x_size;
+int countWhiteThreats(const vector< vector<char> >& grid) {
+    // if white connects to one chain and all key white stones remain, then white has a definite win
+    // if white is making two threats at the same time, then white has a definite win
+    int numWhiteThreats = 0;
+    static int gapIdxRow[] = { 1, 4, 7, 10, 13, 16 };
+    int rowSize = sizeof(gapIdxRow)/sizeof(gapIdxRow[0]);
+    static int gapIdxCol[] = { 3, 5, 7, 9, 11, 13, 15 };
+    int colSize = sizeof(gapIdxCol)/sizeof(gapIdxCol[0]);
 
-//   // char color;
-//   // if (pla == P_WHITE)
-//   //   color = 'O';
-//   // else if (pla == P_BLACK)
-//   //   color = 'X';
-//   // else if (pla == C_EMPTY)
-//   //   color = '.';
-//   // else
-//   //   throw StringError("Expected player as P_WHITE, P_BLACK or C_EMPTY");
+    for (int i = 0; i < rowSize; ++i){
+      for (int j = 0; j < colSize; ++j){
+        std::cout << "--------------------" << endl;
+        std::cout << "grid[gapIdxRow[" << i << "]][gapIdxCol[" << j << "]] == " << grid[gapIdxRow[i]][gapIdxCol[j]] << endl;
+        std::cout << "grid[gapIdxRow[" << i+1 << "]][gapIdxCol[" << j << "]] == " << grid[gapIdxRow[i+1]][gapIdxCol[j]] << endl;
+        char pos1 = grid[gapIdxRow[i]][gapIdxCol[j]];
+        char pos2 = grid[gapIdxRow[i+1]][gapIdxCol[j]];
+        if ((pos1 == 'O' && pos2 == '.') || (pos1 == '.' && pos2 == 'O')){
+          std::cout << "numWhiteThreats++ " << endl;
+          numWhiteThreats++;
+          continue;
+        }
+        if (pos1 == 'O' && pos2 == 'O'){
+          return -1;
+        }
+      }
+    }
+    std::cout << "numWhiteThreats == " << numWhiteThreats << endl;
+    return numWhiteThreats;
+}
 
-//   typedef vector< vector<char> > MatrixChar;
-//   typedef vector< vector<bool> > MatrixBool;
-//   typedef vector<char> RowChar;
-//   typedef vector<bool> RowBool;
-//   MatrixChar grid;
-//   MatrixBool visited;
+void Board::getMotivBoardValue(Board& board, bool& whiteWin, Player nextPla) { 
+    int y_size = board.y_size;
+    int x_size = board.x_size;
 
-//   // Traversing current board and make a Matrix copy for counting numIslands
-//   for(int y = 0; y < y_size; y++)
-//   {
-//     RowChar row_board(x_size);
-//     RowBool row_visited(x_size);
-//     for(int x = 0; x < x_size; x++)
-//     {
-//       Loc loc = Location::getLoc(x,y,board.x_size);
-//       char s = PlayerIO::colorToChar(board.colors[loc]);
+    typedef vector< vector<char> > MatrixChar;
+    typedef vector< vector<bool> > MatrixBool;
+    typedef vector<char> RowChar;
+    typedef vector<bool> RowBool;
+    MatrixChar grid;
+    MatrixBool visited;
+    
+    // Traversing current board and make a Matrix copy for counting numIslands
+    for(int y = 0; y < y_size; y++)
+    {
+      RowChar row_board(x_size);
+      RowBool row_visited(x_size);
+      for(int x = 0; x < x_size; x++)
+      {
+        Loc loc = Location::getLoc(x,y,board.x_size);
+        char s = PlayerIO::colorToChar(board.colors[loc]);
 
-//       row_board[x] = s;
-//       row_visited[x] = false;
-//     }
-//     grid.push_back(row_board);
-//     visited.push_back(row_visited);
-//   }
+        row_board[x] = s;
+        row_visited[x] = false;
+      }
+      grid.push_back(row_board);
+      visited.push_back(row_visited);
+    }
 
-//   // 
-//   int whiteNumIslands = board.getNumIslands(grid, visited, 'O');
-//   int blackNumIslands = board.getNumIslands(grid, visited, 'X');
+    // compute the number of islands for black and white
+    int whiteNumIslands = board.getNumIslands(grid, visited, 'O');
+    std::cout << "Board::getNumIslands(cout, board, P_WHITE) = " << whiteNumIslands << endl;
 
-//   // cout << "Board::getNumIslands(cout, board, P_WHITE) = " << board.getNumIslands(grid, visited, 'O') << endl;
-//   // cout << "Board::getNumIslands(cout, board, P_BLACK) = " << board.getNumIslands(grid, visited, 'X') << endl;
-//   // cout << "Board::getNumIslands(cout, board, C_EMPTY) = " << board.getNumIslands(grid, visited, '.') << endl;
+    // int blackNumIslands = board.getNumIslands(grid, visited, 'X');
 
-// }
+    for(int y = 0; y < y_size; y++)
+    {
+      RowChar row_board(x_size);
+      RowBool row_visited(x_size);
+      for(int x = 0; x < x_size; x++)
+      {
+        Loc loc = Location::getLoc(x,y,board.x_size);
+        char s = PlayerIO::colorToChar(board.colors[loc]);
+
+        row_board[x] = s;
+        row_visited[x] = false;
+      }
+      grid.push_back(row_board);
+      visited.push_back(row_visited);
+    }
+
+    // if white connects to one chain and all key white stones remain, then white has a definite win
+    // if white is making two threats at the same time, then white has a definite win
+    bool cornerWhiteRemains = true;
+    static int cornerRowX[] = { 0, 15, 17, 15, 16, 17, 18 };
+    static int cornerColX[] = { 15, 18, 18, 17, 17, 17, 17 };
+    static int cornerRowO[] = { 0, 1, 0, 1, 15, 17, 15, 16, 17, 18 };
+    static int cornerColO[] = { 18, 18, 17, 17, 0, 0, 1, 1, 1, 1 };
+
+    for (int k = 0; k < 10; ++k){
+      std::cout << "grid[" << cornerRowO[k] << "][" << cornerColO[k] << "]" << " = " << grid[cornerRowO[k]][cornerColO[k]] << endl;
+      if (grid[cornerRowO[k]][cornerColO[k]] != 'O')
+        cornerWhiteRemains = false;
+    }
+
+    // if corner white doesn't remain, the white has already lost
+    if (cornerWhiteRemains){
+      // if number of island == 1, then white wins
+      if (whiteNumIslands == 1){
+        whiteWin = true;
+        return;
+      }
+
+      // On white’s move, if only one move to go for connection by white
+      // or white is making two (or more) threats at the same time, then white wins
+      int numWhiteThreats = countWhiteThreats(grid);
+      if (nextPla == P_WHITE && numWhiteThreats > 0){
+        whiteWin = true;
+        return;
+      }
+      if (nextPla == P_BLACK && numWhiteThreats > 1){
+        whiteWin = true;
+        return;
+      }
+    }
+    // Board::printBoard(cout, board, Board::NULL_LOC, &(thread.history.moveHistory));
+    //   for (int k = 0; k < 7; ++k)
+    //     cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
+  }

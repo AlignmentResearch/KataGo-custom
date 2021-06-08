@@ -275,7 +275,7 @@ struct Board
 
   // ! Yawen added
   int getNumIslands(std::vector< std::vector<char> > grid, std::vector< std::vector<bool> > visited, char color); // ! Yawen added
-  // static void getMotivBoardValue(Board& board);
+  static void getMotivBoardValue(Board& board, bool& whiteWin, Player nextPla);
   // static void dfSearch(vector< vector<int> > grid, int i, int j, vector< vector<int> > visited);
 
   //Data--------------------------------------------

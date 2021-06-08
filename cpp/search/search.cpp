@@ -2606,77 +2606,8 @@ void Search::initMotivNodeValue(
 
   Board board = thread.board; 
 
-  int y_size = board.y_size;
-  int x_size = board.x_size;
-
-  typedef vector< vector<char> > MatrixChar;
-  typedef vector< vector<bool> > MatrixBool;
-  typedef vector<char> RowChar;
-  typedef vector<bool> RowBool;
-  MatrixChar grid;
-  MatrixBool visited;
-  
-  // Traversing current board and make a Matrix copy for counting numIslands
-  for(int y = 0; y < y_size; y++)
-  {
-    RowChar row_board(x_size);
-    RowBool row_visited(x_size);
-    for(int x = 0; x < x_size; x++)
-    {
-      Loc loc = Location::getLoc(x,y,board.x_size);
-      char s = PlayerIO::colorToChar(board.colors[loc]);
-
-      row_board[x] = s;
-      row_visited[x] = false;
-    }
-    grid.push_back(row_board);
-    visited.push_back(row_visited);
-  }
-
-  // compute the number of islands for black and white
-  int whiteNumIslands = board.getNumIslands(grid, visited, 'O');
-  // int blackNumIslands = board.getNumIslands(grid, visited, 'X');
-
-  static int rowX[] = { 0, 15, 17, 15, 16, 17, 18 };
-  static int colX[] = { 15, 18, 18, 17, 17, 17, 17 };
-  static int rowO[] = { 0, 15, 17, 15, 16, 17, 18 };
-  static int colO[] = { 18, 0, 0, 1, 1, 1, 1 };
-
-  for(int y = 0; y < y_size; y++)
-  {
-    RowChar row_board(x_size);
-    RowBool row_visited(x_size);
-    for(int x = 0; x < x_size; x++)
-    {
-      Loc loc = Location::getLoc(x,y,board.x_size);
-      char s = PlayerIO::colorToChar(board.colors[loc]);
-
-      row_board[x] = s;
-      row_visited[x] = false;
-    }
-    grid.push_back(row_board);
-    visited.push_back(row_visited);
-  }
-  
   bool whiteWin = false;
-  // bool blackWin = false;
-
-  // if white connects to one and all key white stones remain, then white has a definite win
-  if (whiteNumIslands == 1){
-    bool allKeyWhiteRemains = true;
-    for (int k = 0; k < 7; ++k){
-      cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
-      if (grid[rowO[k]][colO[k]] != 'O')
-        allKeyWhiteRemains = false;
-    }
-    if (allKeyWhiteRemains)
-      whiteWin = true;
-  }
-
-  // Board::printBoard(cout, board, Board::NULL_LOC, &(thread.history.moveHistory));
-  //   for (int k = 0; k < 7; ++k)
-  //     cout << "grid[" << rowO[k] << "][" << colO[k] << "]" << " = " << grid[rowO[k]][colO[k]] << endl;
-  cout << "Board::getNumIslands(cout, board, P_WHITE) = " << whiteNumIslands << endl;
+  Board::getMotivBoardValue(board, whiteWin, node.nextPla);
   
   // Setting node.nnOutput same as initNodeNNOutput
   {

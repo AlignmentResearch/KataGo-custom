@@ -28,6 +28,16 @@ NodeStats::NodeStats()
   ,attackValue(0.0)
   ,effectiveWinValue(0.0)
   ,minimaxValue(0.0)
+
+  ,winCountMotivGT(0)
+  ,lossCountMotivGT(0)
+  ,winCountPass(0)
+  ,lossCountPass(0)
+  ,winValueMotivGTDirect(0.0)
+  ,winValueSumMotivGT(0.0)
+  ,attackValueMotivGT(0.0)
+  ,effectiveWinValueMotivGT(0.0)
+  ,minimaxValueMotivGT(0.0)
 {}
 NodeStats::~NodeStats()
 {}
@@ -120,12 +130,24 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
    utilitySqBuf(),
    selfUtilityBuf(),
    visitsBuf(),
+
    attackValuesBuf(),
    effectiveWinValuesBuf(),
    minimaxBuf(), // !!dv
+
    attackUtilityBuf(),
    effectiveUtilityBuf(),
    minimaxUtilityBuf(), // !!dv
+
+   winCountMotivGTBuf(),
+   lossCountMotivGTBuf(),
+   winCountPassBuf(),
+   lossCountPassBuf(),
+   winValueMotivGTBuf(),
+   attackValueMotivGTBuf(),
+   effectiveWinValueMotivGTBuf(),
+   minimaxValueMotivGTBuf(), // ! Yawen added
+
    upperBoundVisitsLeft(1e30)
 {
   if(logger != NULL)
@@ -144,12 +166,22 @@ SearchThread::SearchThread(int tIdx, const Search& search, Logger* lg)
   utilitySqBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   selfUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   visitsBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+
   minimaxBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
   attackValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   effectiveWinValuesBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+  minimaxUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
   attackUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
   effectiveUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
-  minimaxUtilityBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // !!dv
+
+  winCountMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  lossCountMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  winCountPassBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  lossCountPassBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  winValueMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  attackValueMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  effectiveWinValueMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
+  minimaxValueMotivGTBuf.resize(NNPos::MAX_NN_POLICY_SIZE); // ! Yawen added
 }
 SearchThread::~SearchThread() {
   if(logStream != NULL)
@@ -2174,6 +2206,16 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   vector<double>& attackValues = thread.attackValuesBuf;
   vector<double>& effectiveWinValues = thread.effectiveWinValuesBuf;
   vector<double>& minimaxValues = thread.minimaxBuf; // !!dv
+
+  vector<int>& winCountsMotivGT = thread.winCountMotivGTBuf; // ! Yawen added
+  vector<int>& lossCountsMotivGT = thread.lossCountMotivGTBuf; // ! Yawen added
+  vector<int>& winCountsPass = thread.winCountPassBuf; // ! Yawen added
+  vector<int>& lossCountsPass = thread.lossCountPassBuf; // ! Yawen added
+  vector<double>& winValuesMotivGT = thread.winValueMotivGTBuf; // ! Yawen added
+  vector<double>& attackValuesMotivGT = thread.attackValueMotivGTBuf; // ! Yawen added
+  vector<double>& effectiveWinValuesMotivGT = thread.effectiveWinValueMotivGTBuf; // ! Yawen added
+  vector<double>& minimaxValuesMotivGT = thread.minimaxValueMotivGTBuf; // ! Yawen added
+
   vector<double> winValuesSub = thread.winValuesBuf;
 
   int64_t totalChildVisits = 0;
@@ -2212,6 +2254,15 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double minimaxValue = child->stats.minimaxValue; // !!dv
     double attackValue = child->stats.attackValue;
     double effectiveWinValue = child->stats.effectiveWinValue;
+
+    int winCountMotivGT = child->stats.winCountMotivGT;
+    int lossCountMotivGT = child->stats.lossCountMotivGT;
+    int winCountPass = child->stats.winCountPass;
+    int lossCountPass = child->stats.lossCountPass;
+    double winValueSumMotivGT = child->stats.winValueSumMotivGT;
+    double attackValueMotivGT = child->stats.attackValueMotivGT;
+    double effectiveWinValueMotivGT = child->stats.effectiveWinValueMotivGT;
+    double minimaxValueMotivGT = child->stats.minimaxValueMotivGT;
     
     child->statsLock.clear(std::memory_order_release);
 
@@ -2232,6 +2283,15 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
 
     winValues[numGoodChildren] = winValueSum / weightSum;
     winValuesSub[numGoodChildren] = node.nextPla == P_WHITE ? winValues[numGoodChildren] : 1.0 - winValues[numGoodChildren];
+
+    winCountsMotivGT[numGoodChildren] = winCountMotivGT; // ! Yawen added
+    lossCountsMotivGT[numGoodChildren] = lossCountMotivGT;
+    winCountsPass[numGoodChildren] = winCountPass; // ! Yawen added
+    lossCountsPass[numGoodChildren] = lossCountPass;
+    winValuesMotivGT[numGoodChildren] = winValueSumMotivGT / weightSum;
+    attackValuesMotivGT[numGoodChildren] = 1.0 - attackValueMotivGT;
+    effectiveWinValuesMotivGT[numGoodChildren] = 1.0 - effectiveWinValueMotivGT;
+    minimaxValuesMotivGT[numGoodChildren] = 1.0 - minimaxValueMotivGT;
     
     noResultValues[numGoodChildren] = noResultValueSum / weightSum;
     scoreMeans[numGoodChildren] = scoreMeanSum / weightSum;
@@ -2285,8 +2345,18 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double minimaxValue = 0.0; 
   double attackValue = 0.0;
   double effectiveWinValue = 0.0; // !!dv
-  double maxDecisionValue = 0.0;
 
+  int winCountMotivGT = 0;
+  int lossCountMotivGT = 0;
+  int winCountPass = 0;
+  int lossCountPass = 0;
+  double winValueSumMotivGT = 0.0;
+  double attackValueMotivGT = 0.0;
+  double effectiveWinValueMotivGT = 0.0;
+  double minimaxValueMotivGT = 0.0;
+
+  double maxDecisionValue = 0.0;
+  double maxDecisionValueTmp = 0.0;
   for(int i = 0; i<numGoodChildren; i++) {
     if(visits[i] < amountToPrune)
       continue;
@@ -2330,6 +2400,24 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     attackValue = std::max(attackValue, effectiveWinValues[i]);
     minimaxValue = std::max(minimaxValue, minimaxValues[i]); // !!dv 
 
+    // ! Yawen added
+    // Updating the motivation GT values
+    if (searchParams.motivGroundTruth) {
+      winValueSumMotivGT += desiredWeight * winValuesMotivGT[i];
+      winCountMotivGT += winCountsMotivGT[i];
+      lossCountMotivGT += lossCountsMotivGT[i];
+      winCountPass += winCountsPass[i];
+      lossCountPass += lossCountsPass[i];
+
+      double decisionValueTmp = playSelectionValues[i];
+      if(maxDecisionValueTmp < decisionValueTmp){ 
+        maxDecisionValueTmp = decisionValueTmp; // !!dv
+        effectiveWinValueMotivGT = attackValuesMotivGT[i];
+      }
+      attackValueMotivGT = std::max(attackValueMotivGT, effectiveWinValuesMotivGT[i]);
+      minimaxValueMotivGT = std::max(minimaxValueMotivGT, minimaxValuesMotivGT[i]); // !!dv 
+    }
+
     noResultValueSum += desiredWeight * noResultValues[i];
     scoreMeanSum += desiredWeight * scoreMeans[i];
     scoreMeanSqSum += desiredWeight * scoreMeanSqs[i];
@@ -2351,6 +2439,10 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
 
     desiredWeight *= searchParams.parentValueWeightFactor;
 
+    while(node.statsLock.test_and_set(std::memory_order_acquire));
+    double winProbMotivGT = (double)node.stats.winValueMotivGTDirect;
+    node.statsLock.clear(std::memory_order_release);
+    
     double winProb = (double)node.nnOutput->whiteWinProb;
     double noResultProb = (double)node.nnOutput->whiteNoResultProb;
     double scoreMean = (double)node.nnOutput->whiteScoreMean;
@@ -2397,6 +2489,8 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       //desiredWeight *= weightSum / (1.0-biasFactor) / std::max(0.001, (weightSum + desiredWeight - desiredWeight / (1.0-biasFactor)));
     }
 
+    winValueSumMotivGT += winProbMotivGT * desiredWeight; // ! Yawen added
+
     winValueSum += winProb * desiredWeight;
     noResultValueSum += noResultProb * desiredWeight;
     scoreMeanSum += scoreMean * desiredWeight;
@@ -2423,6 +2517,15 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.stats.effectiveUtility = effectiveUtility; // ! Yawen added
   node.stats.minimaxUtility = minimaxUtility; // !!dv
 
+  node.stats.winCountMotivGT = winCountMotivGT;
+  node.stats.lossCountMotivGT = lossCountMotivGT;
+  node.stats.winCountPass = winCountPass;
+  node.stats.lossCountPass = lossCountPass;
+  node.stats.winValueSumMotivGT = winValueSumMotivGT;
+  node.stats.attackValueMotivGT = attackValueMotivGT;
+  node.stats.effectiveWinValueMotivGT = effectiveWinValueMotivGT;
+  node.stats.minimaxValueMotivGT = minimaxValueMotivGT;
+
   node.stats.noResultValueSum = noResultValueSum;
   node.stats.scoreMeanSum = scoreMeanSum;
   node.stats.scoreMeanSqSum = scoreMeanSqSum;
@@ -2447,6 +2550,31 @@ void Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft)
   thread.board = rootBoard;
   thread.history = rootHistory;
 }
+
+void Search::addLeafValueMotivGT(SearchNode& node, bool whiteWin, bool isTerminal) { // ! Yawen added
+  double whiteWinValue = whiteWin ? 1.0 : 0.0;
+  while(node.statsLock.test_and_set(std::memory_order_acquire));
+  if (isTerminal){
+    node.stats.winCountMotivGT = 0;
+    node.stats.lossCountMotivGT = 0;
+    node.stats.winCountPass = whiteWin ? 1 : 0;
+    node.stats.lossCountPass = whiteWin ? 0 : 1;
+  } 
+  else{
+    node.stats.winCountMotivGT = whiteWin ? 1 : 0;
+    node.stats.lossCountMotivGT = whiteWin ? 0 : 1;
+    node.stats.winCountPass = 0;
+    node.stats.lossCountPass = 0;
+  }
+
+  node.stats.winValueMotivGTDirect = whiteWinValue;
+  node.stats.winValueSumMotivGT += whiteWinValue;
+  node.stats.attackValueMotivGT = node.nextPla == P_WHITE ? whiteWinValue : 1.0 - whiteWinValue;
+  node.stats.effectiveWinValueMotivGT = node.nextPla == P_WHITE ? whiteWinValue : 1.0 - whiteWinValue;
+  node.stats.minimaxValueMotivGT = node.nextPla == P_WHITE ? whiteWinValue : 1.0 - whiteWinValue; // !!dv
+  node.statsLock.clear(std::memory_order_release);
+}
+
 
 void Search::addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal) {
   double utility =
@@ -2601,14 +2729,8 @@ void Search::addMotivGroundTruthAsLeafValue(SearchNode& node, int32_t virtualLos
 //Assumes node is locked
 void Search::initMotivNodeValue(
   SearchThread& thread, SearchNode& node,
-  bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit
+  bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit, bool whiteWin
 ) {
-
-  Board board = thread.board; 
-
-  bool whiteWin = false;
-  Board::getMotivBoardValue(board, whiteWin, node.nextPla);
-  
   // Setting node.nnOutput same as initNodeNNOutput
   {
     bool includeOwnerMap = isRoot || alwaysIncludeOwnerMap;
@@ -2700,6 +2822,13 @@ void Search::playoutDescend(
       double scoreMeanSq = ScoreValue::whiteScoreMeanSqOfScoreGridded(thread.history.finalWhiteMinusBlackScore,searchParams.drawEquivalentWinsForWhite);
       double lead = scoreMean;
       addLeafValue(node, winValue, noResultValue, scoreMean, scoreMeanSq, lead, virtualLossesToSubtract,true);
+
+      // ! Yawen added 
+      if (searchParams.motivGroundTruth){
+        // cout << "--------------- Hitting Terminal node! ---------------" << endl;
+        bool whiteWin = winValue == 1.0;
+        addLeafValueMotivGT(node, whiteWin, true);
+      }
       return;
     }
   }
@@ -2709,8 +2838,18 @@ void Search::playoutDescend(
 
   //Hit leaf node, finish
   if(node.nnOutput == nullptr) {
-    if (searchParams.motivGroundTruth) // ! Yawen added
-      initMotivNodeValue(thread,node,isRoot,false,virtualLossesToSubtract,false);
+
+    if (searchParams.motivGroundTruth) { // ! Yawen added
+      Board board = thread.board; 
+      bool whiteWin = false;
+      Board::getMotivBoardValue(board, whiteWin, node.nextPla);
+      if (searchParams.motivGroundTruthVisibleOnly) // ! Yawen added
+        initNodeNNOutput(thread,node,isRoot,false,virtualLossesToSubtract,false);
+      else
+        initMotivNodeValue(thread,node,isRoot,false,virtualLossesToSubtract,false, whiteWin);
+
+      addLeafValueMotivGT(node, whiteWin, false);
+    }
     else
       initNodeNNOutput(thread,node,isRoot,false,virtualLossesToSubtract,false);
     return;

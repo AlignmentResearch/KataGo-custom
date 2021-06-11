@@ -11,6 +11,7 @@ struct SearchParams {
   int softExpandThreshold;
   bool attackExpand;
   bool motivGroundTruth;
+  bool motivGroundTruthVisibleOnly;
   bool isMinimaxOptim4Backup;
   Player attackPla;
 

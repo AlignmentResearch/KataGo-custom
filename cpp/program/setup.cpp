@@ -379,6 +379,9 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("motivGroundTruth"+idxStr)) params.motivGroundTruth = cfg.getBool("motivGroundTruth"+idxStr);
     else if(cfg.contains("motivGroundTruth"))   params.motivGroundTruth = cfg.getBool("motivGroundTruth");
 
+    if(cfg.contains("motivGroundTruthVisibleOnly"+idxStr)) params.motivGroundTruthVisibleOnly = cfg.getBool("motivGroundTruthVisibleOnly"+idxStr);
+    else if(cfg.contains("motivGroundTruthVisibleOnly"))   params.motivGroundTruthVisibleOnly = cfg.getBool("motivGroundTruthVisibleOnly");
+
     if(cfg.contains("attackPla"+idxStr)) params.attackPla = parsePlayer("attackPla",cfg.getString("attackPla"+idxStr));
     else if(cfg.contains("attackPla"))   params.attackPla = parsePlayer("attackPla",cfg.getString("attackPla"));
     else                                                   params.attackPla = C_EMPTY;

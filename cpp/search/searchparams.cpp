@@ -11,6 +11,7 @@ SearchParams::SearchParams()
    softExpandThreshold(0),
    attackExpand(false), // ! Yawen added for attack expand
    motivGroundTruth(false), // ! Yawen added for motivation board ground truth
+   motivGroundTruthVisibleOnly(false), // ! Yawen added for motivation board ground truth, visible only, not set as winValue
    isMinimaxOptim4Backup(false), // ! Yawen added for softbackup
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),

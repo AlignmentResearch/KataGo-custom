@@ -560,6 +560,7 @@ Loc Search::getChosenMoveLoc() {
   moveSelectOut << "\n---------------------------\n";
   moveSelectOut << "searchParams.attackExpand: " << searchParams.attackExpand << endl;
   moveSelectOut << "searchParams.motivGroundTruth: " << searchParams.motivGroundTruth << endl;
+  moveSelectOut << "searchParams.motivGroundTruthVisibleOnly: " << searchParams.motivGroundTruthVisibleOnly << endl;
   moveSelectOut << "searchParams.softExpandThreshold: " << searchParams.softExpandThreshold << endl;
   moveSelectOut << "searchParams.visitsThreshold2Attack: " << searchParams.visitsThreshold2Attack << endl;
   moveSelectOut << "searchParams.optimismThreshold4Backup: " << searchParams.optimismThreshold4Backup << endl;
@@ -1376,9 +1377,28 @@ void Search::printTreeHelper(
       double effectiveUtility = node.stats.effectiveUtility;
       double minimaxUtility = node.stats.minimaxUtility; // !!dv
       node.statsLock.clear(std::memory_order_release);
-      sprintf(buf,"WVSum %5.6f WVAvg %5.6f Attack %5.6f EffeMCTS %5.6f Mini %5.6f AttackU %5.6f EffeMCTSU %5.6f MinimaxU %5.6f ",
+      sprintf(buf,"WVSum(W) %5.6f WVAvg(W) %5.6f Attack %5.6f EffeMCTS %5.6f Mini %5.6f AttackU %5.6f EffeMCTSU %5.6f MinimaxU %5.6f ",
       winValueSum, winValueSum/weightSum, attackValue, effectiveWinValue, minimaxValue, attackUtility, effectiveUtility, minimaxUtility);
       out << buf;
+    }
+
+    // * printing values when running motivation board
+    if(searchParams.motivGroundTruth) {
+      while(node.statsLock.test_and_set(std::memory_order_acquire));
+      int winCountMotivGT = node.stats.winCountMotivGT;
+      int lossCountMotivGT = node.stats.lossCountMotivGT;
+      int winCountPass = node.stats.winCountPass;
+      int lossCountPass = node.stats.lossCountPass;
+      double weightSum = node.stats.weightSum;
+      double winValueSumMotivGT = node.stats.winValueSumMotivGT;
+      double attackValueMotivGT = node.stats.attackValueMotivGT;
+      double effectiveWinValueMotivGT = node.stats.effectiveWinValueMotivGT;
+      double minimaxValueMotivGT = node.stats.minimaxValueMotivGT;
+      node.statsLock.clear(std::memory_order_release);
+      sprintf(buf,"WVAvg(GT) %5.6f Attack(GT) %5.6f EffeMCTS(GT) %5.6f Mini(GT) %5.6f WinLeaf(W) %d WinLeafPass(W) %d LossLeafN(W) %d LossLeafPass(W) %d ",
+      winValueSumMotivGT/weightSum, attackValueMotivGT, effectiveWinValueMotivGT, minimaxValueMotivGT, winCountMotivGT, winCountPass, lossCountMotivGT, lossCountPass);
+      out << buf;
+
     }
 
     if(options.printSqs_) {
@@ -1544,6 +1564,17 @@ bool Search::getJsonTreeHelper(
   double attackUtility = node.stats.attackUtility;
   double effectiveUtility = node.stats.effectiveUtility;
   double minimaxUtility = node.stats.minimaxUtility; // !!dv
+
+  int winCountMotivGT = node.stats.winCountMotivGT;
+  int lossCountMotivGT = node.stats.lossCountMotivGT;
+  int winCountPass = node.stats.winCountPass;
+  int lossCountPass = node.stats.lossCountPass;
+  double winValueSumMotivGT = node.stats.winValueSumMotivGT;
+  double winValueAvgMotivGT = winValueSumMotivGT/weightSum;
+  double attackValueMotivGT = node.stats.attackValueMotivGT;
+  double effectiveWinValueMotivGT = node.stats.effectiveWinValueMotivGT;
+  double minimaxValueMotivGT = node.stats.minimaxValueMotivGT; // ! Yawen added
+
   node.statsLock.clear(std::memory_order_release);
 
   // * getting NN direct evaluation
@@ -1660,6 +1691,20 @@ bool Search::getJsonTreeHelper(
     inter["nnExpectedScoreStdev(white)"] = NULL;
     inter["nnLead(white)"] = NULL;
 
+  }
+
+  if (searchParams.motivGroundTruth){
+    inter["winCountMotivGT(white)"] = winCountMotivGT;
+    inter["lossCountMotivGT(white)"] = lossCountMotivGT;
+    inter["winCountPass(white)"] = winCountPass;
+    inter["lossCountPass(white)"] = lossCountPass;
+    inter["winValueSumMotivGT(white)"] = winValueSumMotivGT;
+    inter["winValueAvgMotivGT(white)"] = winValueAvgMotivGT;
+    inter["winValueAvgMotivGT(black)"] = 1.0 - winValueAvgMotivGT;
+    
+    inter["attackValueMotivGT"] = attackValueMotivGT;
+    inter["effectiveWinValueMotivGT"] = effectiveWinValueMotivGT;
+    inter["minimaxValueMotivGT"] = minimaxValueMotivGT;
   }
   
   json pv = json::array();

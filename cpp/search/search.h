@@ -71,6 +71,16 @@ struct NodeStats {
   double effectiveWinValue;
   double minimaxValue;
 
+  int winCountMotivGT;
+  int lossCountMotivGT;
+  int winCountPass;
+  int lossCountPass;
+  double winValueMotivGTDirect;
+  double winValueSumMotivGT;
+  double attackValueMotivGT;
+  double effectiveWinValueMotivGT;
+  double minimaxValueMotivGT;
+
   NodeStats();
   ~NodeStats();
 
@@ -162,6 +172,15 @@ struct SearchThread {
   std::vector<double> attackValuesBuf;
   std::vector<double> effectiveWinValuesBuf;
   std::vector<double> minimaxBuf; 
+
+  std::vector<int> winCountMotivGTBuf;
+  std::vector<int> lossCountMotivGTBuf;
+  std::vector<int> winCountPassBuf;
+  std::vector<int> lossCountPassBuf;
+  std::vector<double> winValueMotivGTBuf;
+  std::vector<double> attackValueMotivGTBuf;
+  std::vector<double> effectiveWinValueMotivGTBuf;
+  std::vector<double> minimaxValueMotivGTBuf;
 
   double upperBoundVisitsLeft;
 
@@ -312,6 +331,7 @@ struct Search {
   bool isMinimaxOptim4Backup;
   bool attackExpand;
   bool motivGroundTruth;
+  bool motivGroundTruthVisibleOnly;
 
   Loc getChosenMoveLoc();
   //Get the vector of values (e.g. modified visit counts) used to select a move.
@@ -507,6 +527,9 @@ private:
     bool isRoot
   ) const;
 
+  // ! Yawen added
+  void addLeafValueMotivGT(SearchNode& node, bool whiteWin, bool isTerminal);
+
   void addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, double lead, int32_t virtualLossesToSubtract, bool isTerminal);
   void addCurentNNOutputAsLeafValue(SearchNode& node, int32_t virtualLossesToSubtract);
 
@@ -524,7 +547,7 @@ private:
   // ! Yawen added
   void initMotivNodeValue(
     SearchThread& thread, SearchNode& node,
-    bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit
+    bool isRoot, bool skipCache, int32_t virtualLossesToSubtract, bool isReInit, bool whiteWin
   ); 
 
   void playoutDescend(

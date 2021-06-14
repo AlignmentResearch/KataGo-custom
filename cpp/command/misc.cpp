@@ -771,7 +771,9 @@ int MainCmds::samplesgfs(int argc, const char* const* argv) {
     }
 
     bool hashComments = false;
-    sgf->iterAllUniquePositions(uniqueHashes, hashComments, posHandler);
+    bool hashParent = false;
+    Rand iterRand;
+    sgf->iterAllUniquePositions(uniqueHashes, hashComments, hashParent, &iterRand, posHandler);
   };
 
   for(size_t i = 0; i<sgfFiles.size(); i++) {
@@ -849,8 +851,8 @@ static double surpriseWeight(double policyProb, Rand& rand, bool markedAsHintPos
   if(policyProb < 0)
     return 0;
   double weight = 0.12 / (policyProb + 0.02) - 0.5;
-  if(markedAsHintPos && weight < 0.5)
-    weight = 0.5;
+  if(markedAsHintPos && weight < 1.0)
+    weight = 1.0;
 
   if(weight <= 0)
     return 0;
@@ -882,6 +884,7 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
   bool gameMode;
   bool treeMode;
   bool autoKomi;
+  bool tolerateIllegalMoves;
   int sgfSplitCount;
   int sgfSplitIdx;
   int64_t maxDepth;
@@ -910,6 +913,7 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
     TCLAP::SwitchArg gameModeArg("","game-mode","Game mode");
     TCLAP::SwitchArg treeModeArg("","tree-mode","Tree mode");
     TCLAP::SwitchArg autoKomiArg("","auto-komi","Auto komi");
+    TCLAP::SwitchArg tolerateIllegalMovesArg("","tolerate-illegal-moves","Tolerate illegal moves");
     TCLAP::ValueArg<int> sgfSplitCountArg("","sgf-split-count","Number of splits",false,1,"N");
     TCLAP::ValueArg<int> sgfSplitIdxArg("","sgf-split-idx","Which split",false,0,"IDX");
     TCLAP::ValueArg<int> maxDepthArg("","max-depth","Max depth allowed for sgf",false,1000000,"INT");
@@ -930,6 +934,7 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
     cmd.add(gameModeArg);
     cmd.add(treeModeArg);
     cmd.add(autoKomiArg);
+    cmd.add(tolerateIllegalMovesArg);
     cmd.add(sgfSplitCountArg);
     cmd.add(sgfSplitIdxArg);
     cmd.add(maxDepthArg);
@@ -953,6 +958,7 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
     gameMode = gameModeArg.getValue();
     treeMode = treeModeArg.getValue();
     autoKomi = autoKomiArg.getValue();
+    tolerateIllegalMoves = tolerateIllegalMovesArg.getValue();
     sgfSplitCount = sgfSplitCountArg.getValue();
     sgfSplitIdx = sgfSplitIdxArg.getValue();
     maxDepth = maxDepthArg.getValue();
@@ -1031,11 +1037,9 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
   vector<size_t> permutation(sgfFiles.size());
   for(size_t i = 0; i<sgfFiles.size(); i++)
     permutation[i] = i;
-  if(gameMode) {
-    for(size_t i = 1; i<sgfFiles.size(); i++) {
-      size_t r = (size_t)seedRand.nextUInt64(i+1);
-      std::swap(permutation[i],permutation[r]);
-    }
+  for(size_t i = 1; i<sgfFiles.size(); i++) {
+    size_t r = (size_t)seedRand.nextUInt64(i+1);
+    std::swap(permutation[i],permutation[r]);
   }
 
   set<Hash128> excludeHashes = Sgf::readExcludes(excludeHashesFiles);
@@ -1420,7 +1424,7 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
 
   const int maxSgfQueueSize = 1024;
   ThreadSafeQueue<Sgf*> sgfQueue(maxSgfQueueSize);
-  auto processSgfLoop = [&logger,&processSgfGame,&sgfQueue,&params,&nnEval,&numSgfsDone,&isPlayerOkay]() {
+  auto processSgfLoop = [&logger,&processSgfGame,&sgfQueue,&params,&nnEval,&numSgfsDone,&isPlayerOkay,&tolerateIllegalMoves]() {
     Rand rand;
     string searchRandSeed = Global::uint64ToString(rand.nextUInt64());
     Search* search = new Search(params,nnEval,searchRandSeed);
@@ -1437,8 +1441,19 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
       bool blackOkay = isPlayerOkay(sgfRaw,P_BLACK);
       bool whiteOkay = isPlayerOkay(sgfRaw,P_WHITE);
 
-      CompactSgf* sgf = new CompactSgf(sgfRaw);
-      processSgfGame(search,rand,sgf->fileName,sgf,blackOkay,whiteOkay);
+      CompactSgf* sgf = NULL;
+      try {
+        sgf = new CompactSgf(sgfRaw);
+      }
+      catch(const StringError& e) {
+        if(!tolerateIllegalMoves)
+          throw;
+        else {
+          logger.write(e.what());
+        }
+      }
+      if(sgf != NULL)
+        processSgfGame(search,rand,sgf->fileName,sgf,blackOkay,whiteOkay);
 
       numSgfsDone.fetch_add(1);
       delete sgf;
@@ -1674,27 +1689,36 @@ int MainCmds::dataminesgfs(int argc, const char* const* argv) {
       bool hashComments = true; //Hash comments so that if we see a position without %HINT% and one with, we make sure to re-load it.
       bool blackOkay = isPlayerOkay(sgf,P_BLACK);
       bool whiteOkay = isPlayerOkay(sgf,P_WHITE);
-      sgf->iterAllUniquePositions(
-        uniqueHashes, hashComments, [&](Sgf::PositionSample& unusedSample, const BoardHistory& hist, const string& comments) {
-          if(comments.size() > 0 && Global::trim(comments) == "%NOHINT%")
-            return;
-          if(hist.moveHistory.size() <= 0)
-            return;
-          int hintIdx = (int)hist.moveHistory.size()-1;
-          if((hist.moveHistory[hintIdx].pla == P_BLACK && !blackOkay) || (hist.moveHistory[hintIdx].pla == P_WHITE && !whiteOkay))
-            return;
+      try {
+        bool hashParent = true; //Hash parent so that we distinguish hint moves that reach the same position but were different moves from different starting states.
+        sgf->iterAllUniquePositions(
+          uniqueHashes, hashComments, hashParent, &seedRand, [&](Sgf::PositionSample& unusedSample, const BoardHistory& hist, const string& comments) {
+            if(comments.size() > 0 && comments.find("%NOHINT%") != string::npos)
+              return;
+            if(hist.moveHistory.size() <= 0)
+              return;
+            int hintIdx = (int)hist.moveHistory.size()-1;
+            if((hist.moveHistory[hintIdx].pla == P_BLACK && !blackOkay) || (hist.moveHistory[hintIdx].pla == P_WHITE && !whiteOkay))
+              return;
 
-          //unusedSample doesn't have enough history, doesn't have hintloc the way we want it
-          int64_t numEnqueued = 1+numPosesEnqueued.fetch_add(1);
-          if(numEnqueued % 500 == 0)
-            logger.write("Enqueued " + Global::int64ToString(numEnqueued) + " poses");
-          PosQueueEntry entry;
-          entry.hist = new BoardHistory(hist);
-          entry.initialTurnNumber = unusedSample.initialTurnNumber; //this is the only thing we keep
-          entry.markedAsHintPos = (comments.size() > 0 && (Global::trim(comments) == "%HINT%"));
-          posQueue.waitPush(entry);
-        }
-      );
+            //unusedSample doesn't have enough history, doesn't have hintloc the way we want it
+            int64_t numEnqueued = 1+numPosesEnqueued.fetch_add(1);
+            if(numEnqueued % 500 == 0)
+              logger.write("Enqueued " + Global::int64ToString(numEnqueued) + " poses");
+            PosQueueEntry entry;
+            entry.hist = new BoardHistory(hist);
+            entry.initialTurnNumber = unusedSample.initialTurnNumber; //this is the only thing we keep
+            entry.markedAsHintPos = (comments.size() > 0 && comments.find("%HINT%") != string::npos);
+            posQueue.waitPush(entry);
+          }
+        );
+      }
+      catch(const StringError& e) {
+        if(!tolerateIllegalMoves)
+          throw;
+        else
+          logger.write(e.what());
+      }
       numSgfsDone.fetch_add(1);
       delete sgf;
     }
@@ -1897,7 +1921,7 @@ int MainCmds::viewstartposes(int argc, const char* const* argv) {
   double minWeight;
   try {
     KataGoCommandLine cmd("View startposes");
-    cmd.addConfigFileArg("","");
+    cmd.addConfigFileArg("","",false);
     cmd.addModelFileArg();
     cmd.addOverrideConfigArg();
 
@@ -2002,7 +2026,7 @@ int MainCmds::viewstartposes(int argc, const char* const* argv) {
     cout << endl;
 
     bool autoKomi = true;
-    if(autoKomi) {
+    if(autoKomi && bot != NULL) {
       const int64_t numVisits = 10;
       OtherGameProperties props;
       PlayUtils::adjustKomiToEven(bot->getSearchStopAndWait(),NULL,board,hist,pla,numVisits,logger,props,rand);
@@ -2024,6 +2048,119 @@ int MainCmds::viewstartposes(int argc, const char* const* argv) {
 
   if(bot != NULL)
     delete bot;
+  if(nnEval != NULL)
+    delete nnEval;
+
+  ScoreValue::freeTables();
+  return 0;
+}
+
+
+int MainCmds::sampleinitializations(int argc, const char* const* argv) {
+  Board::initHash();
+  ScoreValue::initTables();
+
+  ConfigParser cfg;
+  string modelFile;
+  int numToGen;
+  bool evaluate;
+  try {
+    KataGoCommandLine cmd("View startposes");
+    cmd.addConfigFileArg("","");
+    cmd.addModelFileArg();
+    cmd.addOverrideConfigArg();
+
+    TCLAP::ValueArg<int> numToGenArg("","num","Num to gen",false,1,"N");
+    TCLAP::SwitchArg evaluateArg("","evaluate","Print out values and scores on the inited poses");
+    cmd.add(numToGenArg);
+    cmd.add(evaluateArg);
+    cmd.parse(argc,argv);
+    numToGen = numToGenArg.getValue();
+    evaluate = evaluateArg.getValue();
+
+    cmd.getConfigAllowEmpty(cfg);
+    if(cfg.getFileName() != "")
+      modelFile = cmd.getModelFile();
+  }
+  catch (TCLAP::ArgException &e) {
+    cerr << "Error: " << e.error() << " for argument " << e.argId() << endl;
+    return 1;
+  }
+
+  Rand rand;
+  Logger logger;
+  logger.setLogToStdout(true);
+
+  NNEvaluator* nnEval = NULL;
+  if(cfg.getFileName() != "") {
+    SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_GTP);
+    {
+      Setup::initializeSession(cfg);
+      int maxConcurrentEvals = params.numThreads * 2 + 16; // * 2 + 16 just to give plenty of headroom
+      int expectedConcurrentEvals = params.numThreads;
+      int defaultMaxBatchSize = std::max(8,((params.numThreads+3)/4)*4);
+      string expectedSha256 = "";
+      nnEval = Setup::initializeNNEvaluator(
+        modelFile,modelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
+        Board::MAX_LEN,Board::MAX_LEN,defaultMaxBatchSize,
+        Setup::SETUP_FOR_GTP
+      );
+    }
+    logger.write("Loaded neural net");
+  }
+
+  AsyncBot* evalBot;
+  {
+    SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_DISTRIBUTED);
+    params.maxVisits = 20;
+    params.numThreads = 1;
+    string seed = Global::uint64ToString(rand.nextUInt64());
+    evalBot = new AsyncBot(params, nnEval, &logger, seed);
+  }
+
+  //Play no moves in game, since we're sampling initializations
+  cfg.overrideKey("maxMovesPerGame","0");
+
+  PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
+  GameRunner* gameRunner = new GameRunner(cfg, playSettings, logger);
+
+  for(int i = 0; i<numToGen; i++) {
+    string seed = Global::uint64ToString(rand.nextUInt64());
+    MatchPairer::BotSpec botSpec;
+    botSpec.botIdx = 0;
+    botSpec.botName = "";
+    botSpec.nnEval = nnEval;
+    botSpec.baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_DISTRIBUTED);
+
+    FinishedGameData* data = gameRunner->runGame(
+      seed,
+      botSpec,
+      botSpec,
+      NULL,
+      NULL,
+      logger,
+      nullptr,
+      nullptr,
+      nullptr,
+      false
+    );
+
+    cout << data->startHist.rules.toString() << endl;
+    Board::printBoard(cout, data->startBoard, Board::NULL_LOC, &(data->startHist.moveHistory));
+    cout << endl;
+    if(evaluate) {
+      evalBot->setPosition(data->startPla, data->startBoard, data->startHist);
+      evalBot->genMoveSynchronous(data->startPla,TimeControls());
+      ReportedSearchValues values = evalBot->getSearchStopAndWait()->getRootValuesRequireSuccess();
+      cout << "Winloss: " << values.winLossValue << endl;
+      cout << "Lead: " << values.lead << endl;
+    }
+
+    delete data;
+  }
+
+  delete gameRunner;
+  delete evalBot;
   if(nnEval != NULL)
     delete nnEval;
 

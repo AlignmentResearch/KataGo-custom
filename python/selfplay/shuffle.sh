@@ -22,6 +22,8 @@ NTHREADS="$1"
 shift
 BATCHSIZE="$1"
 shift
+MIN_ROWS="$1"
+shift
 
 #------------------------------------------------------------------------------
 
@@ -37,8 +39,10 @@ echo "Beginning shuffle at" $(date "+%Y-%m-%d %H:%M:%S")
 
 #set -x
 (
+    # ! Yawen added
     time python3 ./shuffle.py \
          "$BASEDIR"/selfplay/ \
+         -min-rows "$MIN_ROWS" \
          -expand-window-per-row 0.4 \
          -taper-window-exponent 0.65 \
          -out-dir "$BASEDIR"/shuffleddata/$OUTDIRTRAIN \

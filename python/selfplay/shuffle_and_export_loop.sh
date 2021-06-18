@@ -9,6 +9,7 @@ then
     echo "TMPDIR scratch space, ideally on fast local disk, unique to this loop"
     echo "NTHREADS number of parallel threads/processes to use in shuffle"
     echo "BATCHSIZE number of samples to concat together per batch for training, must match training"
+    echo "MIN_ROWS minimum training rows to use, default 250k"
     echo "USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper"
     exit 0
 fi
@@ -21,6 +22,8 @@ shift
 NTHREADS="$1"
 shift
 BATCHSIZE="$1"
+shift
+MIN_ROWS="$1"
 shift
 USEGATING="$1"
 shift
@@ -44,7 +47,7 @@ cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/*.sh "$DATED_ARCHIVE"
     cd "$basedir"/scripts
     while true
     do
-        ./shuffle.sh "$basedir" "$tmpdir" "$NTHREADS" "$BATCHSIZE" "$@"
+        ./shuffle.sh "$basedir" "$tmpdir" "$NTHREADS" "$BATCHSIZE" "$MIN_ROWS" "$@"
         sleep 20
     done
 ) >> "$basedir"/logs/outshuffle.txt 2>&1 & disown

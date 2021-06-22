@@ -12,6 +12,7 @@ then
     echo "TMPDIR scratch space, ideally on fast local disk, unique to this loop"
     echo "NTHREADS number of parallel threads/processes to use in shuffle"
     echo "BATCHSIZE number of samples to concat together per batch for training"
+    echo "MIN_ROWS minimum training rows to use, default 250k"
     exit 0
 fi
 BASEDIR="$1"

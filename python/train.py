@@ -397,10 +397,12 @@ def model_fn(features,labels,mode,params):
         print("Initial weights checkpoint to use found at: " + checkpoint_path)
         vars_in_checkpoint = tf.contrib.framework.list_variables(checkpoint_path)
         varname_in_checkpoint = {}
+        varandshapes = {}
         print("Checkpoint contains:")
         for varandshape in vars_in_checkpoint:
           print(varandshape)
           varname_in_checkpoint[varandshape[0]] = True
+          varandshapes[varandshape[0]] = varandshape[1]
 
         print("Modifying graph to load weights from checkpoint upon init...")
         sys.stdout.flush()
@@ -410,8 +412,16 @@ def model_fn(features,labels,mode,params):
         assignment_mapping = {}
         for v in variables_to_restore:
           name = v.name.split(":")[0] # drop the ":0" at the end of each var
-          if name in varname_in_checkpoint:
-            assignment_mapping[name] = v
+          # if name in varname_in_checkpoint:
+            # assignment_mapping[name] = v
+
+          # ! Yawen added
+          # varname_in_checkpoint_without_swa = [name[len('swa_model/'):] for name in varname_in_checkpoint if name.startswith('swa_model/')] 
+          swa_name = 'swa_model/' + name
+          if swa_name in varname_in_checkpoint:
+            assignment_mapping[swa_name] = v
+            print(f"\'{swa_name}\' {varandshapes[swa_name]} to be loaded to {v}")
+          # ! --------------------------------------------------------
 
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)
         initial_weights_already_loaded = True

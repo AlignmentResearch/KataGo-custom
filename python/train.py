@@ -415,7 +415,7 @@ def model_fn(features,labels,mode,params):
           # if name in varname_in_checkpoint:
             # assignment_mapping[name] = v
 
-          # ! Yawen added
+          # ! Yawen added --------------------------------------------
           # varname_in_checkpoint_without_swa = [name[len('swa_model/'):] for name in varname_in_checkpoint if name.startswith('swa_model/')] 
           swa_name = 'swa_model/' + name
           if swa_name in varname_in_checkpoint:

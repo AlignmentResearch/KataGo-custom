@@ -227,6 +227,7 @@ add_executable(katago
   command/runtests.cpp
   command/sandbox.cpp
   command/selfplay.cpp
+  command/victimplay.cpp
   command/tune.cpp
   main.cpp
   )
@@ -406,4 +407,3 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
 endif()
 
 target_include_directories(katago PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-

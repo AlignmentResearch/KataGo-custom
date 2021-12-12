@@ -2230,7 +2230,8 @@ FinishedGameData* GameRunner::runGame(
   ExtraBlackAndKomi extraBlackAndKomi;
   OtherGameProperties otherGameProps;
   if(playSettings.forSelfPlay) {
-    assert(botSpecB.botIdx == botSpecW.botIdx);
+    // Let's hope this is harmless.
+    assert(playSettings.forVictimPlay || botSpecB.botIdx == botSpecW.botIdx);
     SearchParams params = botSpecB.baseParams;
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,params,initialPosition,playSettings,otherGameProps,startPosSample);
     botSpecB.baseParams = params;
@@ -2253,7 +2254,7 @@ FinishedGameData* GameRunner::runGame(
   }
 
   bool clearBotBeforeSearchThisGame = clearBotBeforeSearch;
-  if(botSpecB.botIdx == botSpecW.botIdx) {
+  if(playSettings.forVictimPlay || botSpecB.botIdx == botSpecW.botIdx) {
     //Avoid interactions between the two bots since they're the same.
     //Also in self-play this makes sure root noise is effective on each new search
     clearBotBeforeSearchThisGame = true;

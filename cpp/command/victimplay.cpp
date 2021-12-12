@@ -237,6 +237,8 @@ int MainCmds::victimplay(const vector<string>& args) {
       tdataOutputDir, inputsVersion, maxRowsPerTrainFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
     TrainingDataWriter* vdataWriter = new TrainingDataWriter(
       vdataOutputDir, inputsVersion, maxRowsPerValFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
+    tdataWriter->skipWriteVictim = true;
+    vdataWriter->skipWriteVictim = true;
     ofstream* sgfOut = NULL;
     if(sgfOutputDir.length() > 0) {
       sgfOut = new ofstream();

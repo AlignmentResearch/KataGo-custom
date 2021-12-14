@@ -338,16 +338,21 @@ int MainCmds::victimplay(const vector<string>& args) {
           nullptr
         );
 
-        const float victimMinusAdvScore = (
-          (gameIdx % 2 == 0 ? -1 : 1)
-          * gameData->finalWhiteMinusBlackScore()
-        );
-        logger.write(
-          "Game #"
-          + Global::intToString(gameIdx)
-          + " victim - adv score: "
-          + Global::floatToString(victimMinusAdvScore)
-        );
+        if (botSpecB.botName == "victim") {
+          logger.write(
+            "Game #" + Global::intToString(gameIdx)
+            + " victim (B) - adv score (W): "
+            + Global::floatToString(-gameData->finalWhiteMinusBlackScore())
+          );
+        } else if (botSpecW.botName == "victim") {
+          logger.write(
+            "Game #" + Global::intToString(gameIdx)
+            + " victim (W) - adv score (B): "
+            + Global::floatToString(gameData->finalWhiteMinusBlackScore())
+          );
+        } else {
+          assert(false);
+        }
       }
 
       //NULL gamedata will happen when the game is interrupted by shouldStop, which means we should also stop.

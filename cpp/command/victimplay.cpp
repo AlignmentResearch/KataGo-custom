@@ -337,6 +337,17 @@ int MainCmds::victimplay(const vector<string>& args) {
           nullptr,
           nullptr
         );
+
+        const float victimMinusAdvScore = (
+          (gameIdx % 2 == 0 ? -1 : 1)
+          * gameData->finalWhiteMinusBlackScore()
+        );
+        logger.write(
+          "Game #"
+          + Global::intToString(gameIdx)
+          + " victim - adv score: "
+          + Global::floatToString(victimMinusAdvScore)
+        );
       }
 
       //NULL gamedata will happen when the game is interrupted by shouldStop, which means we should also stop.

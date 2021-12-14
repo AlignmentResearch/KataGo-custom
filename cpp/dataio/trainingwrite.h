@@ -106,6 +106,7 @@ struct FinishedGameData {
   ~FinishedGameData();
 
   void printDebug(std::ostream& out) const;
+  float finalWhiteMinusBlackScore() const;
 };
 
 struct TrainingWriteBuffers {

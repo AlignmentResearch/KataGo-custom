@@ -194,6 +194,20 @@ void FinishedGameData::printDebug(ostream& out) const {
   }
 }
 
+/* Function implementation adapted from command/gatekeeper.cpp */
+float FinishedGameData::finalWhiteMinusBlackScore() const {
+  if(endHist.isGameFinished && endHist.isNoResult) {
+    return NAN;
+  }
+
+  BoardHistory hist(endHist);
+  Board endBoard = hist.getRecentBoard(0);
+  //Force game end just in caseif we crossed a move limit
+  if(!hist.isGameFinished)
+    hist.endAndScoreGameNow(endBoard);
+
+  return hist.finalWhiteMinusBlackScore;
+}
 //-------------------------------------------------------------------------------------
 
 

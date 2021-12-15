@@ -119,6 +119,17 @@ string Global::uint64ToHexString(uint64_t x)
   return s;
 }
 
+string Global::vectorToString(vector<string> xs, string sep) {
+  std::stringstream ss;
+  for (size_t i = 0; i < xs.size(); i++) {
+    ss << xs[i];
+    if (i + 1 < xs.size()) {
+      ss << sep;
+    }
+  }
+  return ss.str();
+}
+
 bool Global::tryStringToInt(const string& str, int& x)
 {
   int val = 0;

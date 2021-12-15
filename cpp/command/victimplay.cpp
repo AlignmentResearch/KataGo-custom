@@ -338,21 +338,25 @@ int MainCmds::victimplay(const vector<string>& args) {
           nullptr
         );
 
-        if (botSpecB.botName == "victim") {
-          logger.write(
-            "Game #" + Global::intToString(gameIdx)
-            + " victim (B) - adv score (W): "
-            + Global::floatToString(-gameData->finalWhiteMinusBlackScore())
-          );
-        } else if (botSpecW.botName == "victim") {
-          logger.write(
-            "Game #" + Global::intToString(gameIdx)
-            + " victim (W) - adv score (B): "
-            + Global::floatToString(gameData->finalWhiteMinusBlackScore())
-          );
-        } else {
-          assert(false);
+        const bool victimIsBlack = botSpecB.botName == "victim";
+        const string victimColor = victimIsBlack ? "B" : "W";
+        const string adversaryColor = victimIsBlack ? "W" : "B";
+        const float victimMinusAdvScore =
+          (victimIsBlack ? -1 : 1)
+          * gameData->finalWhiteMinusBlackScore();
+
+        vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
+        for (auto &x : gameData->changedNeuralNets) {
+          adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
         }
+
+        logger.write(
+          "Game #" + Global::int64ToString(gameIdx) +
+          " victim (" + victimColor + ")" +
+          " - adv (" + adversaryColor + ")" +
+          " score: " + Global::floatToString(victimMinusAdvScore) +
+          "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+        );
       }
 
       //NULL gamedata will happen when the game is interrupted by shouldStop, which means we should also stop.

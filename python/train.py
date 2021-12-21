@@ -397,6 +397,8 @@ def model_fn(features,labels,mode,params):
       logvars["tdsloss"] = tdsloss
 
     logging_hook = CustomLoggingHook(logvars, every_n_iter=print_train_loss_every_batches, handle_logging_values=update_global_latest_extra_stats)
+    for lv_name, lv_tensor in logvars.items():
+      tf.summary.scalar(name=lv_name, tensor=lv_tensor)
 
     printed_model_yet = True
 

@@ -70,7 +70,7 @@ struct PlaySettings {
   //Enable full data recording and a variety of other minor tweaks applying only for self-play training.
   bool forSelfPlay;
 
-  // Enabled on top of `forSelfPlay` when we want to do fixed victim training.
+  //Enabled on top of `forSelfPlay` when we want to do fixed victim training.
   bool forVictimPlay;
 
   //Asymmetric playouts training

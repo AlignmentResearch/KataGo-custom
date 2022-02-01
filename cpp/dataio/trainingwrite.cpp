@@ -968,35 +968,36 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
       }
     }
 
-    while(targetWeight > 0.0) {
-      if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
-        if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
-          if (skipWriteVictim && nextPlayer == victimPlayer) break;
-          writeBuffers->addRow(
-            board,hist,nextPlayer,
-            turnIdx,
-            1.0,
-            unreducedNumVisits,
-            policyTarget0,
-            policyTarget1,
-            data.whiteValueTargetsByTurn,
-            turnAfterStart,
-            data.nnRawStatsByTurn[turnAfterStart],
-            &(data.endHist.getRecentBoard(0)),
-            data.finalFullArea,
-            data.finalOwnership,
-            data.finalWhiteScoring,
-            &posHistForFutureBoards,
-            isSidePosition,
-            numNeuralNetsBehindLatest,
-            data,
-            rand
-          );
-          writeAndClearIfFull();
+    if (!(skipWriteVictim && nextPlayer == victimPlayer)) {
+      while(targetWeight > 0.0) {
+        if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
+          if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
+            writeBuffers->addRow(
+              board,hist,nextPlayer,
+              turnIdx,
+              1.0,
+              unreducedNumVisits,
+              policyTarget0,
+              policyTarget1,
+              data.whiteValueTargetsByTurn,
+              turnAfterStart,
+              data.nnRawStatsByTurn[turnAfterStart],
+              &(data.endHist.getRecentBoard(0)),
+              data.finalFullArea,
+              data.finalOwnership,
+              data.finalWhiteScoring,
+              &posHistForFutureBoards,
+              isSidePosition,
+              numNeuralNetsBehindLatest,
+              data,
+              rand
+            );
+            writeAndClearIfFull();
+          }
+          rowCount++;
         }
-        rowCount++;
+        targetWeight -= 1.0;
       }
-      targetWeight -= 1.0;
     }
 
 
@@ -1011,6 +1012,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   vector<ValueTargets> whiteValueTargetsBuf(1);
   for(int i = 0; i<data.sidePositions.size(); i++) {
     SidePosition* sp = data.sidePositions[i];
+    if (skipWriteVictim && sp->pla == victimPlayer) continue;
 
     double targetWeight = sp->targetWeight;
     while(targetWeight > 0.0) {
@@ -1023,7 +1025,6 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
           bool isSidePosition = true;
           int numNeuralNetsBehindLatest = (int)data.changedNeuralNets.size() - sp->numNeuralNetChangesSoFar;
 
-          if (skipWriteVictim && sp->pla == victimPlayer) break;
           writeBuffers->addRow(
             sp->board,sp->hist,sp->pla,
             turnIdx,

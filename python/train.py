@@ -369,6 +369,8 @@ def model_fn(features,labels,mode,params):
     # also log to TB, everything above plus a few extra (these cause errors with CustomLoggingHook)
     scalar_logvars = dict(logvars)
     scalar_logvars.update({
+      # Warning: If shuffle hits maximum dataset size, cumulative data will max out at that
+      # (but by default dataset size can grow unboundedly so this is not a problem).
       "cumulative_data": last_datainfo_row,
       "cumulative_data_reuse": logvars["nsamp"] / last_datainfo_row,
     })

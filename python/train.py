@@ -366,7 +366,7 @@ def model_fn(features,labels,mode,params):
     logging_hook = CustomLoggingHook(logvars, every_n_iter=log_every_n_steps,
                                      handle_logging_values=update_global_latest_extra_stats)
 
-    # also log to TB, everything above plus a few extra (these cause errors with CustomLoggingHook)
+    # also log to TB, everything above plus a few extras that cause errors with CustomLoggingHook
     scalar_logvars = dict(logvars)
     scalar_logvars.update({
       # Warning: If shuffle hits maximum dataset size, cumulative data will max out at that

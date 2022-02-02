@@ -1,13 +1,11 @@
 #!/usr/bin/python3
+from typing import Any, Mapping
 import sys
 import os
 import argparse
-import traceback
 import random
-import math
 import time
 import logging
-import contextlib
 import json
 import datetime
 import gc
@@ -18,46 +16,46 @@ import numpy as np
 import itertools
 import copy
 
-import data
-from board import Board
-from model import Model, Target_vars, Metrics, ModelUtils
+from model import Model, ModelUtils
 import modelconfigs
 import tfrecordio
 
 #Command and args-------------------------------------------------------------------
 
-description = """
-Train neural net on Go positions from tf record files of batches from selfplay.
-"""
+def parse_args() -> Mapping[str, Any]:
+  description = """
+  Train neural net on Go positions from tf record files of batches from selfplay.
+  """
+  parser = argparse.ArgumentParser(description=description)
+  parser.add_argument('-traindir', help='Dir to write to for recording training results', required=True)
+  parser.add_argument('-datadir', help='Directory with a train and val subdir of tf records data', required=True)
+  parser.add_argument('-exportdir', help='Directory to export models periodically', required=True)
+  parser.add_argument('-exportprefix', help='Prefix to append to names of models', required=True)
+  parser.add_argument('-pos-len', help='Spatial length of expected training data', type=int, required=True)
+  parser.add_argument('-batch-size', help='Expected batch size of the input data, must match tfrecords', type=int, required=True)
+  parser.add_argument('-samples-per-epoch', help='Number of data samples to consider as one epoch', type=int, required=False)
+  parser.add_argument('-multi-gpus', help='Use multiple gpus, comma-separated device ids', required=False)
+  parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
+  parser.add_argument('-model-kind', help='String name for what model to use', required=True)
+  parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
+  parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
+  parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
+  parser.add_argument('-gnorm-clip-scale', help='Multiplier on gradient clipping threshold', type=float, required=False)
+  parser.add_argument('-sub-epochs', help='Reload training data up to this many times per epoch', type=int, required=True)
+  parser.add_argument('-epochs-per-export', help='Export model once every this many epochs', type=int, required=False)
+  parser.add_argument('-export-prob', help='Export model with this probablity', type=float, required=False)
+  parser.add_argument('-max-epochs-this-instance', help='Terminate training after this many more epochs', type=int, required=False)
+  parser.add_argument('-sleep-seconds-per-epoch', help='Sleep this long between epochs', type=int, required=False)
+  parser.add_argument('-swa-sub-epoch-scale', help='Number of sub-epochs to average in expectation together for SWA', type=float, required=False)
+  parser.add_argument('-max-train-bucket-per-new-data', help='When data added, add this many train rows per data row to bucket', type=float, required=False)
+  parser.add_argument('-max-train-bucket-size', help='Approx total number of train rows allowed if data stops', type=float, required=False)
+  parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
+  parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
+  parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
+  return vars(parser.parse_args())
 
-parser = argparse.ArgumentParser(description=description)
-parser.add_argument('-traindir', help='Dir to write to for recording training results', required=True)
-parser.add_argument('-datadir', help='Directory with a train and val subdir of tf records data', required=True)
-parser.add_argument('-exportdir', help='Directory to export models periodically', required=True)
-parser.add_argument('-exportprefix', help='Prefix to append to names of models', required=True)
-parser.add_argument('-pos-len', help='Spatial length of expected training data', type=int, required=True)
-parser.add_argument('-batch-size', help='Expected batch size of the input data, must match tfrecords', type=int, required=True)
-parser.add_argument('-samples-per-epoch', help='Number of data samples to consider as one epoch', type=int, required=False)
-parser.add_argument('-multi-gpus', help='Use multiple gpus, comma-separated device ids', required=False)
-parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
-parser.add_argument('-model-kind', help='String name for what model to use', required=True)
-parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
-parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
-parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
-parser.add_argument('-gnorm-clip-scale', help='Multiplier on gradient clipping threshold', type=float, required=False)
-parser.add_argument('-sub-epochs', help='Reload training data up to this many times per epoch', type=int, required=True)
-parser.add_argument('-epochs-per-export', help='Export model once every this many epochs', type=int, required=False)
-parser.add_argument('-export-prob', help='Export model with this probablity', type=float, required=False)
-parser.add_argument('-max-epochs-this-instance', help='Terminate training after this many more epochs', type=int, required=False)
-parser.add_argument('-sleep-seconds-per-epoch', help='Sleep this long between epochs', type=int, required=False)
-parser.add_argument('-swa-sub-epoch-scale', help='Number of sub-epochs to average in expectation together for SWA', type=float, required=False)
-parser.add_argument('-max-train-bucket-per-new-data', help='When data added, add this many train rows per data row to bucket', type=float, required=False)
-parser.add_argument('-max-train-bucket-size', help='Approx total number of train rows allowed if data stops', type=float, required=False)
-parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
-parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
-parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
-args = vars(parser.parse_args())
 
+args = parse_args()
 traindir = args["traindir"]
 datadir = args["datadir"]
 exportdir = args["exportdir"]

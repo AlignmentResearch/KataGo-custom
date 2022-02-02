@@ -38,7 +38,7 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
   parser.add_argument('-model-kind', help='String name for what model to use', required=True)
   parser.add_argument('-log-every-n-steps', help='How many steps to log to TB and stdout',
-                      type=float, default=1000, required=False)
+                      type=float, default=100, required=False)
   parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
   parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
   parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)

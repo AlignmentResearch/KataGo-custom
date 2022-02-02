@@ -37,6 +37,8 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-multi-gpus', help='Use multiple gpus, comma-separated device ids', required=False)
   parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
   parser.add_argument('-model-kind', help='String name for what model to use', required=True)
+  parser.add_argument('-log-every-n-steps', help='How many steps to log to TB and stdout',
+                      type=float, default=1000, required=False)
   parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
   parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
   parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
@@ -66,6 +68,7 @@ samples_per_epoch = args["samples_per_epoch"]
 multi_gpus = args["multi_gpus"]
 gpu_memory_frac = args["gpu_memory_frac"]
 model_kind = args["model_kind"]
+log_every_n_steps = args["log_every_n_steps"]
 lr_scale = args["lr_scale"]
 lr_scale_before_export = args["lr_scale_before_export"]
 lr_scale_before_export_epochs = args["lr_scale_before_export_epochs"]
@@ -311,7 +314,7 @@ def build_metrics(model, target_vars, metrics, estimator: bool):
       metric, op = moving_mean(k, v, weights=w)
       logvars[k] = metric
       log_ops.append(op)
-      return logvars, log_ops
+    return logvars, log_ops
 
 
 def model_fn(features,labels,mode,params):
@@ -349,37 +352,28 @@ def model_fn(features,labels,mode,params):
     printed_model_yet = True
 
     logvars, log_ops = build_metrics(model, target_vars, metrics, estimator=False)
-
     wmean, wmean_op = tf.compat.v1.metrics.mean(target_vars.weight_sum)
     log_ops.append(wmean_op)
-
-    extra_logvars = {
+    logvars.update({
       "wmean": wmean,
       "nsamp": global_step * tf.constant(batch_size, dtype=tf.int64),
       "wsum": global_step_float * wmean * tf.constant(float(num_gpus_used)),
       "skw": target_vars.seki_weight_scale,
       "pslr": per_sample_learning_rate,
-    }
-    # These cause an error with CustomLoggingHook
-    scalar_only_logvars = {
+    })
+
+    # log to stdout at this frequency
+    logging_hook = CustomLoggingHook(logvars, every_n_iter=log_every_n_steps,
+                                     handle_logging_values=update_global_latest_extra_stats)
+
+    # also log to TB, everything above plus a few extra (these cause errors with CustomLoggingHook)
+    scalar_logvars = dict(logvars)
+    scalar_logvars.update({
       "cumulative_data": last_datainfo_row,
-      "cumulative_data_reuse": extra_logvars["nsamp"] / last_datainfo_row,
-    }
-
-    # These logvars are not present in the standard Estimator metrics, so log
-    # them separately using `tf.summary.scalar`.
-    # TODO(adam): maybe we actually want to log everything using tf.summary.scalar?
-    # The standard logvars still only get logged during eval...
-    for k, v in extra_logvars.items():
+      "cumulative_data_reuse": logvars["nsamp"] / last_datainfo_row,
+    })
+    for k, v in scalar_logvars.items():
       tf.summary.scalar(k, v)
-    for k, v in scalar_only_logvars.items():
-      tf.summary.scalar(k, v)
-
-    logvars.update(extra_logvars)  # still log the extra ones to stdout like the rest
-    print_train_loss_every_batches = 100
-    logging_hook = CustomLoggingHook(logvars, every_n_iter=print_train_loss_every_batches, handle_logging_values=update_global_latest_extra_stats)
-
-    printed_model_yet = True
 
     sys.stdout.flush()
     sys.stderr.flush()
@@ -473,6 +467,7 @@ if multi_gpus is None:
     params={},
     config=tf.estimator.RunConfig(
       save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
+      save_summary_steps=log_every_n_steps,
       keep_checkpoint_every_n_hours = 1000000,
       keep_checkpoint_max = 10,
       session_config = session_config

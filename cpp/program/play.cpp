@@ -1401,7 +1401,7 @@ FinishedGameData* Play::runGame(
             botW->setNNEval(newNNEval);
             botSpecW.nnEval = newNNEval;
           } else {
-            assert(false);
+            ASSERT_UNREACHABLE;
           }
           logger.write(
             "Swapping adversary: "

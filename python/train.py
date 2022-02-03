@@ -38,7 +38,7 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
   parser.add_argument('-model-kind', help='String name for what model to use', required=True)
   parser.add_argument('-log-every-n-steps', help='How many steps to log to TB and stdout',
-                      type=float, default=100, required=False)
+                      type=int, default=100, required=False)
   parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
   parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
   parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
@@ -369,8 +369,9 @@ def model_fn(features,labels,mode,params):
     # also log to TB, everything above plus a few extras that cause errors with CustomLoggingHook
     scalar_logvars = dict(logvars)
     scalar_logvars.update({
-      # Warning: If shuffle hits maximum dataset size, cumulative data will max out at that
-      # (but by default dataset size can grow unboundedly so this is not a problem).
+      # Warning: If shuffle.py is run with `-max-rows` and dataset exceeds this size
+      # then it will be truncated, and `cumulative_data` will saturate at that value.
+      # However, by default `-max-rows` is unbounded in which case this is not a problem.
       "cumulative_data": last_datainfo_row,
       "cumulative_data_reuse": logvars["nsamp"] / last_datainfo_row,
     })
@@ -458,45 +459,49 @@ def val_input_fn(vdatadir):
 
 # TRAINING PARAMETERS ------------------------------------------------------------
 
-trainlog("Beginning training")
+def build_estimator() -> tf.estimator.Estimator:
+  config_kwargs = dict(
+    save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
+    keep_checkpoint_every_n_hours=1000000,
+    keep_checkpoint_max = 10,
+    save_summary_steps=log_every_n_steps,
+  )
+  if multi_gpus is None:
+    session_config = tf.compat.v1.ConfigProto()
+    session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
+    return tf.estimator.Estimator(
+      model_fn=model_fn,
+      model_dir=traindir,
+      params={},
+      config=tf.estimator.RunConfig(
+        session_config=session_config,
+        **config_kwargs,
+      )
+    )
+  else:
+    session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+    session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
+    multigpu_strategy = tf.distribute.MirroredStrategy(
+      devices=multi_gpu_device_ids,
+      cross_device_ops=tf.distribute.ReductionToOneDevice(
+        reduce_to_device="/device:CPU:0"
+      )
+    )
+    return tf.estimator.Estimator(
+      model_fn=model_fn,
+      model_dir=traindir,
+      params={},
+      config=tf.estimator.RunConfig(
+        session_config = session_config,
+        train_distribute = multigpu_strategy,
+        eval_distribute = multigpu_strategy,
+        **config_kwargs,
+      )
+    )
 
-if multi_gpus is None:
-  session_config = tf.compat.v1.ConfigProto()
-  session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
-  estimator = tf.estimator.Estimator(
-    model_fn=model_fn,
-    model_dir=traindir,
-    params={},
-    config=tf.estimator.RunConfig(
-      save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
-      save_summary_steps=log_every_n_steps,
-      keep_checkpoint_every_n_hours = 1000000,
-      keep_checkpoint_max = 10,
-      session_config = session_config
-    )
-  )
-else:
-  session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
-  session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
-  multigpu_strategy = tf.distribute.MirroredStrategy(
-    devices=multi_gpu_device_ids,
-    cross_device_ops=tf.distribute.ReductionToOneDevice(
-      reduce_to_device="/device:CPU:0"
-    )
-  )
-  estimator = tf.estimator.Estimator(
-    model_fn=model_fn,
-    model_dir=traindir,
-    params={},
-    config=tf.estimator.RunConfig(
-      save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
-      keep_checkpoint_every_n_hours = 1000000,
-      keep_checkpoint_max = 10,
-      session_config = session_config,
-      train_distribute = multigpu_strategy,
-      eval_distribute = multigpu_strategy,
-    )
-  )
+
+trainlog("Beginning training")
+estimator = build_estimator()
 
 
 class CheckpointSaverListenerFunction(tf.estimator.CheckpointSaverListener):

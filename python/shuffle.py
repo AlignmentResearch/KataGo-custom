@@ -547,7 +547,7 @@ if __name__ == '__main__':
       merge_results = pool.starmap(merge_shards, [
         (out_files[idx],num_shards_to_merge,out_tmp_dirs[idx],batch_size,ensure_batch_multiple) for idx in range(len(out_files))
       ])
-    print("Mumber of rows by output file:",flush=True)
+    print("Number of rows by output file:",flush=True)
     print(list(zip(out_files,merge_results)),flush=True)
     sys.stdout.flush()
 

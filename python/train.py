@@ -1,13 +1,11 @@
 #!/usr/bin/python3
+from typing import Any, Mapping
 import sys
 import os
 import argparse
-import traceback
 import random
-import math
 import time
 import logging
-import contextlib
 import json
 import datetime
 import gc
@@ -18,46 +16,48 @@ import numpy as np
 import itertools
 import copy
 
-import data
-from board import Board
-from model import Model, Target_vars, Metrics, ModelUtils
+from model import Model, ModelUtils
 import modelconfigs
 import tfrecordio
 
 #Command and args-------------------------------------------------------------------
 
-description = """
-Train neural net on Go positions from tf record files of batches from selfplay.
-"""
+def parse_args() -> Mapping[str, Any]:
+  description = """
+  Train neural net on Go positions from tf record files of batches from selfplay.
+  """
+  parser = argparse.ArgumentParser(description=description)
+  parser.add_argument('-traindir', help='Dir to write to for recording training results', required=True)
+  parser.add_argument('-datadir', help='Directory with a train and val subdir of tf records data', required=True)
+  parser.add_argument('-exportdir', help='Directory to export models periodically', required=True)
+  parser.add_argument('-exportprefix', help='Prefix to append to names of models', required=True)
+  parser.add_argument('-pos-len', help='Spatial length of expected training data', type=int, required=True)
+  parser.add_argument('-batch-size', help='Expected batch size of the input data, must match tfrecords', type=int, required=True)
+  parser.add_argument('-samples-per-epoch', help='Number of data samples to consider as one epoch', type=int, required=False)
+  parser.add_argument('-multi-gpus', help='Use multiple gpus, comma-separated device ids', required=False)
+  parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
+  parser.add_argument('-model-kind', help='String name for what model to use', required=True)
+  parser.add_argument('-log-every-n-steps', help='How many steps to log to TB and stdout',
+                      type=int, default=100, required=False)
+  parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
+  parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
+  parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
+  parser.add_argument('-gnorm-clip-scale', help='Multiplier on gradient clipping threshold', type=float, required=False)
+  parser.add_argument('-sub-epochs', help='Reload training data up to this many times per epoch', type=int, required=True)
+  parser.add_argument('-epochs-per-export', help='Export model once every this many epochs', type=int, required=False)
+  parser.add_argument('-export-prob', help='Export model with this probablity', type=float, required=False)
+  parser.add_argument('-max-epochs-this-instance', help='Terminate training after this many more epochs', type=int, required=False)
+  parser.add_argument('-sleep-seconds-per-epoch', help='Sleep this long between epochs', type=int, required=False)
+  parser.add_argument('-swa-sub-epoch-scale', help='Number of sub-epochs to average in expectation together for SWA', type=float, required=False)
+  parser.add_argument('-max-train-bucket-per-new-data', help='When data added, add this many train rows per data row to bucket', type=float, required=False)
+  parser.add_argument('-max-train-bucket-size', help='Approx total number of train rows allowed if data stops', type=float, required=False)
+  parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
+  parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
+  parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
+  return vars(parser.parse_args())
 
-parser = argparse.ArgumentParser(description=description)
-parser.add_argument('-traindir', help='Dir to write to for recording training results', required=True)
-parser.add_argument('-datadir', help='Directory with a train and val subdir of tf records data', required=True)
-parser.add_argument('-exportdir', help='Directory to export models periodically', required=True)
-parser.add_argument('-exportprefix', help='Prefix to append to names of models', required=True)
-parser.add_argument('-pos-len', help='Spatial length of expected training data', type=int, required=True)
-parser.add_argument('-batch-size', help='Expected batch size of the input data, must match tfrecords', type=int, required=True)
-parser.add_argument('-samples-per-epoch', help='Number of data samples to consider as one epoch', type=int, required=False)
-parser.add_argument('-multi-gpus', help='Use multiple gpus, comma-separated device ids', required=False)
-parser.add_argument('-gpu-memory-frac', help='Fraction of gpu memory to use', type=float, required=True)
-parser.add_argument('-model-kind', help='String name for what model to use', required=True)
-parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
-parser.add_argument('-lr-scale-before-export', help='LR multiplier on the hardcoded schedule just before export', type=float, required=False)
-parser.add_argument('-lr-scale-before-export-epochs', help='Number of epochs for -lr-scale-before-export', type=int, required=False)
-parser.add_argument('-gnorm-clip-scale', help='Multiplier on gradient clipping threshold', type=float, required=False)
-parser.add_argument('-sub-epochs', help='Reload training data up to this many times per epoch', type=int, required=True)
-parser.add_argument('-epochs-per-export', help='Export model once every this many epochs', type=int, required=False)
-parser.add_argument('-export-prob', help='Export model with this probablity', type=float, required=False)
-parser.add_argument('-max-epochs-this-instance', help='Terminate training after this many more epochs', type=int, required=False)
-parser.add_argument('-sleep-seconds-per-epoch', help='Sleep this long between epochs', type=int, required=False)
-parser.add_argument('-swa-sub-epoch-scale', help='Number of sub-epochs to average in expectation together for SWA', type=float, required=False)
-parser.add_argument('-max-train-bucket-per-new-data', help='When data added, add this many train rows per data row to bucket', type=float, required=False)
-parser.add_argument('-max-train-bucket-size', help='Approx total number of train rows allowed if data stops', type=float, required=False)
-parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
-parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
-parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
-args = vars(parser.parse_args())
 
+args = parse_args()
 traindir = args["traindir"]
 datadir = args["datadir"]
 exportdir = args["exportdir"]
@@ -68,6 +68,7 @@ samples_per_epoch = args["samples_per_epoch"]
 multi_gpus = args["multi_gpus"]
 gpu_memory_frac = args["gpu_memory_frac"]
 model_kind = args["model_kind"]
+log_every_n_steps = args["log_every_n_steps"]
 lr_scale = args["lr_scale"]
 lr_scale_before_export = args["lr_scale_before_export"]
 lr_scale_before_export_epochs = args["lr_scale_before_export_epochs"]
@@ -233,6 +234,89 @@ def update_global_latest_extra_stats(results):
   for key in results:
     global_latest_extra_stats[key] = results[key].item()
 
+
+def moving_mean(name: str, x, weights):
+  sumwx = tf.reduce_sum(x*weights,name="printstats/wx/"+name)
+  sumw = tf.reduce_sum(weights,name="printstats/w/"+name)
+  moving_wx = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_wx"),trainable=False)
+  moving_w = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_w"),trainable=False)
+
+  decay = 0.999
+  with tf.compat.v1.variable_scope(name):
+    wx_op = tf.keras.backend.moving_average_update(moving_wx,sumwx,decay)
+    w_op = tf.keras.backend.moving_average_update(moving_w,sumw,decay)
+    op = tf.group(wx_op,w_op)
+
+  avg = (moving_wx + sumwx * (1.0-decay)) / (moving_w + sumw * (1.0-decay))
+  return avg, op
+
+
+def build_metrics(model, target_vars, metrics, estimator: bool):
+  """Builds metrics.
+
+  If ``estimator``, then returns a dictionary mapping from string metric names
+  to (metric, op) pairs constructed with ``tf.compat.v1.metrics.mean``. Otherwise,
+  returns a tuple of a dictionary mapping from string metric names to metrics, and a
+  list of operations, constructed using ``moving_mean``."""
+  means = {
+    "p0loss": target_vars.policy_loss_unreduced,
+    "p1loss": target_vars.policy1_loss_unreduced,
+    "vloss": target_vars.value_loss_unreduced,
+    "tdvloss": target_vars.td_value_loss_unreduced,
+    "smloss": target_vars.scoremean_loss_unreduced,
+    "leadloss": target_vars.lead_loss_unreduced,
+    "vtimeloss": target_vars.variance_time_loss_unreduced,
+    "sbpdfloss": target_vars.scorebelief_pdf_loss_unreduced,
+    "sbcdfloss": target_vars.scorebelief_cdf_loss_unreduced,
+    "oloss": target_vars.ownership_loss_unreduced,
+    "sloss": target_vars.scoring_loss_unreduced,
+    "fploss": target_vars.futurepos_loss_unreduced,
+    "skloss": target_vars.seki_loss_unreduced,
+    "rsdloss": target_vars.scorestdev_reg_loss_unreduced,
+    "rloss": target_vars.reg_loss_per_weight,
+    "rscloss": target_vars.scale_reg_loss_unreduced,
+    "ventr": metrics.value_entropy_unreduced,
+    "pacc1": metrics.accuracy1_unreduced,
+    "ptentr": metrics.policy_target_entropy_unreduced,
+  }
+  if model.version >= 9:
+    means["evstloss"] = target_vars.shortterm_value_error_loss_unreduced
+    means["esstloss"] = target_vars.shortterm_score_error_loss_unreduced
+  if model.version >= 10:
+    means["tdsloss"] = target_vars.td_score_loss_unreduced
+
+  if not estimator:
+    means["gnorm"] = metrics.gnorm
+    means["excessgnorm"] = metrics.excess_gnorm
+
+  default_weight = target_vars.target_weight_used
+  weights = {
+    "rloss": target_vars.weight_sum,
+    # NOTE: These two are going to be smaller if using more GPUs since it's the gradient norm as measured on the instance batch
+    # rather than the global batch.
+    # Also, somewhat awkwardly, we say the weight is 1.0 rather than 1.0/num_gpus_used because tensorflow seems to have "meany"
+    # behavior where it updates sumw via the mean of the two separate updates of the gpus rather than the sum.
+    "gnorm": 1.0,
+    "excessgnorm": 1.0,
+  }
+
+  if estimator:
+    eval_metric_ops = {}
+    for k, v in means.items():
+      w = weights.get(k, default_weight)
+      eval_metric_ops[k] = tf.compat.v1.metrics.mean(v, weights=w)
+    return eval_metric_ops
+  else:
+    logvars = {}
+    log_ops = []
+    for k, v in means.items():
+      w = weights.get(k, default_weight)
+      metric, op = moving_mean(k, v, weights=w)
+      logvars[k] = metric
+      log_ops.append(op)
+    return logvars, log_ops
+
+
 def model_fn(features,labels,mode,params):
   global num_epochs_this_instance
   global printed_model_yet
@@ -255,39 +339,7 @@ def model_fn(features,labels,mode,params):
 
   if mode == tf.estimator.ModeKeys.EVAL:
     (model,target_vars,metrics) = built
-    wsum = tf.Variable(
-      0.0,dtype=tf.float32,name="wsum",trainable=False,
-      collections=[tf.compat.v1.GraphKeys.LOCAL_VARIABLES, tf.compat.v1.GraphKeys.METRIC_VARIABLES],
-      synchronization=tf.VariableSynchronization.ON_READ,
-      aggregation=tf.VariableAggregation.SUM
-    )
-    wsum_op = tf.assign_add(wsum,target_vars.weight_sum)
-    eval_metric_ops={
-      #"wsum": (wsum.read_value(),wsum_op),
-      "p0loss": tf.compat.v1.metrics.mean(target_vars.policy_loss_unreduced, weights=target_vars.target_weight_used),
-      "p1loss": tf.compat.v1.metrics.mean(target_vars.policy1_loss_unreduced, weights=target_vars.target_weight_used),
-      "vloss": tf.compat.v1.metrics.mean(target_vars.value_loss_unreduced, weights=target_vars.target_weight_used),
-      "tdvloss": tf.compat.v1.metrics.mean(target_vars.td_value_loss_unreduced, weights=target_vars.target_weight_used),
-      "smloss": tf.compat.v1.metrics.mean(target_vars.scoremean_loss_unreduced, weights=target_vars.target_weight_used),
-      "leadloss": tf.compat.v1.metrics.mean(target_vars.lead_loss_unreduced, weights=target_vars.target_weight_used),
-      "vtimeloss": tf.compat.v1.metrics.mean(target_vars.variance_time_loss_unreduced, weights=target_vars.target_weight_used),
-      "sbpdfloss": tf.compat.v1.metrics.mean(target_vars.scorebelief_pdf_loss_unreduced, weights=target_vars.target_weight_used),
-      "sbcdfloss": tf.compat.v1.metrics.mean(target_vars.scorebelief_cdf_loss_unreduced, weights=target_vars.target_weight_used),
-      "oloss": tf.compat.v1.metrics.mean(target_vars.ownership_loss_unreduced, weights=target_vars.target_weight_used),
-      "sloss": tf.compat.v1.metrics.mean(target_vars.scoring_loss_unreduced, weights=target_vars.target_weight_used),
-      "fploss": tf.compat.v1.metrics.mean(target_vars.futurepos_loss_unreduced, weights=target_vars.target_weight_used),
-      "rsdloss": tf.compat.v1.metrics.mean(target_vars.scorestdev_reg_loss_unreduced, weights=target_vars.target_weight_used),
-      "rloss": tf.compat.v1.metrics.mean(target_vars.reg_loss_per_weight, weights=target_vars.weight_sum),
-      "rscloss": tf.compat.v1.metrics.mean(target_vars.scale_reg_loss_unreduced, weights=target_vars.target_weight_used),
-      "pacc1": tf.compat.v1.metrics.mean(metrics.accuracy1_unreduced, weights=target_vars.target_weight_used),
-      "ventr": tf.compat.v1.metrics.mean(metrics.value_entropy_unreduced, weights=target_vars.target_weight_used),
-      "ptentr": tf.compat.v1.metrics.mean(metrics.policy_target_entropy_unreduced, weights=target_vars.target_weight_used)
-    }
-    if model.version >= 9:
-      eval_metric_ops["evstloss"] = tf.compat.v1.metrics.mean(target_vars.shortterm_value_error_loss_unreduced, weights=target_vars.target_weight_used)
-      eval_metric_ops["esstloss"] = tf.compat.v1.metrics.mean(target_vars.shortterm_score_error_loss_unreduced, weights=target_vars.target_weight_used)
-    if model.version >= 10:
-      eval_metric_ops["tdsloss"] = tf.compat.v1.metrics.mean(target_vars.td_score_loss_unreduced, weights=target_vars.target_weight_used)
+    eval_metric_ops = build_metrics(model, target_vars, metrics, estimator=True)
 
     return tf.estimator.EstimatorSpec(
       mode,
@@ -299,106 +351,32 @@ def model_fn(features,labels,mode,params):
     (model,target_vars,metrics,global_step,global_step_float,per_sample_learning_rate,train_step) = built
     printed_model_yet = True
 
-    def moving_mean(name,x,weights):
-      sumwx = tf.reduce_sum(x*weights,name="printstats/wx/"+name)
-      sumw = tf.reduce_sum(weights,name="printstats/w/"+name)
-      moving_wx = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_wx"),trainable=False)
-      moving_w = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_w"),trainable=False)
-
-      decay = 0.999
-      with tf.compat.v1.variable_scope(name):
-        wx_op = tf.keras.backend.moving_average_update(moving_wx,sumwx,decay)
-        w_op = tf.keras.backend.moving_average_update(moving_w,sumw,decay)
-        op = tf.group(wx_op,w_op)
-
-      avg = (moving_wx + sumwx * (1.0-decay)) / (moving_w + sumw * (1.0-decay))
-      return (avg,op)
-
-    (p0loss,p0loss_op) = moving_mean("p0loss",target_vars.policy_loss_unreduced, weights=target_vars.target_weight_used)
-    (p1loss,p1loss_op) = moving_mean("p1loss",target_vars.policy1_loss_unreduced, weights=target_vars.target_weight_used)
-    (vloss,vloss_op) = moving_mean("vloss",target_vars.value_loss_unreduced, weights=target_vars.target_weight_used)
-    (tdvloss,tdvloss_op) = moving_mean("tdvloss",target_vars.td_value_loss_unreduced, weights=target_vars.target_weight_used)
-    (smloss,smloss_op) = moving_mean("smloss",target_vars.scoremean_loss_unreduced, weights=target_vars.target_weight_used)
-    (leadloss,leadloss_op) = moving_mean("leadloss",target_vars.lead_loss_unreduced, weights=target_vars.target_weight_used)
-    (vtimeloss,vtimeloss_op) = moving_mean("vtimeloss",target_vars.variance_time_loss_unreduced, weights=target_vars.target_weight_used)
-    (sbpdfloss,sbpdfloss_op) = moving_mean("sbpdfloss",target_vars.scorebelief_pdf_loss_unreduced, weights=target_vars.target_weight_used)
-    (sbcdfloss,sbcdfloss_op) = moving_mean("sbcdfloss",target_vars.scorebelief_cdf_loss_unreduced, weights=target_vars.target_weight_used)
-    (oloss,oloss_op) = moving_mean("oloss",target_vars.ownership_loss_unreduced, weights=target_vars.target_weight_used)
-    (sloss,sloss_op) = moving_mean("sloss",target_vars.scoring_loss_unreduced, weights=target_vars.target_weight_used)
-    (fploss,fploss_op) = moving_mean("fploss",target_vars.futurepos_loss_unreduced, weights=target_vars.target_weight_used)
-    (skloss,skloss_op) = moving_mean("skloss",target_vars.seki_loss_unreduced, weights=target_vars.target_weight_used)
-    (rsdloss,rsdloss_op) = moving_mean("rsdloss",target_vars.scorestdev_reg_loss_unreduced, weights=target_vars.target_weight_used)
-    (rloss,rloss_op) = moving_mean("rloss",target_vars.reg_loss_per_weight, weights=target_vars.weight_sum)
-    (rscloss,rscloss_op) = moving_mean("rscloss",target_vars.scale_reg_loss_unreduced, weights=target_vars.target_weight_used)
-    if model.version >= 9:
-      (evstloss,evstloss_op) = moving_mean("evstloss",target_vars.shortterm_value_error_loss_unreduced, weights=target_vars.target_weight_used)
-      (esstloss,esstloss_op) = moving_mean("esstloss",target_vars.shortterm_score_error_loss_unreduced, weights=target_vars.target_weight_used)
-      # (evstm,evstm_op) = moving_mean("evstm",metrics.shortterm_value_error_mean_unreduced, weights=target_vars.target_weight_used)
-      # (evstv,evstv_op) = moving_mean("evstv",metrics.shortterm_value_error_var_unreduced, weights=target_vars.target_weight_used)
-      # (esstm,esstm_op) = moving_mean("esstm",metrics.shortterm_score_error_mean_unreduced, weights=target_vars.target_weight_used)
-      # (esstv,esstv_op) = moving_mean("esstv",metrics.shortterm_score_error_var_unreduced, weights=target_vars.target_weight_used)
-    if model.version >= 10:
-      (tdsloss,tdsloss_op) = moving_mean("tdsloss",target_vars.td_score_loss_unreduced, weights=target_vars.target_weight_used)
-    (pacc1,pacc1_op) = moving_mean("pacc1",metrics.accuracy1_unreduced, weights=target_vars.target_weight_used)
-    (ptentr,ptentr_op) = moving_mean("ptentr",metrics.policy_target_entropy_unreduced, weights=target_vars.target_weight_used)
-    #NOTE: These two are going to be smaller if using more GPUs since it's the gradient norm as measured on the instance batch
-    #rather than the global batch.
-    #Also, somewhat awkwardly, we say the weight is 1.0 rather than 1.0/num_gpus_used because tensorflow seems to have "meany"
-    #behavior where it updates sumw via the mean of the two separate updates of the gpus rather than the sum.
-    (gnorm,gnorm_op) = moving_mean("gnorm",metrics.gnorm, weights=1.0)
-    (exgnorm,exgnorm_op) = moving_mean("excessgnorm",metrics.excess_gnorm, weights=1.0)
-    (wmean,wmean_op) = tf.compat.v1.metrics.mean(target_vars.weight_sum)
-
-    # print_op = tf.print(
-    #   metrics.gnorm,
-    #   target_vars.weight_sum,
-    #   target_vars.opt_loss,
-    #   metrics.tmp,
-    #   foo[0],
-    #   output_stream=sys.stdout
-    # )
-
-    print_train_loss_every_batches = 100
-
-    logvars = {
-      "nsamp": global_step * tf.constant(batch_size,dtype=tf.int64),
+    logvars, log_ops = build_metrics(model, target_vars, metrics, estimator=False)
+    wmean, wmean_op = tf.compat.v1.metrics.mean(target_vars.weight_sum)
+    log_ops.append(wmean_op)
+    logvars.update({
+      "wmean": wmean,
+      "nsamp": global_step * tf.constant(batch_size, dtype=tf.int64),
       "wsum": global_step_float * wmean * tf.constant(float(num_gpus_used)),
-      "p0loss": p0loss,
-      "p1loss": p1loss,
-      "vloss": vloss,
-      "tdvloss": tdvloss,
-      "smloss": smloss,
-      "leadloss": leadloss,
-      "vtimeloss": vtimeloss,
-      "sbpdfloss": sbpdfloss,
-      "sbcdfloss": sbcdfloss,
-      "oloss": oloss,
-      "sloss": sloss,
-      "fploss": fploss,
-      "skloss": skloss,
       "skw": target_vars.seki_weight_scale,
-      "rsdloss": rsdloss,
-      "rloss": rloss,
-      "rscloss": rscloss,
-      "pacc1": pacc1,
-      "ptentr": ptentr,
       "pslr": per_sample_learning_rate,
-      "gnorm": gnorm,
-      "exgnorm": exgnorm
-    }
-    if model.version >= 9:
-      logvars["evstloss"] = evstloss
-      logvars["esstloss"] = esstloss
-      # logvars["evstm"] = evstm
-      # logvars["evstv"] = evstv
-      # logvars["esstm"] = esstm
-      # logvars["esstv"] = esstv
-    if model.version >= 10:
-      logvars["tdsloss"] = tdsloss
+    })
 
-    logging_hook = CustomLoggingHook(logvars, every_n_iter=print_train_loss_every_batches, handle_logging_values=update_global_latest_extra_stats)
+    # log to stdout at this frequency
+    logging_hook = CustomLoggingHook(logvars, every_n_iter=log_every_n_steps,
+                                     handle_logging_values=update_global_latest_extra_stats)
 
-    printed_model_yet = True
+    # also log to TB, everything above plus a few extras that cause errors with CustomLoggingHook
+    scalar_logvars = dict(logvars)
+    scalar_logvars.update({
+      # Warning: If shuffle.py is run with `-max-rows` and dataset exceeds this size
+      # then it will be truncated, and `cumulative_data` will saturate at that value.
+      # However, by default `-max-rows` is unbounded in which case this is not a problem.
+      "cumulative_data": last_datainfo_row,
+      "cumulative_data_reuse": logvars["nsamp"] / last_datainfo_row,
+    })
+    for k, v in scalar_logvars.items():
+      tf.summary.scalar(k, v)
 
     sys.stdout.flush()
     sys.stderr.flush()
@@ -436,21 +414,7 @@ def model_fn(features,labels,mode,params):
         tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)
         initial_weights_already_loaded = True
 
-    ops = [
-      train_step,
-      p0loss_op,p1loss_op,vloss_op,tdvloss_op,smloss_op,leadloss_op,vtimeloss_op,sbpdfloss_op,sbcdfloss_op,
-      oloss_op,sloss_op,fploss_op,skloss_op,rsdloss_op,rloss_op,rscloss_op,pacc1_op,ptentr_op,wmean_op,
-      gnorm_op,exgnorm_op
-    ]
-    if model.version >= 9:
-      ops.append(evstloss_op)
-      ops.append(esstloss_op)
-      # ops.append(evstm_op)
-      # ops.append(evstv_op)
-      # ops.append(esstm_op)
-      # ops.append(esstv_op)
-    if model.version >= 10:
-      ops.append(tdsloss_op)
+    ops = [train_step] + log_ops
 
     return tf.estimator.EstimatorSpec(
       mode,
@@ -495,44 +459,49 @@ def val_input_fn(vdatadir):
 
 # TRAINING PARAMETERS ------------------------------------------------------------
 
-trainlog("Beginning training")
+def build_estimator() -> tf.estimator.Estimator:
+  config_kwargs = dict(
+    save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
+    keep_checkpoint_every_n_hours=1000000,
+    keep_checkpoint_max = 10,
+    save_summary_steps=log_every_n_steps,
+  )
+  if multi_gpus is None:
+    session_config = tf.compat.v1.ConfigProto()
+    session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
+    return tf.estimator.Estimator(
+      model_fn=model_fn,
+      model_dir=traindir,
+      params={},
+      config=tf.estimator.RunConfig(
+        session_config=session_config,
+        **config_kwargs,
+      )
+    )
+  else:
+    session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+    session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
+    multigpu_strategy = tf.distribute.MirroredStrategy(
+      devices=multi_gpu_device_ids,
+      cross_device_ops=tf.distribute.ReductionToOneDevice(
+        reduce_to_device="/device:CPU:0"
+      )
+    )
+    return tf.estimator.Estimator(
+      model_fn=model_fn,
+      model_dir=traindir,
+      params={},
+      config=tf.estimator.RunConfig(
+        session_config = session_config,
+        train_distribute = multigpu_strategy,
+        eval_distribute = multigpu_strategy,
+        **config_kwargs,
+      )
+    )
 
-if multi_gpus is None:
-  session_config = tf.compat.v1.ConfigProto()
-  session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
-  estimator = tf.estimator.Estimator(
-    model_fn=model_fn,
-    model_dir=traindir,
-    params={},
-    config=tf.estimator.RunConfig(
-      save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
-      keep_checkpoint_every_n_hours = 1000000,
-      keep_checkpoint_max = 10,
-      session_config = session_config
-    )
-  )
-else:
-  session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
-  session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
-  multigpu_strategy = tf.distribute.MirroredStrategy(
-    devices=multi_gpu_device_ids,
-    cross_device_ops=tf.distribute.ReductionToOneDevice(
-      reduce_to_device="/device:CPU:0"
-    )
-  )
-  estimator = tf.estimator.Estimator(
-    model_fn=model_fn,
-    model_dir=traindir,
-    params={},
-    config=tf.estimator.RunConfig(
-      save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
-      keep_checkpoint_every_n_hours = 1000000,
-      keep_checkpoint_max = 10,
-      session_config = session_config,
-      train_distribute = multigpu_strategy,
-      eval_distribute = multigpu_strategy,
-    )
-  )
+
+trainlog("Beginning training")
+estimator = build_estimator()
 
 
 class CheckpointSaverListenerFunction(tf.estimator.CheckpointSaverListener):

@@ -174,6 +174,7 @@ add_executable(katago
   neuralnet/nninputs.cpp
   neuralnet/modelversion.cpp
   neuralnet/nneval.cpp
+  neuralnet/nneval_colored.cpp
   neuralnet/desc.cpp
   ${NEURALNET_BACKEND_SOURCES}
   book/book.cpp

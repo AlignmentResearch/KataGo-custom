@@ -3,12 +3,11 @@
 
 using namespace std;
 
-NNEvaluatorColored::NNEvaluatorColored(NNEvaluator& b_nnEval, NNEvaluator& w_nnEval)
-  : black_nnEval(&b_nnEval), white_nnEval(&w_nnEval) {}
+NNEvaluatorColored::NNEvaluatorColored(NNEvaluator* b_nnEval, NNEvaluator* w_nnEval)
+  : black_nnEval(b_nnEval), white_nnEval(w_nnEval) {}
 
 NNEvaluatorColored::~NNEvaluatorColored() {
-  delete black_nnEval;
-  delete white_nnEval;
+  // We are not responsible for deleting black_nnEval and white_nnEval.
 }
 
 string NNEvaluatorColored::getModelName() const {

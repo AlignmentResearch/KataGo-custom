@@ -54,6 +54,22 @@ NNServerBuf::~NNServerBuf() {
 
 //-------------------------------------------------------------------------------------
 
+NNEvaluator::NNEvaluator()
+  :modelName(""),
+   modelFileName(""),
+   nnXLen(0),
+   nnYLen(0),
+   requireExactNNLen(false),
+   policySize(0),
+   inputsUseNHWC(false),
+   usingFP16Mode({}),
+   usingNHWCMode({}),
+   randSeed(""),
+   debugSkipNeuralNet(false)
+{
+  ASSERT_UNREACHABLE;
+}
+
 NNEvaluator::NNEvaluator(
   const string& mName,
   const string& mFileName,

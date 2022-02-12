@@ -7,6 +7,7 @@
 #include "../dataio/trainingwrite.h"
 #include "../dataio/loadmodel.h"
 #include "../neuralnet/modelversion.h"
+#include "../neuralnet/nneval_colored.h"
 #include "../search/asyncbot.h"
 #include "../program/setup.h"
 #include "../program/play.h"
@@ -108,6 +109,7 @@ int MainCmds::victimplay(const vector<string>& args) {
   const int64_t logGamesEvery = cfg.getInt64("logGamesEvery",1,1000000);
 
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
+  assert(!switchNetsMidGame);
   const SearchParams baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_OTHER);
 
   //Initialize object for randomizing game settings and running games
@@ -292,22 +294,6 @@ int MainCmds::victimplay(const vector<string>& args) {
         logger.write("Game loop thread " + Global::intToString(threadIdx) + " starting game on new neural net: " + prevModelName);
       }
 
-      //Callback that runGame will call periodically to ask us if we have a new neural net
-      std::function<NNEvaluator*()> checkForNewNNEval = [&manager,&nnEval,&prevModelName,&logger,&threadIdx]() -> NNEvaluator* {
-        NNEvaluator* newNNEval = manager->acquireLatest();
-        assert(newNNEval != NULL);
-        if(newNNEval == nnEval) {
-          manager->release(newNNEval);
-          return NULL;
-        }
-        manager->release(nnEval);
-
-        nnEval = newNNEval;
-        prevModelName = nnEval->getModelName();
-        logger.write("Game loop thread " + Global::intToString(threadIdx) + " changing midgame to new neural net: " + prevModelName);
-        return nnEval;
-      };
-
       FinishedGameData* gameData = NULL;
 
       int64_t gameIdx = numGamesStarted.fetch_add(1,std::memory_order_acq_rel);
@@ -320,10 +306,16 @@ int MainCmds::victimplay(const vector<string>& args) {
         victimBotSpec.nnEval = victimNNEval;
         victimBotSpec.baseParams = baseParams;
 
+        const Color advColor = gameIdx % 2 == 0 ? C_BLACK : C_WHITE;
+        NNEvaluator* advNNEval = new NNEvaluatorColored(
+          advColor == C_BLACK ? nnEval : victimNNEval,
+          advColor == C_BLACK ? victimNNEval : nnEval
+        );
+
         MatchPairer::BotSpec adversaryBotSpec;
         adversaryBotSpec.botIdx = 1; // adversary is always idx 1
-        adversaryBotSpec.botName = nnEval->getModelName();
-        adversaryBotSpec.nnEval = nnEval;
+        adversaryBotSpec.botName = advNNEval->getModelName();
+        adversaryBotSpec.nnEval = advNNEval;
         adversaryBotSpec.baseParams = baseParams;
 
         MatchPairer::BotSpec& botSpecB = gameIdx % 2 == 0 ? victimBotSpec : adversaryBotSpec;
@@ -333,7 +325,7 @@ int MainCmds::victimplay(const vector<string>& args) {
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, forkData, NULL, logger,
           shouldStopFunc,
-          (switchNetsMidGame ? checkForNewNNEval : nullptr),
+          nullptr,
           nullptr,
           nullptr
         );

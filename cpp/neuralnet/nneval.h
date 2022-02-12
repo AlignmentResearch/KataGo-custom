@@ -76,6 +76,9 @@ struct NNServerBuf {
 
 class NNEvaluator {
  public:
+  // Should never be called. Implemented just so NNEvaluatorColored works.
+  NNEvaluator();
+
   NNEvaluator(
     const std::string& modelName,
     const std::string& modelFileName,

@@ -65,10 +65,7 @@ NNEvaluator::NNEvaluator()
    usingFP16Mode({}),
    usingNHWCMode({}),
    randSeed(""),
-   debugSkipNeuralNet(false)
-{
-  ASSERT_UNREACHABLE;
-}
+   debugSkipNeuralNet(false) {}
 
 NNEvaluator::NNEvaluator(
   const string& mName,

@@ -10,25 +10,28 @@ class NNEvaluatorColored : public NNEvaluator {
   NNEvaluator* white_nnEval;
 
   NNEvaluatorColored(NNEvaluator* black_nnEval, NNEvaluator* white_nnEval);
-  ~NNEvaluatorColored();
+  ~NNEvaluatorColored() override;
 
-  virtual std::string getModelName() const;
-  std::string getModelFileName() const;
-  std::string getInternalModelName() const;
-  Logger* getLogger();
-  bool isNeuralNetLess() const;
-  int getMaxBatchSize() const;
-  int getNumGpus() const;
-  int getNumServerThreads() const;
-  std::set<int> getGpuIdxs() const;
-  int getNNXLen() const;
-  int getNNYLen() const;
-  enabled_t getUsingFP16Mode() const;
-  enabled_t getUsingNHWCMode() const;
-  bool supportsShorttermError() const;
-  Rules getSupportedRules(const Rules& desiredRules, bool& supported);
+  NNEvaluatorColored(const NNEvaluatorColored& other) = delete;
+  NNEvaluatorColored& operator=(const NNEvaluatorColored& other) = delete;
 
-  void clearCache();
+  std::string getModelName() const override;
+  std::string getModelFileName() const override;
+  std::string getInternalModelName() const override;
+  Logger* getLogger() override;
+  bool isNeuralNetLess() const override;
+  int getMaxBatchSize() const override;
+  int getNumGpus() const override;
+  int getNumServerThreads() const override;
+  std::set<int> getGpuIdxs() const override;
+  int getNNXLen() const override;
+  int getNNYLen() const override;
+  enabled_t getUsingFP16Mode() const override;
+  enabled_t getUsingNHWCMode() const override;
+  bool supportsShorttermError() const override;
+  Rules getSupportedRules(const Rules& desiredRules, bool& supported) override;
+
+  void clearCache() override;
   void evaluate(
     Board& board,
     const BoardHistory& history,
@@ -36,25 +39,25 @@ class NNEvaluatorColored : public NNEvaluator {
     const MiscNNInputParams& nnInputParams,
     NNResultBuf& buf,
     bool skipCache,
-    bool includeOwnerMap);
+    bool includeOwnerMap) override;
 
-  void waitForNextNNEvalIfAny();
-  void spawnServerThreads();
-  void killServerThreads();
-  void setNumThreads(const std::vector<int>& gpuIdxByServerThr);
+  void waitForNextNNEvalIfAny() override;
+  void spawnServerThreads() override;
+  void killServerThreads() override;
+  void setNumThreads(const std::vector<int>& gpuIdxByServerThr) override;
 
-  bool getDoRandomize() const;
-  int getDefaultSymmetry() const;
-  void setDoRandomize(bool b);
-  void setDefaultSymmetry(int s);
+  bool getDoRandomize() const override;
+  int getDefaultSymmetry() const override;
+  void setDoRandomize(bool b) override;
+  void setDefaultSymmetry(int s) override;
 
-  uint64_t numRowsProcessed() const;
-  uint64_t numBatchesProcessed() const;
-  double averageProcessedBatchSize() const;
+  uint64_t numRowsProcessed() const override;
+  uint64_t numBatchesProcessed() const override;
+  double averageProcessedBatchSize() const override;
 
-  void clearStats();
+  void clearStats() override;
 
-  void serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx);
+  void serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx) override;
 };
 
 #endif  // NEURALNET_NNEVAL_COLORED_H_

@@ -41,6 +41,7 @@ int MainCmds::victimplay(const vector<string>& args) {
   ConfigParser cfg;
   string modelsDir;
   string outputDir;
+  string nnVictimFile;
   int64_t maxGamesTotal = ((int64_t)1) << 62;
   try {
     KataGoCommandLine cmd("Generate training data via victim play.");
@@ -49,9 +50,11 @@ int MainCmds::victimplay(const vector<string>& args) {
     TCLAP::ValueArg<string> modelsDirArg("","models-dir","Dir to poll and load models from",true,string(),"DIR");
     TCLAP::ValueArg<string> outputDirArg("","output-dir","Dir to output files",true,string(),"DIR");
     TCLAP::ValueArg<string> maxGamesTotalArg("","max-games-total","Terminate after this many games",false,string(),"NGAMES");
+    TCLAP::ValueArg<string> nnVictimFileArg("","nn-victim-file","Path to victim model",true,string(),"VICTIM");
     cmd.add(modelsDirArg);
     cmd.add(outputDirArg);
     cmd.add(maxGamesTotalArg);
+    cmd.add(nnVictimFileArg);
     cmd.parseArgs(args);
 
     modelsDir = modelsDirArg.getValue();
@@ -69,6 +72,8 @@ int MainCmds::victimplay(const vector<string>& args) {
     };
     checkDirNonEmpty("models-dir",modelsDir);
     checkDirNonEmpty("output-dir",outputDir);
+
+    nnVictimFile = nnVictimFileArg.getValue();
 
     cmd.getConfig(cfg);
   }
@@ -134,7 +139,7 @@ int MainCmds::victimplay(const vector<string>& args) {
   // Load victim neural net
   NNEvaluator* victimNNEval; {
     const string modelName = "victim";
-    const string modelFile = cfg.getString("nnVictimFile");
+    const string modelFile = nnVictimFile;
     const string expectedSha256 = "";
     Rand rand;
     const int maxConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads * 2 + 16;
@@ -331,8 +336,8 @@ int MainCmds::victimplay(const vector<string>& args) {
         );
 
         const bool victimIsBlack = botSpecB.botName == "victim";
-        const string victimColor = victimIsBlack ? "B" : "W";
-        const string adversaryColor = victimIsBlack ? "W" : "B";
+        const string victimColorStr = victimIsBlack ? "B" : "W";
+        const string adversaryColorStr = victimIsBlack ? "W" : "B";
         const float victimMinusAdvScore =
           (victimIsBlack ? -1 : 1)
           * gameData->finalWhiteMinusBlackScore();
@@ -344,8 +349,8 @@ int MainCmds::victimplay(const vector<string>& args) {
 
         logger.write(
           "Game #" + Global::int64ToString(gameIdx) +
-          " victim (" + victimColor + ")" +
-          " - adv (" + adversaryColor + ")" +
+          " victim (" + victimColorStr + ")" +
+          " - adv (" + adversaryColorStr + ")" +
           " score: " + Global::floatToString(victimMinusAdvScore) +
           "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
         );
@@ -419,6 +424,8 @@ int MainCmds::victimplay(const vector<string>& args) {
     modelLoadSleepVar.notify_all();
   }
   modelLoadLoopThread.join();
+
+  delete victimNNEval;
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

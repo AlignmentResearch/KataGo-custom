@@ -11,21 +11,20 @@ NNEvaluatorColored::~NNEvaluatorColored() {
 }
 
 string NNEvaluatorColored::getModelName() const {
-  return black_nnEval->getModelName() + "_" + white_nnEval->getModelName();
+  return black_nnEval->getModelName() + "__" + white_nnEval->getModelName();
 }
 string NNEvaluatorColored::getModelFileName() const {
-  return black_nnEval->getModelFileName() + "_" + white_nnEval->getModelFileName();
+  return black_nnEval->getModelFileName() + "__" + white_nnEval->getModelFileName();
 }
 string NNEvaluatorColored::getInternalModelName() const {
-  return black_nnEval->getInternalModelName() + "_" + white_nnEval->getInternalModelName();
+  return black_nnEval->getInternalModelName() + "__" + white_nnEval->getInternalModelName();
 }
 Logger* NNEvaluatorColored::getLogger() {
   assert(black_nnEval->getLogger() == white_nnEval->getLogger());
   return black_nnEval->getLogger();
 }
 bool NNEvaluatorColored::isNeuralNetLess() const {
-  assert(black_nnEval->isNeuralNetLess() == white_nnEval->isNeuralNetLess());
-  return black_nnEval->isNeuralNetLess();
+  return black_nnEval->isNeuralNetLess() || white_nnEval->isNeuralNetLess();
 }
 int NNEvaluatorColored::getMaxBatchSize() const {
   assert(black_nnEval->getMaxBatchSize() == white_nnEval->getMaxBatchSize());
@@ -93,6 +92,9 @@ uint64_t NNEvaluatorColored::numRowsProcessed() const {
 }
 uint64_t NNEvaluatorColored::numBatchesProcessed() const {
   return black_nnEval->numBatchesProcessed() + white_nnEval->numBatchesProcessed();
+}
+double NNEvaluatorColored::averageProcessedBatchSize() const {
+  return (double)numRowsProcessed() / (double)numBatchesProcessed();
 }
 
 void NNEvaluatorColored::clearStats() {

@@ -1373,44 +1373,13 @@ FinishedGameData* Play::runGame(
   //NOTE: that checkForNewNNEval might also cause the old nnEval to be invalidated and freed. This is okay since the only
   //references we both hold on to and use are the ones inside the bots here, and we replace the ones in the botSpecs.
   //We should NOT ever store an nnEval separately from these.
-  auto maybeCheckForNewNNEval = [
-    &botB,
-    &botW,
-    &botSpecB,
-    &botSpecW,
-    &checkForNewNNEval,
-    &gameRand,
-    &gameData,
-    &playSettings,
-    &logger
-  ](int nextTurnIdx) {
+  assert(!(playSettings.forVictimPlay && checkForNewNNEval != nullptr));
+  auto maybeCheckForNewNNEval = [&botB,&botW,&botSpecB,&botSpecW,&checkForNewNNEval,&gameRand,&gameData](int nextTurnIdx) {
     //Check if we got a new nnEval, with some probability.
     //Randomized and low-probability so as to reduce contention in checking, while still probably happening in a timely manner.
     if(checkForNewNNEval != nullptr && gameRand.nextBool(0.1)) {
       NNEvaluator* newNNEval = checkForNewNNEval();
       if(newNNEval != NULL) {
-        // If doing victimplay, only change adversary.
-        if (playSettings.forVictimPlay) {
-          string oldName;
-          if (botSpecB.botName != "victim") {
-            oldName = botSpecB.nnEval->getModelName();
-            botB->setNNEval(newNNEval);
-            botSpecB.nnEval = newNNEval;
-          } else if (botSpecW.botName != "victim") {
-            oldName = botSpecW.nnEval->getModelName();
-            botW->setNNEval(newNNEval);
-            botSpecW.nnEval = newNNEval;
-          } else {
-            ASSERT_UNREACHABLE;
-          }
-          logger.write(
-            "Swapping adversary: "
-            + oldName + " for " + newNNEval->getModelName()
-          );
-          gameData->changedNeuralNets.push_back(new ChangedNeuralNet(newNNEval->getModelName(),nextTurnIdx));
-          return;
-        }
-
         botB->setNNEval(newNNEval);
         if(botW != botB)
           botW->setNNEval(newNNEval);

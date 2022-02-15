@@ -228,7 +228,6 @@ add_executable(katago
   command/runtests.cpp
   command/sandbox.cpp
   command/selfplay.cpp
-  command/victimplay.cpp
   command/tune.cpp
   main.cpp
   )

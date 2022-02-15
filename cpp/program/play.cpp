@@ -1370,10 +1370,13 @@ FinishedGameData* Play::runGame(
   //In selfplay, record all the policy maps and evals and such as well for training data
   bool recordFullData = playSettings.forSelfPlay;
 
+  // We do not want to checkForNewNNEval during the game if we are doing victimplay.
+  // That is to say, we only want to use a single adversary per game.
+  assert(!(playSettings.forVictimPlay && checkForNewNNEval != nullptr));
+
   //NOTE: that checkForNewNNEval might also cause the old nnEval to be invalidated and freed. This is okay since the only
   //references we both hold on to and use are the ones inside the bots here, and we replace the ones in the botSpecs.
   //We should NOT ever store an nnEval separately from these.
-  assert(!(playSettings.forVictimPlay && checkForNewNNEval != nullptr));
   auto maybeCheckForNewNNEval = [&botB,&botW,&botSpecB,&botSpecW,&checkForNewNNEval,&gameRand,&gameData](int nextTurnIdx) {
     //Check if we got a new nnEval, with some probability.
     //Randomized and low-probability so as to reduce contention in checking, while still probably happening in a timely manner.

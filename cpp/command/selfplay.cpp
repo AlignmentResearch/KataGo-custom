@@ -32,6 +32,74 @@ static void signalHandler(int signal)
 
 //-----------------------------------------------------------------------------------------
 
+/**
+ * Does not do any forking
+ * Does not switch networks mid game.
+ */
+static FinishedGameData* runOneVictimplayGame(
+  NNEvaluator* victimNNEval,
+  NNEvaluator* advNNEval,
+  const Color advColor,
+  const SearchParams &searchParams,
+  GameRunner* gameRunner,
+  const std::function<bool()>& shouldStopFunc,
+  Logger &logger,
+  const int gameIdx,
+  const string &seed
+) {
+  MatchPairer::BotSpec victimBotSpec;
+  victimBotSpec.botIdx = 0; // victim is always idx 0
+  victimBotSpec.botName = victimNNEval->getModelName();
+  victimBotSpec.nnEval = victimNNEval;
+  victimBotSpec.baseParams = searchParams;
+
+  NNEvaluator* advNNEvalColored = new NNEvaluatorColored(
+    advColor == C_BLACK ? advNNEval : victimNNEval,
+    advColor == C_BLACK ? victimNNEval : advNNEval
+  );
+
+  MatchPairer::BotSpec adversaryBotSpec;
+  adversaryBotSpec.botIdx = 1; // adversary is always idx 1
+  adversaryBotSpec.botName = advNNEvalColored->getModelName();
+  adversaryBotSpec.nnEval = advNNEvalColored;
+  adversaryBotSpec.baseParams = searchParams;
+
+  MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
+  MatchPairer::BotSpec& botSpecW = advColor == C_BLACK ? victimBotSpec : adversaryBotSpec;
+
+  FinishedGameData* gameData = gameRunner->runGame(
+    seed, botSpecB, botSpecW,
+    nullptr, // forkData
+    nullptr, // startPosSample
+    logger,
+    shouldStopFunc,
+    nullptr, // checkForNewNNEval
+    nullptr, // afterInitialization
+    nullptr  // onEachMove
+  );
+
+  const bool victimIsBlack = advColor == C_WHITE;
+  const string victimColorStr = victimIsBlack ? "B" : "W";
+  const string adversaryColorStr = victimIsBlack ? "W" : "B";
+  const float victimMinusAdvScore =
+    (victimIsBlack ? -1 : 1)
+    * gameData->finalWhiteMinusBlackScore();
+
+  vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
+  for (auto &x : gameData->changedNeuralNets) {
+    adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
+  }
+
+  logger.write(
+    "Game #" + Global::int64ToString(gameIdx) +
+    " victim (" + victimColorStr + ")" +
+    " - adv (" + adversaryColorStr + ")" +
+    " score: " + Global::floatToString(victimMinusAdvScore) +
+    "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+  );
+
+  return gameData;
+}
 
 int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   Board::initHash();
@@ -323,55 +391,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         // Do nothing.
       } else if(victimplay) {
         manager->countOneGameStarted(nnEval);
-
-        MatchPairer::BotSpec victimBotSpec;
-        victimBotSpec.botIdx = 0; // victim is always idx 0
-        victimBotSpec.botName = victimNNEval->getModelName();
-        victimBotSpec.nnEval = victimNNEval;
-        victimBotSpec.baseParams = baseParams;
-
-        const Color advColor = gameIdx % 2 == 0 ? C_BLACK : C_WHITE;
-        NNEvaluator* advNNEval = new NNEvaluatorColored(
-          advColor == C_BLACK ? nnEval : victimNNEval,
-          advColor == C_BLACK ? victimNNEval : nnEval
-        );
-
-        MatchPairer::BotSpec adversaryBotSpec;
-        adversaryBotSpec.botIdx = 1; // adversary is always idx 1
-        adversaryBotSpec.botName = advNNEval->getModelName();
-        adversaryBotSpec.nnEval = advNNEval;
-        adversaryBotSpec.baseParams = baseParams;
-
-        MatchPairer::BotSpec& botSpecB = gameIdx % 2 == 0 ? victimBotSpec : adversaryBotSpec;
-        MatchPairer::BotSpec& botSpecW = gameIdx % 2 == 0 ? adversaryBotSpec : victimBotSpec;
-
-        string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
-        gameData = gameRunner->runGame(
-          seed, botSpecB, botSpecW, forkData, NULL, logger,
-          shouldStopFunc,
-          nullptr,
-          nullptr,
-          nullptr
-        );
-
-        const bool victimIsBlack = botSpecB.botName == "victim";
-        const string victimColorStr = victimIsBlack ? "B" : "W";
-        const string adversaryColorStr = victimIsBlack ? "W" : "B";
-        const float victimMinusAdvScore =
-          (victimIsBlack ? -1 : 1)
-          * gameData->finalWhiteMinusBlackScore();
-
-        vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
-        for (auto &x : gameData->changedNeuralNets) {
-          adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
-        }
-
-        logger.write(
-          "Game #" + Global::int64ToString(gameIdx) +
-          " victim (" + victimColorStr + ")" +
-          " - adv (" + adversaryColorStr + ")" +
-          " score: " + Global::floatToString(victimMinusAdvScore) +
-          "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+        const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
+        gameData = runOneVictimplayGame(
+          victimNNEval, nnEval, gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
+          baseParams, gameRunner, shouldStopFunc, logger,
+          gameIdx, seed
         );
       } else {
         manager->countOneGameStarted(nnEval);

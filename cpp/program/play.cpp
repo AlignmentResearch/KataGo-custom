@@ -2262,6 +2262,13 @@ FinishedGameData* GameRunner::runGame(
     //Avoid interactions between the two bots since they're the same.
     //Also in self-play this makes sure root noise is effective on each new search
     clearBotBeforeSearchThisGame = true;
+    // TODO: In the victimplay setting, it may be possible to not clear search
+    // since we have two different botSpecs? Not sure how safe this is to do,
+    // since the advBotSpec and victimBotSpec share the same victimNNEval.
+    // At any rate, the selfplay codepaths would need to be edited and double-checked,
+    // because they currently assume (and assert) clearBotBeforeSearchThisGame = true.
+    // In short, this may be a complicated thing to code, but could be done to get a
+    // performance boost (unclear how big of a boost though)...
   }
 
   //In 2% of games, don't autoterminate the game upon all pass alive, to just provide a tiny bit of training data on positions that occur

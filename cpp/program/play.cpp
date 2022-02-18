@@ -6,6 +6,7 @@
 #include "../program/setup.h"
 #include "../search/asyncbot.h"
 #include "../dataio/files.h"
+#include "../neuralnet/nneval_colored.h"
 
 using namespace std;
 
@@ -593,13 +594,15 @@ MatchPairer::MatchPairer(
   const vector<SearchParams>& bParamss,
   bool forSelfPlay,
   bool forGateKeeper,
-  const vector<bool>& exclude
+  const vector<bool>& exclude,
+  const vector<bool>& uVictimplays
 )
   :numBots(nBots),
    botNames(bNames),
    nnEvals(nEvals),
    baseParamss(bParamss),
    excludeBot(exclude),
+   useVictimplays(uVictimplays.size() > 0 ? uVictimplays : vector<bool>(nBots)),
    secondaryBots(),
    blackPriority(),
    nextMatchups(),
@@ -617,6 +620,7 @@ MatchPairer::MatchPairer(
   assert(nnEvals.size() == numBots);
   assert(baseParamss.size() == numBots);
   assert(exclude.size() == numBots);
+  assert(useVictimplays.size() == numBots);
   if(forSelfPlay) {
     assert(numBots == 1);
     numGamesTotal = cfg.getInt64("numGamesTotal",1,((int64_t)1) << 62);
@@ -683,15 +687,31 @@ bool MatchPairer::getMatchup(
     matchup = make_pair(matchup.second,matchup.first);
   }
 
-  botSpecB.botIdx = matchup.first;
-  botSpecB.botName = botNames[matchup.first];
-  botSpecB.nnEval = nnEvals[matchup.first];
-  botSpecB.baseParams = baseParamss[matchup.first];
+  auto fillBotSpec = [this, &logger](
+    BotSpec& myBotSpec,
+    const int myIdx,
+    const int opIdx,
+    const Color myColor
+  ) {
+    myBotSpec.botIdx = myIdx;
+    myBotSpec.botName = botNames[myIdx];
+    myBotSpec.baseParams = baseParamss[myIdx];
+    myBotSpec.victimplay = useVictimplays[myIdx];
+    if (!myBotSpec.victimplay) {
+      myBotSpec.nnEval = nnEvals[myIdx];
+      return;
+    }
 
-  botSpecW.botIdx = matchup.second;
-  botSpecW.botName = botNames[matchup.second];
-  botSpecW.nnEval = nnEvals[matchup.second];
-  botSpecW.baseParams = baseParamss[matchup.second];
+    NNEvaluator* myNNEval = nnEvals[myIdx];
+    NNEvaluator* opNNEval = nnEvals[opIdx];
+    myBotSpec.nnEval = new NNEvaluatorColored(
+      myColor == C_BLACK ? myNNEval : opNNEval,
+      myColor == C_BLACK ? opNNEval : myNNEval
+    );
+  };
+
+  fillBotSpec(botSpecB, matchup.first, matchup.second, C_BLACK);
+  fillBotSpec(botSpecW, matchup.second, matchup.first, C_WHITE);
 
   return true;
 }
@@ -1369,10 +1389,6 @@ FinishedGameData* Play::runGame(
 
   //In selfplay, record all the policy maps and evals and such as well for training data
   bool recordFullData = playSettings.forSelfPlay;
-
-  // We do not want to checkForNewNNEval during the game if we are doing victimplay.
-  // That is to say, we only want to use a single adversary per game.
-  assert(!(playSettings.forVictimPlay && checkForNewNNEval != nullptr));
 
   //NOTE: that checkForNewNNEval might also cause the old nnEval to be invalidated and freed. This is okay since the only
   //references we both hold on to and use are the ones inside the bots here, and we replace the ones in the botSpecs.
@@ -2211,6 +2227,11 @@ FinishedGameData* GameRunner::runGame(
   std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization,
   std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove
 ) {
+  // We do not want to checkForNewNNEval during the game if we are doing victimplay.
+  // That is to say, we only want to use a single adversary per game.
+  const bool forVictimPlay = bSpecB.victimplay || bSpecW.victimplay;
+  assert(!(forVictimPlay && checkForNewNNEval != nullptr));
+
   MatchPairer::BotSpec botSpecB = bSpecB;
   MatchPairer::BotSpec botSpecW = bSpecW;
 
@@ -2234,8 +2255,17 @@ FinishedGameData* GameRunner::runGame(
   ExtraBlackAndKomi extraBlackAndKomi;
   OtherGameProperties otherGameProps;
   if(playSettings.forSelfPlay) {
-    // Let's hope this is harmless.
-    assert(playSettings.forVictimPlay || botSpecB.botIdx == botSpecW.botIdx);
+    // When doing selfplay, we want either:
+    //   1. Two identical bots.
+    //   2. To be in victimplay mode.
+    //
+    // The first case is kosher, and is what the original codebase assumes.
+    //
+    // The second case was added to support victimplay.
+    // We assume it works and have empirical evidence to suggest so,
+    // but we have not fully checked all codepaths by eye.
+    assert(botSpecB.botIdx == botSpecW.botIdx || forVictimPlay);
+
     SearchParams params = botSpecB.baseParams;
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,params,initialPosition,playSettings,otherGameProps,startPosSample);
     botSpecB.baseParams = params;
@@ -2258,10 +2288,12 @@ FinishedGameData* GameRunner::runGame(
   }
 
   bool clearBotBeforeSearchThisGame = clearBotBeforeSearch;
-  if(playSettings.forVictimPlay || botSpecB.botIdx == botSpecW.botIdx) {
+  if (botSpecB.botIdx == botSpecW.botIdx) {
     //Avoid interactions between the two bots since they're the same.
     //Also in self-play this makes sure root noise is effective on each new search
     clearBotBeforeSearchThisGame = true;
+  }
+  if (forVictimPlay) {
     // TODO: In the victimplay setting, it may be possible to not clear search
     // since we have two different botSpecs? Not sure how safe this is to do,
     // since the advBotSpec and victimBotSpec share the same victimNNEval.
@@ -2269,6 +2301,7 @@ FinishedGameData* GameRunner::runGame(
     // because they currently assume (and assert) clearBotBeforeSearchThisGame = true.
     // In short, this may be a complicated thing to code, but could be done to get a
     // performance boost (unclear how big of a boost though)...
+    clearBotBeforeSearchThisGame = true;
   }
 
   //In 2% of games, don't autoterminate the game upon all pass alive, to just provide a tiny bit of training data on positions that occur

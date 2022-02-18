@@ -186,9 +186,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   const SearchParams baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_OTHER);
 
   //Initialize object for randomizing game settings and running games
-  PlaySettings playSettings =
-    victimplay ? PlaySettings::loadForVictimplay(cfg)
-               : PlaySettings::loadForSelfplay(cfg);
+  PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
   GameRunner* gameRunner = new GameRunner(cfg, playSettings, logger);
   bool autoCleanupAllButLatestIfUnused = true;
   SelfplayManager* manager = new SelfplayManager(validationProp, maxDataQueueSize, &logger, logGamesEvery, autoCleanupAllButLatestIfUnused);

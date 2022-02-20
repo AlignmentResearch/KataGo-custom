@@ -59,8 +59,7 @@ enabled_t NNEvaluatorColored::getUsingNHWCMode() const {
   return black_nnEval->getUsingNHWCMode();
 }
 bool NNEvaluatorColored::supportsShorttermError() const {
-  assert(black_nnEval->supportsShorttermError() == white_nnEval->supportsShorttermError());
-  return black_nnEval->supportsShorttermError();
+  return black_nnEval->supportsShorttermError() && white_nnEval->supportsShorttermError();
 }
 bool NNEvaluatorColored::getDoRandomize() const {
   assert(black_nnEval->getDoRandomize() == white_nnEval->getDoRandomize());

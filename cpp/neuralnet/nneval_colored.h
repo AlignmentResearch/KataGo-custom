@@ -28,6 +28,7 @@ class NNEvaluatorColored : public NNEvaluator {
   int getNNYLen() const override;
   enabled_t getUsingFP16Mode() const override;
   enabled_t getUsingNHWCMode() const override;
+
   bool supportsShorttermError() const override;
   Rules getSupportedRules(const Rules& desiredRules, bool& supported) override;
 

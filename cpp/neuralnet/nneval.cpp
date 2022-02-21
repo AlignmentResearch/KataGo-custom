@@ -191,6 +191,8 @@ NNEvaluator::NNEvaluator(
 }
 
 NNEvaluator::~NNEvaluator() {
+  if (skipBaseDestruct) return;
+
   killServerThreads();
 
   for(int i = 0; i < numResultBufss; i++) {

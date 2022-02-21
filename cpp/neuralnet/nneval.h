@@ -79,6 +79,9 @@ class NNEvaluator {
   // Should never be called directly. Implemented just so NNEvaluatorColored works.
   NNEvaluator();
 
+  // If true, ~NNEvaluator() is a noop.
+  bool skipBaseDestruct = false;
+
  public:
   NNEvaluator(
     const std::string& modelName,

@@ -5,6 +5,7 @@
 #include "../core/datetime.h"
 #include "../core/makedir.h"
 #include "../dataio/sgf.h"
+#include "../neuralnet/nneval_colored.h"
 #include "../search/asyncbot.h"
 #include "../program/setup.h"
 #include "../program/playutils.h"
@@ -308,6 +309,8 @@ struct GTPEngine {
   GTPEngine& operator=(const GTPEngine&) = delete;
 
   const string nnModelFile;
+  const string nnWhiteFile;
+  const bool usingVictimplay;
   const bool assumeMultipleStartingBlackMovesAreHandicap;
   const int analysisPVLen;
   const bool preventEncore;
@@ -350,7 +353,9 @@ struct GTPEngine {
   double genmoveTimeSum;
 
   GTPEngine(
-    const string& modelFile, SearchParams initialParams, Rules initialRules,
+    const string& modelFile,
+    const string& whiteFile,
+    SearchParams initialParams, Rules initialRules,
     bool assumeMultiBlackHandicap, bool prevtEncore,
     double dynamicPDACapPerOppLead, double staticPDA, bool staticPDAPrecedence,
     double normAvoidRepeatedPatternUtility, double hcapAvoidRepeatedPatternUtility,
@@ -361,6 +366,8 @@ struct GTPEngine {
     std::unique_ptr<PatternBonusTable>&& pbTable
   )
     :nnModelFile(modelFile),
+     nnWhiteFile(whiteFile),
+     usingVictimplay(whiteFile != ""),
      assumeMultipleStartingBlackMovesAreHandicap(assumeMultiBlackHandicap),
      analysisPVLen(pvLen),
      preventEncore(prevtEncore),
@@ -392,10 +399,19 @@ struct GTPEngine {
   {
   }
 
+  void deleteNNEval() {
+    if (usingVictimplay) {
+      NNEvaluatorColored* nnEvalColored = dynamic_cast<NNEvaluatorColored*>(nnEval);
+      delete nnEvalColored->black_nnEval;
+      delete nnEvalColored->white_nnEval;
+    }
+    delete nnEval;
+  }
+
   ~GTPEngine() {
     stopAndWait();
     delete bot;
-    delete nnEval;
+    deleteNNEval();
   }
 
   void stopAndWait() {
@@ -418,7 +434,7 @@ struct GTPEngine {
       assert(bot != NULL);
       bot->stopAndWait();
       delete bot;
-      delete nnEval;
+      deleteNNEval();
       bot = NULL;
       nnEval = NULL;
       logger.write("Cleaned up old neural net and bot");
@@ -431,17 +447,35 @@ struct GTPEngine {
       wasDefault = true;
     }
 
-    const int maxConcurrentEvals = params.numThreads * 2 + 16; // * 2 + 16 just to give plenty of headroom
-    const int expectedConcurrentEvals = params.numThreads;
-    const int defaultMaxBatchSize = std::max(8,((params.numThreads+3)/4)*4);
-    const bool defaultRequireExactNNLen = true;
-    const string expectedSha256 = "";
-    nnEval = Setup::initializeNNEvaluator(
-      nnModelFile,nnModelFile,expectedSha256,cfg,logger,seedRand,maxConcurrentEvals,expectedConcurrentEvals,
-      boardXSize,boardYSize,defaultMaxBatchSize,defaultRequireExactNNLen,
-      Setup::SETUP_FOR_GTP
-    );
-    logger.write("Loaded neural net with nnXLen " + Global::intToString(nnEval->getNNXLen()) + " nnYLen " + Global::intToString(nnEval->getNNYLen()));
+    auto getNNEvaluator = [this, &cfg, &logger, &seedRand, &boardXSize, &boardYSize](
+      const string modelName,
+      const string modelFile
+    ) {
+      const int maxConcurrentEvals = params.numThreads * 2 + 16; // * 2 + 16 just to give plenty of headroom
+      const int expectedConcurrentEvals = params.numThreads;
+      const int defaultMaxBatchSize = std::max(8,((params.numThreads+3)/4)*4);
+      const bool defaultRequireExactNNLen = true;
+      const string expectedSha256 = "";
+      NNEvaluator* retNNEval = Setup::initializeNNEvaluator(
+        modelName,modelFile,expectedSha256,cfg,logger,seedRand,maxConcurrentEvals,expectedConcurrentEvals,
+        boardXSize,boardYSize,defaultMaxBatchSize,defaultRequireExactNNLen,
+        Setup::SETUP_FOR_GTP
+      );
+      logger.write(
+        "Loaded neural net with nnXLen " + Global::intToString(retNNEval->getNNXLen())
+                            + " nnYLen " + Global::intToString(retNNEval->getNNYLen())
+      );
+      return retNNEval;
+    };
+
+    if (usingVictimplay) {
+      nnEval = new NNEvaluatorColored(
+        getNNEvaluator(nnModelFile, nnModelFile),
+        getNNEvaluator(nnWhiteFile, nnWhiteFile)
+      );
+    } else {
+      nnEval = getNNEvaluator(nnModelFile, nnModelFile);
+    }
 
     {
       bool rulesWereSupported;
@@ -1232,6 +1266,10 @@ struct GTPEngine {
   }
 
   string rawNN(int whichSymmetry) {
+    // TODO: Support rawNN when using victimplay.
+    //       We need to figure out what the desired behavior here is.
+    assert(!usingVictimplay);
+
     if(nnEval == NULL)
       return "";
     ostringstream out;
@@ -1488,6 +1526,7 @@ int MainCmds::gtp(const vector<string>& args) {
 
   ConfigParser cfg;
   string nnModelFile;
+  string nnWhiteFile;
   string overrideVersion;
   KataGoCommandLine cmd("Run KataGo main GTP engine for playing games or casual analysis.");
   try {
@@ -1496,11 +1535,19 @@ int MainCmds::gtp(const vector<string>& args) {
     cmd.setShortUsageArgLimit();
     cmd.addOverrideConfigArg();
 
+    TCLAP::ValueArg<string> nnWhiteFileArg(
+      "", "nn-white-file",
+      "Path to white model. If specified the other model is used as the black model.",
+      false, string(), "WHITE_MODEL"
+    );
+    cmd.add(nnWhiteFileArg);
+
     TCLAP::ValueArg<string> overrideVersionArg("","override-version","Force KataGo to say a certain value in response to gtp version command",false,string(),"VERSION");
     cmd.add(overrideVersionArg);
     cmd.parseArgs(args);
     nnModelFile = cmd.getModelFile();
     overrideVersion = overrideVersionArg.getValue();
+    nnWhiteFile = nnWhiteFileArg.getValue();
 
     cmd.getConfig(cfg);
   }
@@ -1624,7 +1671,8 @@ int MainCmds::gtp(const vector<string>& args) {
   Player perspective = Setup::parseReportAnalysisWinrates(cfg,C_EMPTY);
 
   GTPEngine* engine = new GTPEngine(
-    nnModelFile,initialParams,initialRules,
+    nnModelFile,nnWhiteFile,
+    initialParams,initialRules,
     assumeMultipleStartingBlackMovesAreHandicap,preventEncore,
     dynamicPlayoutDoublingAdvantageCapPerOppLead,
     staticPlayoutDoublingAdvantage,staticPDATakesPrecedence,

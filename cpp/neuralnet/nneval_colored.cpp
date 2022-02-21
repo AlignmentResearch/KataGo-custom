@@ -4,7 +4,9 @@
 using namespace std;
 
 NNEvaluatorColored::NNEvaluatorColored(NNEvaluator* b_nnEval, NNEvaluator* w_nnEval)
-  : black_nnEval(b_nnEval), white_nnEval(w_nnEval) {}
+  : black_nnEval(b_nnEval), white_nnEval(w_nnEval) {
+  skipBaseDestruct = true;
+}
 
 NNEvaluatorColored::~NNEvaluatorColored() {
   // We are not responsible for deleting black_nnEval and white_nnEval.

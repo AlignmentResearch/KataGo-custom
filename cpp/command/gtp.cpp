@@ -402,6 +402,7 @@ struct GTPEngine {
   void deleteNNEval() {
     if (usingVictimplay) {
       NNEvaluatorColored* nnEvalColored = dynamic_cast<NNEvaluatorColored*>(nnEval);
+      assert(nnEvalColored != NULL);
       delete nnEvalColored->black_nnEval;
       delete nnEvalColored->white_nnEval;
     }

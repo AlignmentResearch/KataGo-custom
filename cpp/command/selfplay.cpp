@@ -63,6 +63,7 @@ static FinishedGameData* runOneVictimplayGame(
   adversaryBotSpec.botName = advNNEvalColored->getModelName();
   adversaryBotSpec.nnEval = advNNEvalColored;
   adversaryBotSpec.baseParams = searchParams;
+  adversaryBotSpec.victimplay = true;
 
   MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
   MatchPairer::BotSpec& botSpecW = advColor == C_BLACK ? victimBotSpec : adversaryBotSpec;

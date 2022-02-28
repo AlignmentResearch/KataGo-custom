@@ -202,7 +202,7 @@ float FinishedGameData::finalWhiteMinusBlackScore() const {
 
   BoardHistory hist(endHist);
   Board endBoard = hist.getRecentBoard(0);
-  //Force game end just in caseif we crossed a move limit
+  //Force game end just in case we crossed a move limit
   if(!hist.isGameFinished)
     hist.endAndScoreGameNow(endBoard);
 

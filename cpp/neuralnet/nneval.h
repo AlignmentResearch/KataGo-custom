@@ -240,9 +240,9 @@ class NNEvaluator {
   int m_currentResultBufsIdx; //Index of the current resultBufs being filled.
   int m_oldestResultBufsIdx; //Index of the oldest resultBufs that still needs to be processed by a server thread
 
- public:
-  //Helper, for internal use only
-  virtual void serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx);
+  // Helpers, for internal use only
+  void serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx);
+  void serveEvals(std::string randSeedThisThread, int gpuIdxForThisThread, int serverThreadIdx);
 };
 
 #endif  // NEURALNET_NNEVAL_H_

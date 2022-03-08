@@ -121,11 +121,6 @@ void NNEvaluatorColored::killServerThreads() {
   white_nnEval->killServerThreads();
 }
 
-void NNEvaluatorColored::serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx) {
-  black_nnEval->serve(buf, rand, gpuIdxForThisThread, serverThreadIdx);
-  white_nnEval->serve(buf, rand, gpuIdxForThisThread, serverThreadIdx);
-}
-
 void NNEvaluatorColored::waitForNextNNEvalIfAny() {
   black_nnEval->waitForNextNNEvalIfAny();
   white_nnEval->waitForNextNNEvalIfAny();

@@ -56,8 +56,6 @@ class NNEvaluatorColored : public NNEvaluator {
   double averageProcessedBatchSize() const override;
 
   void clearStats() override;
-
-  void serve(NNServerBuf& buf, Rand& rand, int gpuIdxForThisThread, int serverThreadIdx) override;
 };
 
 #endif  // NEURALNET_NNEVAL_COLORED_H_

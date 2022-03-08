@@ -7,6 +7,7 @@
 #include "../dataio/trainingwrite.h"
 #include "../dataio/loadmodel.h"
 #include "../neuralnet/modelversion.h"
+#include "../neuralnet/nneval_colored.h"
 #include "../search/asyncbot.h"
 #include "../program/setup.h"
 #include "../program/play.h"
@@ -31,8 +32,77 @@ static void signalHandler(int signal)
 
 //-----------------------------------------------------------------------------------------
 
+/**
+ * Does not do any forking
+ * Does not switch networks mid game.
+ */
+static FinishedGameData* runOneVictimplayGame(
+  NNEvaluator* victimNNEval,
+  NNEvaluator* advNNEval,
+  const Color advColor,
+  const SearchParams &searchParams,
+  GameRunner* gameRunner,
+  const std::function<bool()>& shouldStopFunc,
+  Logger &logger,
+  const int gameIdx,
+  const string &seed
+) {
+  MatchPairer::BotSpec victimBotSpec;
+  victimBotSpec.botIdx = 0; // victim is always idx 0
+  victimBotSpec.botName = victimNNEval->getModelName();
+  victimBotSpec.nnEval = victimNNEval;
+  victimBotSpec.baseParams = searchParams;
 
-int MainCmds::selfplay(const vector<string>& args) {
+  NNEvaluator* advNNEvalColored = new NNEvaluatorColored(
+    advColor == C_BLACK ? advNNEval : victimNNEval,
+    advColor == C_BLACK ? victimNNEval : advNNEval
+  );
+
+  MatchPairer::BotSpec adversaryBotSpec;
+  adversaryBotSpec.botIdx = 1; // adversary is always idx 1
+  adversaryBotSpec.botName = advNNEvalColored->getModelName();
+  adversaryBotSpec.nnEval = advNNEvalColored;
+  adversaryBotSpec.baseParams = searchParams;
+  adversaryBotSpec.victimplay = true;
+
+  MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
+  MatchPairer::BotSpec& botSpecW = advColor == C_BLACK ? victimBotSpec : adversaryBotSpec;
+
+  FinishedGameData* gameData = gameRunner->runGame(
+    seed, botSpecB, botSpecW,
+    nullptr, // forkData
+    nullptr, // startPosSample
+    logger,
+    shouldStopFunc,
+    nullptr, // checkForNewNNEval
+    nullptr, // afterInitialization
+    nullptr  // onEachMove
+  );
+
+  const bool victimIsBlack = advColor == C_WHITE;
+  const string victimColorStr = victimIsBlack ? "B" : "W";
+  const string adversaryColorStr = victimIsBlack ? "W" : "B";
+  const float victimMinusAdvScore =
+    (victimIsBlack ? -1 : 1)
+    * gameData->finalWhiteMinusBlackScore();
+
+  vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
+  for (auto &x : gameData->changedNeuralNets) {
+    adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
+  }
+
+  logger.write(
+    "Game #" + Global::int64ToString(gameIdx) +
+    " victim (" + victimColorStr + ")" +
+    " - adv (" + adversaryColorStr + ")" +
+    " score: " + Global::floatToString(victimMinusAdvScore) +
+    "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+  );
+
+  return gameData;
+}
+
+int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   Board::initHash();
   ScoreValue::initTables();
   Rand seedRand;
@@ -40,6 +110,7 @@ int MainCmds::selfplay(const vector<string>& args) {
   ConfigParser cfg;
   string modelsDir;
   string outputDir;
+  string nnVictimFile;
   int64_t maxGamesTotal = ((int64_t)1) << 62;
   try {
     KataGoCommandLine cmd("Generate training data via self play.");
@@ -48,9 +119,11 @@ int MainCmds::selfplay(const vector<string>& args) {
     TCLAP::ValueArg<string> modelsDirArg("","models-dir","Dir to poll and load models from",true,string(),"DIR");
     TCLAP::ValueArg<string> outputDirArg("","output-dir","Dir to output files",true,string(),"DIR");
     TCLAP::ValueArg<string> maxGamesTotalArg("","max-games-total","Terminate after this many games",false,string(),"NGAMES");
+    TCLAP::ValueArg<string> nnVictimFileArg("","nn-victim-file","Path to victim model",victimplay,string(),"VICTIM");
     cmd.add(modelsDirArg);
     cmd.add(outputDirArg);
     cmd.add(maxGamesTotalArg);
+    cmd.add(nnVictimFileArg);
     cmd.parseArgs(args);
 
     modelsDir = modelsDirArg.getValue();
@@ -69,6 +142,8 @@ int MainCmds::selfplay(const vector<string>& args) {
     checkDirNonEmpty("models-dir",modelsDir);
     checkDirNonEmpty("output-dir",outputDir);
 
+    nnVictimFile = nnVictimFileArg.getValue();
+
     cmd.getConfig(cfg);
   }
   catch (TCLAP::ArgException &e) {
@@ -85,7 +160,7 @@ int MainCmds::selfplay(const vector<string>& args) {
   bool logToStdout = cfg.getBool("logToStdout");
   logger.setLogToStdout(logToStdout);
 
-  logger.write("Self Play Engine starting...");
+  logger.write(string(victimplay ? "Victim" : "Self") + " Play Engine starting...");
   logger.write(string("Git revision: ") + Version::getGitRevision());
 
   //Load runner settings
@@ -108,6 +183,7 @@ int MainCmds::selfplay(const vector<string>& args) {
   const int64_t logGamesEvery = cfg.getInt64("logGamesEvery",1,1000000);
 
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
+  assert(!(victimplay && switchNetsMidGame));
   const SearchParams baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_OTHER);
 
   //Initialize object for randomizing game settings and running games
@@ -125,20 +201,52 @@ int MainCmds::selfplay(const vector<string>& args) {
 
   //Done loading!
   //------------------------------------------------------------------------------------
-  logger.write("Loaded all config stuff, starting self play");
+  logger.write("Loaded all config stuff, starting play");
   if(!logToStdout)
-    cout << "Loaded all config stuff, starting self play" << endl;
+    cout << "Loaded all config stuff, starting play" << endl;
 
   if(!std::atomic_is_lock_free(&shouldStop))
     throw StringError("shouldStop is not lock free, signal-quitting mechanism for terminating matches will NOT work!");
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
+  auto loadNN = [
+    &cfg,
+    &numGameThreads,
+    &minBoardXSizeUsed,
+    &maxBoardXSizeUsed,
+    &minBoardYSizeUsed,
+    &maxBoardYSizeUsed,
+    &logger
+  ](
+    const string modelName,
+    const string modelFile
+  ) -> NNEvaluator* {
+    const string expectedSha256 = "";
+    Rand rand;
+    const int maxConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads * 2 + 16;
+    const int expectedConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads;
+    const int defaultMaxBatchSize = -1;
+    const bool defaultRequireExactNNLen = minBoardXSizeUsed == maxBoardXSizeUsed && minBoardYSizeUsed == maxBoardYSizeUsed;
+
+    NNEvaluator* nnEval = Setup::initializeNNEvaluator(
+      modelName,modelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
+      maxBoardXSizeUsed,maxBoardYSizeUsed,defaultMaxBatchSize,defaultRequireExactNNLen,
+      Setup::SETUP_FOR_OTHER
+    );
+
+    logger.write("Loaded" + modelName + " neural net from: " + modelFile);
+    return nnEval;
+  };
+
+  NNEvaluator* victimNNEval = victimplay ?
+    loadNN("victim", nnVictimFile) : nullptr;
 
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
     [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
-     &modelsDir,&outputDir,&logger,&cfg,numGameThreads,
+     &loadNN,
+     &modelsDir,&outputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
 
     string modelName;
@@ -153,20 +261,7 @@ int MainCmds::selfplay(const vector<string>& args) {
 
     logger.write("Found new neural net " + modelName);
 
-    // * 2 + 16 just in case to have plenty of room
-    const int maxConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads * 2 + 16;
-    const int expectedConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads;
-    const bool defaultRequireExactNNLen = minBoardXSizeUsed == maxBoardXSizeUsed && minBoardYSizeUsed == maxBoardYSizeUsed;
-    const int defaultMaxBatchSize = -1;
-    const string expectedSha256 = "";
-
-    Rand rand;
-     NNEvaluator* nnEval = Setup::initializeNNEvaluator(
-      modelName,modelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
-      maxBoardXSizeUsed,maxBoardYSizeUsed,defaultMaxBatchSize,defaultRequireExactNNLen,
-      Setup::SETUP_FOR_OTHER
-    );
-    logger.write("Loaded latest neural net " + modelName + " from: " + modelFile);
+    NNEvaluator* nnEval = loadNN(modelName, modelFile);
 
     string modelOutputDir = outputDir + "/" + modelName;
     string sgfOutputDir = modelOutputDir + "/sgfs";
@@ -175,6 +270,7 @@ int MainCmds::selfplay(const vector<string>& args) {
 
     //Try repeatedly to make directories, in case the filesystem is unhappy with us as we try to make the same dirs as another process.
     //Wait a random amount of time in between each failure.
+    Rand rand;
     int maxTries = 5;
     for(int i = 0; i<maxTries; i++) {
       bool success = false;
@@ -217,6 +313,10 @@ int MainCmds::selfplay(const vector<string>& args) {
       tdataOutputDir, inputsVersion, maxRowsPerTrainFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
     TrainingDataWriter* vdataWriter = new TrainingDataWriter(
       vdataOutputDir, inputsVersion, maxRowsPerValFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
+
+    tdataWriter->forVictimPlay = victimplay;
+    vdataWriter->forVictimPlay = victimplay;
+
     ofstream* sgfOut = NULL;
     if(sgfOutputDir.length() > 0) {
       sgfOut = new ofstream();
@@ -250,7 +350,9 @@ int MainCmds::selfplay(const vector<string>& args) {
     &forkData,
     maxGamesTotal,
     &baseParams,
-    &gameSeedBase
+    &gameSeedBase,
+    &victimplay,
+    &victimNNEval
   ](int threadIdx) {
     auto shouldStopFunc = []() {
       return shouldStop.load();
@@ -288,7 +390,17 @@ int MainCmds::selfplay(const vector<string>& args) {
       FinishedGameData* gameData = NULL;
 
       int64_t gameIdx = numGamesStarted.fetch_add(1,std::memory_order_acq_rel);
-      if(gameIdx < maxGamesTotal) {
+      if (gameIdx >= maxGamesTotal) {
+        // Do nothing.
+      } else if(victimplay) {
+        manager->countOneGameStarted(nnEval);
+        const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
+        gameData = runOneVictimplayGame(
+          victimNNEval, nnEval, gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
+          baseParams, gameRunner, shouldStopFunc, logger,
+          gameIdx, seed
+        );
+      } else {
         manager->countOneGameStarted(nnEval);
         MatchPairer::BotSpec botSpecB;
         botSpecB.botIdx = 0;
@@ -375,6 +487,10 @@ int MainCmds::selfplay(const vector<string>& args) {
     modelLoadSleepVar.notify_all();
   }
   modelLoadLoopThread.join();
+
+  if (victimplay) {
+    delete victimNNEval;
+  }
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

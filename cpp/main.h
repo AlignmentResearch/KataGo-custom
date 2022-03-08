@@ -11,7 +11,7 @@ namespace MainCmds {
   int tuner(const std::vector<std::string>& args);
   int match(const std::vector<std::string>& args);
   int matchauto(const std::vector<std::string>& args);
-  int selfplay(const std::vector<std::string>& args);
+  int selfplay(const std::vector<std::string>& args, const bool victimplay = false);
 
   int runtests(const std::vector<std::string>& args);
   int runnnlayertests(const std::vector<std::string>& args);

@@ -87,6 +87,8 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::matchauto(subArgs);
   else if(subcommand == "selfplay")
     return MainCmds::selfplay(subArgs);
+  else if(subcommand == "victimplay")
+    return MainCmds::selfplay(subArgs, true);
   else if(subcommand == "runtests")
     return MainCmds::runtests(subArgs);
   else if(subcommand == "runnnlayertests")

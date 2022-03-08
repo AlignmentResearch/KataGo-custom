@@ -194,6 +194,20 @@ void FinishedGameData::printDebug(ostream& out) const {
   }
 }
 
+/* Function implementation adapted from command/gatekeeper.cpp */
+float FinishedGameData::finalWhiteMinusBlackScore() const {
+  if(endHist.isGameFinished && endHist.isNoResult) {
+    return NAN;
+  }
+
+  BoardHistory hist(endHist);
+  Board endBoard = hist.getRecentBoard(0);
+  //Force game end just in case we crossed a move limit
+  if(!hist.isGameFinished)
+    hist.endAndScoreGameNow(endBoard);
+
+  return hist.finalWhiteMinusBlackScore;
+}
 //-------------------------------------------------------------------------------------
 
 
@@ -931,6 +945,12 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   BoardHistory hist(data.startHist);
   Player nextPlayer = data.startPla;
 
+  if (forVictimPlay) {
+    // When doing victimplay, exactly one side should be named "victim".
+    assert((data.bName == "victim") ^ (data.wName == "victim"));
+  }
+  Player victimPlayer = (data.bName == "victim" ? P_BLACK : P_WHITE);
+
   //Write main game rows
   int startTurnIdx = (int)data.startHist.moveHistory.size();
   for(int turnAfterStart = 0; turnAfterStart<numMoves; turnAfterStart++) {
@@ -950,34 +970,38 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
       }
     }
 
-    while(targetWeight > 0.0) {
-      if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
-        if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
-          writeBuffers->addRow(
-            board,hist,nextPlayer,
-            turnIdx,
-            1.0,
-            unreducedNumVisits,
-            policyTarget0,
-            policyTarget1,
-            data.whiteValueTargetsByTurn,
-            turnAfterStart,
-            data.nnRawStatsByTurn[turnAfterStart],
-            &(data.endHist.getRecentBoard(0)),
-            data.finalFullArea,
-            data.finalOwnership,
-            data.finalWhiteScoring,
-            &posHistForFutureBoards,
-            isSidePosition,
-            numNeuralNetsBehindLatest,
-            data,
-            rand
-          );
-          writeAndClearIfFull();
+    if (forVictimPlay && nextPlayer == victimPlayer) {
+      // Skip writing data when it is victim to move.
+    } else {
+      while(targetWeight > 0.0) {
+        if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
+          if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
+            writeBuffers->addRow(
+              board,hist,nextPlayer,
+              turnIdx,
+              1.0,
+              unreducedNumVisits,
+              policyTarget0,
+              policyTarget1,
+              data.whiteValueTargetsByTurn,
+              turnAfterStart,
+              data.nnRawStatsByTurn[turnAfterStart],
+              &(data.endHist.getRecentBoard(0)),
+              data.finalFullArea,
+              data.finalOwnership,
+              data.finalWhiteScoring,
+              &posHistForFutureBoards,
+              isSidePosition,
+              numNeuralNetsBehindLatest,
+              data,
+              rand
+            );
+            writeAndClearIfFull();
+          }
+          rowCount++;
         }
-        rowCount++;
+        targetWeight -= 1.0;
       }
-      targetWeight -= 1.0;
     }
 
 
@@ -992,6 +1016,9 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   vector<ValueTargets> whiteValueTargetsBuf(1);
   for(int i = 0; i<data.sidePositions.size(); i++) {
     SidePosition* sp = data.sidePositions[i];
+
+    // Skip writing data when it is victim to move.
+    if (forVictimPlay && sp->pla == victimPlayer) continue;
 
     double targetWeight = sp->targetWeight;
     while(targetWeight > 0.0) {

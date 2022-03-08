@@ -106,6 +106,7 @@ struct FinishedGameData {
   ~FinishedGameData();
 
   void printDebug(std::ostream& out) const;
+  float finalWhiteMinusBlackScore() const;
 };
 
 struct TrainingWriteBuffers {
@@ -258,6 +259,8 @@ class TrainingDataWriter {
 
   bool isEmpty() const;
   int64_t numRowsInBuffer() const;
+
+  bool forVictimPlay = false;
 
  private:
   std::string outputDir;

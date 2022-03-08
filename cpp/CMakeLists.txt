@@ -174,6 +174,7 @@ add_executable(katago
   neuralnet/nninputs.cpp
   neuralnet/modelversion.cpp
   neuralnet/nneval.cpp
+  neuralnet/nneval_colored.cpp
   neuralnet/desc.cpp
   ${NEURALNET_BACKEND_SOURCES}
   book/book.cpp
@@ -406,4 +407,3 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
 endif()
 
 target_include_directories(katago PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-

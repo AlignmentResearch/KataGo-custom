@@ -84,6 +84,7 @@ int MainCmds::match(const vector<string>& args) {
   //Load the names of the bots and which model each bot is using
   vector<string> nnModelFilesByBot(numBots);
   vector<string> botNames(numBots);
+  vector<bool> useVictimplays(numBots);
   for(int i = 0; i<numBots; i++) {
     string idxStr = Global::intToString(i);
 
@@ -98,6 +99,11 @@ int MainCmds::match(const vector<string>& args) {
       nnModelFilesByBot[i] = cfg.getString("nnModelFile"+idxStr);
     else
       nnModelFilesByBot[i] = cfg.getString("nnModelFile");
+
+    if(cfg.contains("useVictimplay"+idxStr))
+      useVictimplays[i] = Global::stringToBool(cfg.getString("useVictimplay"+idxStr));
+    else
+      useVictimplays[i] = false;
   }
 
   //Dedup and load each necessary model exactly once
@@ -176,7 +182,9 @@ int MainCmds::match(const vector<string>& args) {
   //Initialize object for randomly pairing bots
   bool forSelfPlay = false;
   bool forGateKeeper = false;
-  MatchPairer* matchPairer = new MatchPairer(cfg,numBots,botNames,nnEvalsByBot,paramss,forSelfPlay,forGateKeeper,excludeBot);
+  MatchPairer* matchPairer = new MatchPairer(
+    cfg,numBots,botNames,nnEvalsByBot,paramss,forSelfPlay,forGateKeeper,excludeBot,useVictimplays
+  );
 
   //Check for unused config keys
   cfg.warnUnusedKeys(cerr,&logger);
@@ -224,6 +232,12 @@ int MainCmds::match(const vector<string>& args) {
           assert(spec.botIdx < patternBonusTables.size());
           search->setCopyOfExternalPatternBonusTable(patternBonusTables[spec.botIdx]);
         };
+
+        logger.write(
+          "Launching game between " +
+          botSpecB.botName + (botSpecB.victimplay ? "-victimplay" : "") + " (B) " +
+          botSpecW.botName + (botSpecW.victimplay ? "-victimplay" : "") + " (W)..."
+        );
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
           shouldStopFunc, nullptr, afterInitialization, nullptr

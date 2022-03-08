@@ -699,15 +699,14 @@ bool MatchPairer::getMatchup(
     myBotSpec.victimplay = useVictimplays[myIdx];
     if (!myBotSpec.victimplay) {
       myBotSpec.nnEval = nnEvals[myIdx];
-      return;
+    } else {
+      NNEvaluator* myNNEval = nnEvals[myIdx];
+      NNEvaluator* opNNEval = nnEvals[opIdx];
+      myBotSpec.nnEval = new NNEvaluatorColored(
+        myColor == C_BLACK ? myNNEval : opNNEval,
+        myColor == C_BLACK ? opNNEval : myNNEval
+      );
     }
-
-    NNEvaluator* myNNEval = nnEvals[myIdx];
-    NNEvaluator* opNNEval = nnEvals[opIdx];
-    myBotSpec.nnEval = new NNEvaluatorColored(
-      myColor == C_BLACK ? myNNEval : opNNEval,
-      myColor == C_BLACK ? opNNEval : myNNEval
-    );
   };
 
   fillBotSpec(botSpecB, matchup.first, matchup.second, C_BLACK);

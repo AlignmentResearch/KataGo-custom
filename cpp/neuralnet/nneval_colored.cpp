@@ -4,11 +4,10 @@
 using namespace std;
 
 NNEvaluatorColored::NNEvaluatorColored(NNEvaluator* b_nnEval, NNEvaluator* w_nnEval)
-  : black_nnEval(b_nnEval), white_nnEval(w_nnEval) {}
+  : NNEvaluator(), black_nnEval(b_nnEval), white_nnEval(w_nnEval) {}
 
-NNEvaluatorColored::~NNEvaluatorColored() {
-  // We are not responsible for deleting black_nnEval and white_nnEval.
-}
+// Not responsible for deleting black_nnEval and white_nnEval.
+NNEvaluatorColored::~NNEvaluatorColored() {}
 
 string NNEvaluatorColored::getModelName() const {
   return black_nnEval->getModelName() + "__" + white_nnEval->getModelName();
@@ -59,8 +58,7 @@ enabled_t NNEvaluatorColored::getUsingNHWCMode() const {
   return black_nnEval->getUsingNHWCMode();
 }
 bool NNEvaluatorColored::supportsShorttermError() const {
-  assert(black_nnEval->supportsShorttermError() == white_nnEval->supportsShorttermError());
-  return black_nnEval->supportsShorttermError();
+  return black_nnEval->supportsShorttermError() && white_nnEval->supportsShorttermError();
 }
 bool NNEvaluatorColored::getDoRandomize() const {
   assert(black_nnEval->getDoRandomize() == white_nnEval->getDoRandomize());

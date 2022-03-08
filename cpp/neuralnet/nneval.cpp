@@ -55,7 +55,8 @@ NNServerBuf::~NNServerBuf() {
 //-------------------------------------------------------------------------------------
 
 NNEvaluator::NNEvaluator()
-  :modelName(""),
+  :isEmptyNNEvaluator(true),
+   modelName(""),
    modelFileName(""),
    nnXLen(0),
    nnYLen(0),
@@ -191,6 +192,8 @@ NNEvaluator::NNEvaluator(
 }
 
 NNEvaluator::~NNEvaluator() {
+  if (isEmptyNNEvaluator) return;
+
   killServerThreads();
 
   for(int i = 0; i < numResultBufss; i++) {

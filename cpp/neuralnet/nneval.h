@@ -76,8 +76,8 @@ struct NNServerBuf {
 
 class NNEvaluator {
  protected:
-  // Should never be called directly. Implemented just so NNEvaluatorColored works.
-  NNEvaluator();
+  bool isEmptyNNEvaluator = false;
+  NNEvaluator(); // Creates an empty NNEvaluator
 
  public:
   NNEvaluator(

@@ -945,8 +945,10 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   BoardHistory hist(data.startHist);
   Player nextPlayer = data.startPla;
 
-  // For victimplay, the victim is always named "victim"
-  assert(!skipWriteVictim || data.bName == "victim" || data.wName == "victim");
+  if (forVictimPlay) {
+    // When doing victimplay, exactly one side should be named "victim".
+    assert((data.bName == "victim") ^ (data.wName == "victim"));
+  }
   Player victimPlayer = (data.bName == "victim" ? P_BLACK : P_WHITE);
 
   //Write main game rows
@@ -968,7 +970,9 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
       }
     }
 
-    if (!(skipWriteVictim && nextPlayer == victimPlayer)) {
+    if (forVictimPlay && nextPlayer == victimPlayer) {
+      // Skip writing data when it is victim to move.
+    } else {
       while(targetWeight > 0.0) {
         if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
           if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
@@ -1012,7 +1016,9 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   vector<ValueTargets> whiteValueTargetsBuf(1);
   for(int i = 0; i<data.sidePositions.size(); i++) {
     SidePosition* sp = data.sidePositions[i];
-    if (skipWriteVictim && sp->pla == victimPlayer) continue;
+
+    // Skip writing data when it is victim to move.
+    if (forVictimPlay && sp->pla == victimPlayer) continue;
 
     double targetWeight = sp->targetWeight;
     while(targetWeight > 0.0) {

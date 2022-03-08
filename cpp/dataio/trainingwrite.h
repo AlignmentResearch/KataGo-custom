@@ -260,8 +260,7 @@ class TrainingDataWriter {
   bool isEmpty() const;
   int64_t numRowsInBuffer() const;
 
-  // Used in for victimplay
-  bool skipWriteVictim = false;
+  bool forVictimPlay = false;
 
  private:
   std::string outputDir;

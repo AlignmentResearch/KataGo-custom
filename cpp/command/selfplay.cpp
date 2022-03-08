@@ -246,7 +246,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   auto loadLatestNeuralNetIntoManager =
     [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
      &loadNN,
-     &modelsDir,&outputDir,&logger,&cfg,numGameThreads,
+     &modelsDir,&outputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
 
     string modelName;
@@ -313,6 +313,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       tdataOutputDir, inputsVersion, maxRowsPerTrainFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
     TrainingDataWriter* vdataWriter = new TrainingDataWriter(
       vdataOutputDir, inputsVersion, maxRowsPerValFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
+
+    tdataWriter->forVictimPlay = victimplay;
+    vdataWriter->forVictimPlay = victimplay;
+
     ofstream* sgfOut = NULL;
     if(sgfOutputDir.length() > 0) {
       sgfOut = new ofstream();

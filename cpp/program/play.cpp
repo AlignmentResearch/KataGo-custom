@@ -2226,9 +2226,18 @@ FinishedGameData* GameRunner::runGame(
   std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization,
   std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove
 ) {
-  // We do not want to checkForNewNNEval during the game if we are doing victimplay.
-  // That is to say, we only want to use a single adversary per game.
   const bool forVictimPlay = bSpecB.victimplay || bSpecW.victimplay;
+
+  // checkForNewNNEval is non-NULL when switchNetsMidGame is true.
+  // We do not currently support switchNetsMidGame if we are doing victimPlay.
+  // In the past, we ran into tricky bugs when trying to support
+  // switchNetsMidGame during victimplay.
+  //
+  // Lack of support means degraded victimplay performance.
+  // Unclear how significant this is though...
+  //
+  // TODO: As a performance enhancement, support checkForNewNNEval when doing
+  //       victimplay.
   assert(!(forVictimPlay && checkForNewNNEval != nullptr));
 
   MatchPairer::BotSpec botSpecB = bSpecB;

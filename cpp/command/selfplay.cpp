@@ -191,7 +191,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   else assert(paramss.size() == 1);
   SearchParams baseParams = paramss[0];
   SearchParams victimSearchParams = paramss[0];
-  SearchParams advSearchParams = paramss[victimplay];
+  SearchParams advSearchParams = paramss[paramss.size() - 1];
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);

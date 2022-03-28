@@ -35,6 +35,8 @@ set(NO_GIT_REVISION 0 CACHE BOOL "Disable embedding the git revision into the co
 set(USE_AVX2 0 CACHE BOOL "Compile with AVX2")
 set(USE_BIGGER_BOARDS_EXPENSIVE 0 CACHE BOOL "Allow boards up to size 29. Compiling with this will use more memory and slow down KataGo, even when playing on boards of size 19.")
 
+set(BUILD_DEBUG 0 CACHE BOOL "Build for debugging")
+
 #--------------------------- NEURAL NET BACKEND ------------------------------------------------------------------------
 
 message(STATUS "Building 'katago' executable for GTP engine and other tools.")
@@ -382,7 +384,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
   find_package (Threads REQUIRED)
   target_link_libraries(katago Threads::Threads)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -pedantic -Wall -Wextra -Wno-sign-compare -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Wmissing-declarations -Wmissing-include-dirs -Woverloaded-virtual -Wredundant-decls -Wshadow -Wstrict-overflow=1 -Wswitch-default -Wfloat-conversion -Wunused")
+  if(BUILD_DEBUG)
+    set(CMAKE_CXX_OPT_LEVEL "-O0")
+    message(STATUS "Building for debug, using optimization level ${CMAKE_CXX_OPT_LEVEL}")
+  else()
+    set(CMAKE_CXX_OPT_LEVEL "-O2")
+    message(STATUS "Building for release, using optimization level ${CMAKE_CXX_OPT_LEVEL}")
+  endif()
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g ${CMAKE_CXX_OPT_LEVEL} -pedantic -Wall -Wextra -Wno-sign-compare -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Wmissing-declarations -Wmissing-include-dirs -Woverloaded-virtual -Wredundant-decls -Wshadow -Wstrict-overflow=1 -Wswitch-default -Wfloat-conversion -Wunused")
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "Enabling GNU-specific build options.")

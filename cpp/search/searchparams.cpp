@@ -6,7 +6,8 @@
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :winLossUtilityFactor(1.0),
+  :searchAlgorithm(SEARCH_ALGORITHM_MCTS),
+   winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),
    dynamicScoreCenterZeroWeight(0.0),

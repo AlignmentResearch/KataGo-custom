@@ -914,10 +914,17 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   }
 }
 
-double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
-  double rawHalflives = (rootHistory.initialTurnNumber + rootHistory.moveHistory.size()) / halflife;
+double Search::calculateTemperature(
+  double halflife, double earlyValue, double value, int numMoves
+) const {
+  double rawHalflives = numMoves / halflife;
   double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
   return value + (earlyValue - value) * pow(0.5, halflives);
+}
+
+double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
+  const int numMoves = rootHistory.initialTurnNumber + rootHistory.moveHistory.size();
+  return calculateTemperature(halflife, earlyValue, value, numMoves);
 }
 
 Loc Search::runWholeSearchAndGetMove(Player movePla) {
@@ -2833,6 +2840,46 @@ void Search::selectBestChildToDescend(
   }
 
   const std::vector<int>& avoidMoveUntilByLoc = thread.pla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
+
+  // If we are searching with EMCTS1 and are on an opponents move,
+  // we sample directly from the opponents policy.
+  if (
+    searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1
+    && node.nextPla != rootNode->nextPla
+  ) {
+    // EMCTS1 does not support avoidMoveUntilByLoc.
+    assert(avoidMoveUntilByLoc.size() == 0);
+
+    // bestChildMoveLoc is sampled directly from policy
+    // (with an appropriately calcuated temperature).
+    {
+      vector<Loc> locs;
+      vector<double> playSelectionValues;
+      getPlaySelectionValues(node, locs, playSelectionValues, NULL, 0.0, true);
+      assert(locs.size() == playSelectionValues.size());
+
+      const double temperature = calculateTemperature(
+        searchParams.chosenMoveTemperatureHalflife,
+        searchParams.chosenMoveTemperatureEarly,
+        searchParams.chosenMoveTemperature,
+        thread.history.initialTurnNumber + thread.history.moveHistory.size()
+      );
+      const uint32_t idxChosen = chooseIndexWithTemperature(
+        thread.rand, playSelectionValues.data(), playSelectionValues.size(), temperature
+      );
+      bestChildMoveLoc = locs[idxChosen];
+    }
+
+    // Check if bestChildMoveLoc is an existing child node.
+    bestChildIdx = numChildrenFound;
+    for (int i = 0; i < numChildrenFound; i++) {
+      if (bestChildMoveLoc == children[i].getIfAllocated()->prevMoveLoc) {
+        bestChildIdx = i;
+        break;
+      }
+    }
+    return;
+  }
 
   //Try the new child with the best policy value
   Loc bestNewMoveLoc = Board::NULL_LOC;

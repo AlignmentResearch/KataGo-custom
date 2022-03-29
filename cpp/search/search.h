@@ -532,6 +532,8 @@ private:
 
   double getResultUtility(double winlossValue, double noResultValue) const;
   double getResultUtilityFromNN(const NNOutput& nnOutput) const;
+
+  double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
 
   void spawnThreadsIfNeeded();

@@ -844,7 +844,7 @@ static void extractPolicyTarget(
 
   assert(node != NULL);
   assert(!toMoveBot->searchParams.rootSymmetryPruning);
-  bool allowDirectPolicyMoves = false;
+  bool allowDirectPolicyMoves = true;
   bool success = toMoveBot->getPlaySelectionValues(*node,locsBuf,playSelectionValuesBuf,NULL,scaleMaxToAtLeast,allowDirectPolicyMoves);
   assert(success);
   (void)success; //Avoid warning when asserts are disabled

@@ -39,8 +39,9 @@ static void signalHandler(int signal)
 static FinishedGameData* runOneVictimplayGame(
   NNEvaluator* victimNNEval,
   NNEvaluator* advNNEval,
+  const SearchParams &victimSearchParams,
+  const SearchParams &advSearchParams,
   const Color advColor,
-  const SearchParams &searchParams,
   GameRunner* gameRunner,
   const std::function<bool()>& shouldStopFunc,
   Logger &logger,
@@ -51,7 +52,7 @@ static FinishedGameData* runOneVictimplayGame(
   victimBotSpec.botIdx = 0; // victim is always idx 0
   victimBotSpec.botName = victimNNEval->getModelName();
   victimBotSpec.nnEval = victimNNEval;
-  victimBotSpec.baseParams = searchParams;
+  victimBotSpec.baseParams = victimSearchParams;
 
   NNEvaluator* advNNEvalColored = new NNEvaluatorColored(
     advColor == C_BLACK ? advNNEval : victimNNEval,
@@ -62,7 +63,7 @@ static FinishedGameData* runOneVictimplayGame(
   adversaryBotSpec.botIdx = 1; // adversary is always idx 1
   adversaryBotSpec.botName = advNNEvalColored->getModelName();
   adversaryBotSpec.nnEval = advNNEvalColored;
-  adversaryBotSpec.baseParams = searchParams;
+  adversaryBotSpec.baseParams = advSearchParams;
   adversaryBotSpec.victimplay = true;
 
   MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
@@ -184,7 +185,13 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
   assert(!(victimplay && switchNetsMidGame));
-  const SearchParams baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_OTHER);
+
+  vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+  if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
+  else assert(paramss.size() == 1);
+  SearchParams baseParams = paramss[0];
+  SearchParams victimSearchParams = paramss[0];
+  SearchParams advSearchParams = paramss[paramss.size() - 1];
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
@@ -350,6 +357,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &forkData,
     maxGamesTotal,
     &baseParams,
+    &victimSearchParams,
+    &advSearchParams,
     &gameSeedBase,
     &victimplay,
     &victimNNEval
@@ -396,8 +405,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = runOneVictimplayGame(
-          victimNNEval, nnEval, gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
-          baseParams, gameRunner, shouldStopFunc, logger,
+          victimNNEval, nnEval,
+          victimSearchParams, advSearchParams,
+          gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
+          gameRunner, shouldStopFunc, logger,
           gameIdx, seed
         );
       } else {

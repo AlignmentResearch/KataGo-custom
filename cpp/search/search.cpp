@@ -2712,7 +2712,7 @@ double Search::getFpuValueForChildrenAssumeVisited(
   double utilitySqAvg = node.stats.utilitySqAvg.load(std::memory_order_acquire);
 
   assert(visits > 0);
-  assert(weightSum > 0.0);
+  assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1);
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;
   double variancePrior = searchParams.cpuctUtilityStdevPrior * searchParams.cpuctUtilityStdevPrior;
@@ -2855,7 +2855,7 @@ void Search::selectBestChildToDescend(
     {
       vector<Loc> locs;
       vector<double> playSelectionValues;
-      getPlaySelectionValues(node, locs, playSelectionValues, NULL, 0.0, true);
+      getPlaySelectionValuesWithDirectPolicy(node, locs, playSelectionValues);
       assert(locs.size() == playSelectionValues.size());
 
       const double temperature = calculateTemperature(
@@ -3143,7 +3143,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       //desiredSelfWeight *= weightSum / (1.0-biasFactor) / std::max(0.001, (weightSum + desiredSelfWeight - desiredSelfWeight / (1.0-biasFactor)));
     }
 
-    double weight = computeWeightFromNNOutput(nnOutput);
+    double weight = computeNodeWeight(node);
     winLossValueSum += (winProb - lossProb) * weight;
     noResultValueSum += noResultProb * weight;
     scoreMeanSum += scoreMean * weight;
@@ -3414,12 +3414,23 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
   double scoreMean = (double)nnOutput->whiteScoreMean;
   double scoreMeanSq = (double)nnOutput->whiteScoreMeanSq;
   double lead = (double)nnOutput->whiteLead;
-  double weight = computeWeightFromNNOutput(nnOutput);
+  double weight = computeNodeWeight(node);
   addLeafValue(node,winProb-lossProb,noResultProb,scoreMean,scoreMeanSq,lead,weight,false,assumeNoExistingWeight);
 }
 
 
-double Search::computeWeightFromNNOutput(const NNOutput* nnOutput) const {
+double Search::computeNodeWeight(const SearchNode& node) const {
+  // If doing EMCTS1, we weight opponent nodes as zero.
+  if (
+    searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1
+    && node.nextPla != rootNode->nextPla
+  ) {
+    return 0.0;
+  }
+
+  const NNOutput* nnOutput = node.getNNOutput();
+  assert(nnOutput != NULL);
+
   if(!searchParams.useUncertainty)
     return 1.0;
   if(!nnEvaluator->supportsShorttermError())

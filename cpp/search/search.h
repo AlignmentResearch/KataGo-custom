@@ -444,7 +444,7 @@ struct Search {
     double scaleMaxToAtLeast = 0.0
   ) const;
 
-  // Given a some playSelectionValues, scale the max at least scaleMaxToAtLeast.
+  // Given some playSelectionValues, scale the max at least scaleMaxToAtLeast.
   bool clipAndScalePlaySelectionValues(
     std::vector<double>& playSelectionValues,
     const double scaleMaxToAtLeast,

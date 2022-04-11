@@ -202,7 +202,9 @@ bool Search::getPlaySelectionValues(
   //If we have no children, then use the policy net directly. Only for the root, though, if calling this on any subtree
   //then just require that we have children, for implementation simplicity (since it requires that we have a board and a boardhistory too)
   //(and we also use isAllowedRootMove and avoidMoveUntilByLoc)
-  if(numChildren == 0 && allowDirectPolicyMoves) {
+  if(numChildren == 0) {
+    if(&node != rootNode || !allowDirectPolicyMoves)
+      return false;
     return getPlaySelectionValuesWithDirectPolicy(
       node, locs, playSelectionValues, scaleMaxToAtLeast
     );

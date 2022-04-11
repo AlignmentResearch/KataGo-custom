@@ -6,9 +6,8 @@
 
 struct SearchParams {
   // Algorithm to use for search
-  int searchAlgorithm;
-  static constexpr int SEARCH_ALGORITHM_MCTS = 0;
-  static constexpr int SEARCH_ALGORITHM_EMCTS1 = 1;
+  enum class SearchAlgorithm { MCTS, EMCTS1 };
+  SearchAlgorithm searchAlgorithm = SearchAlgorithm::MCTS;
 
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing

@@ -2713,7 +2713,7 @@ double Search::getFpuValueForChildrenAssumeVisited(
 
   assert(visits > 0);
   assert(weightSum >= 0.0);
-  assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1);
+  assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1);
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;
   double variancePrior = searchParams.cpuctUtilityStdevPrior * searchParams.cpuctUtilityStdevPrior;
@@ -2845,7 +2845,7 @@ void Search::selectBestChildToDescend(
   // If we are searching with EMCTS1 and are on an opponents move,
   // we sample directly from the opponents policy.
   if (
-    searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1
+    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla
   ) {
     // EMCTS1 does not support avoidMoveUntilByLoc.
@@ -3423,7 +3423,7 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
 double Search::computeNodeWeight(const SearchNode& node) const {
   // If doing EMCTS1, we weight opponent nodes as zero.
   if (
-    searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1
+    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla
   ) {
     return 0.0;

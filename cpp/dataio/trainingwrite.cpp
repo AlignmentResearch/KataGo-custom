@@ -982,7 +982,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
               1.0,
               unreducedNumVisits,
               policyTarget0,
-              forVictimPlay ? NULL : policyTarget1,
+              policyTarget1,
               data.whiteValueTargetsByTurn,
               turnAfterStart,
               data.nnRawStatsByTurn[turnAfterStart],

@@ -2712,6 +2712,7 @@ double Search::getFpuValueForChildrenAssumeVisited(
   double utilitySqAvg = node.stats.utilitySqAvg.load(std::memory_order_acquire);
 
   assert(visits > 0);
+  assert(weightSum >= 0.0);
   assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SEARCH_ALGORITHM_EMCTS1);
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;

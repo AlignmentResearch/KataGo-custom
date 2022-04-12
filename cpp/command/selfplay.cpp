@@ -193,8 +193,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   SearchParams baseParams = paramss[0];
   SearchParams victimSearchParams = paramss[0];
   SearchParams advSearchParams = paramss[paramss.size() - 1];
-
-  victimSearchParams.searchAlgorithm = SearchParams::SearchAlgorithm::EMCTS1;
   advSearchParams.searchAlgorithm = SearchParams::SearchAlgorithm::EMCTS1;
 
   //Initialize object for randomizing game settings and running games

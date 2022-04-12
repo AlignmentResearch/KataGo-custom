@@ -2002,8 +2002,23 @@ void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int
 
 
 shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const {
-  if(!isRoot)
-    return NULL;
+  if (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::MCTS) {
+    // FOR MCTS:
+    //   - add noise iff we are the root
+    if (isRoot) { /* noise */ }
+    else { return NULL; /* no noise */ }
+  } else if (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1) {
+    // FOR EMCTS1:
+    //   - if we are the root, add noise
+    //   - if we are a different color than the root, add noise
+    //   - otherwise don't add noise
+    if (isRoot) { /* noise */ }
+    else if (thread.pla != rootNode->nextPla) { /* noise */ }
+    else { return NULL; /* no noise */ }
+  } else {
+    ASSERT_UNREACHABLE;
+  }
+
   if(!searchParams.rootNoiseEnabled && searchParams.rootPolicyTemperature == 1.0 && searchParams.rootPolicyTemperatureEarly == 1.0 && rootHintLoc == Board::NULL_LOC)
     return NULL;
   if(oldNNOutput == NULL)

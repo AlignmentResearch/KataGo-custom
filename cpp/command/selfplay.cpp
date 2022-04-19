@@ -87,17 +87,15 @@ static FinishedGameData* runOneVictimplayGame(
     (victimIsBlack ? -1 : 1)
     * gameData->finalWhiteMinusBlackScore();
 
-  vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
-  for (auto &x : gameData->changedNeuralNets) {
-    adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
-  }
-
   logger.write(
     "Game #" + Global::int64ToString(gameIdx) +
     " victim (" + victimColorStr + ")" +
     " - adv (" + adversaryColorStr + ")" +
     " score: " + Global::floatToString(victimMinusAdvScore) +
-    "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+    "; victim_" + SearchParams::searchAlgorithmToStr(victimSearchParams.searchAlgorithm) +
+            "@" + Global::intToString(victimSearchParams.maxVisits) +
+    " adv_" + SearchParams::searchAlgorithmToStr(advSearchParams.searchAlgorithm) +
+        "@" + Global::intToString(advSearchParams.maxVisits)
   );
 
   return gameData;
@@ -193,7 +191,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   SearchParams baseParams = paramss[0];
   SearchParams victimSearchParams = paramss[0];
   SearchParams advSearchParams = paramss[paramss.size() - 1];
-  advSearchParams.searchAlgorithm = SearchParams::SearchAlgorithm::EMCTS1;
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);

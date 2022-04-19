@@ -367,6 +367,9 @@ vector<SearchParams> Setup::loadParams(
 
     string idxStr = Global::intToString(i);
 
+    if(cfg.contains("searchAlgorithm"+idxStr)) params.searchAlgorithm = SearchParams::strToSearchAlgorithm(cfg.getString("searchAlgorithm"+idxStr));
+    else if(cfg.contains("searchAlgorithm"))   params.searchAlgorithm = SearchParams::strToSearchAlgorithm(cfg.getString("searchAlgorithm"));
+
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayouts"))   params.maxPlayouts = cfg.getInt64("maxPlayouts",        (int64_t)1, (int64_t)1 << 50);
     if(cfg.contains("maxVisits"+idxStr)) params.maxVisits = cfg.getInt64("maxVisits"+idxStr, (int64_t)1, (int64_t)1 << 50);

@@ -1,5 +1,19 @@
 #include "../search/searchparams.h"
 
+SearchParams::SearchAlgorithm SearchParams::strToSearchAlgorithm(const std::string& algoStr) {
+  if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
+  if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
+  ASSERT_UNREACHABLE;
+}
+
+std::string SearchParams::searchAlgorithmToStr(SearchAlgorithm algo) {
+  switch(algo) {
+    case SearchAlgorithm::MCTS: return "MCTS";
+    case SearchAlgorithm::EMCTS1: return "EMCTS1";
+    default: ASSERT_UNREACHABLE;
+  }
+}
+
 //Default search params
 //The intent is that the are good default guesses for values of the parameters,
 //with deterministic behavior (no noise, no randomization) and no bounds (unbounded time and visits).

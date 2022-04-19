@@ -7,6 +7,8 @@
 struct SearchParams {
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };
+  static SearchAlgorithm strToSearchAlgorithm(const std::string& algoStr);
+  static std::string searchAlgorithmToStr(SearchAlgorithm algo);
   SearchAlgorithm searchAlgorithm = SearchAlgorithm::MCTS;
 
   //Utility function parameters

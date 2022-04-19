@@ -2002,13 +2002,20 @@ void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int
 
 
 shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const {
-  if (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::MCTS) {
-    // FOR MCTS:
+  if (
+      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::MCTS
+   || (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+       && !searchParams.EMCTS1_noiseOppNodes)
+  ) {
+    // Regular MCTS behavior:
     //   - add noise iff we are the root
     if (isRoot) { /* noise */ }
     else { return NULL; /* no noise */ }
-  } else if (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1) {
-    // FOR EMCTS1:
+  } else if (
+      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+   && searchParams.EMCTS1_noiseOppNodes
+  ) {
+    // EMCTS1 adjusement (when noiseOppNodesDuringEMCTS1 = true):
     //   - if we are the root, add noise
     //   - if we are a different color than the root, add noise
     //   - otherwise don't add noise

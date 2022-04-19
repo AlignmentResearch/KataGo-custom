@@ -11,6 +11,9 @@ struct SearchParams {
   static std::string searchAlgorithmToStr(SearchAlgorithm algo);
   SearchAlgorithm searchAlgorithm = SearchAlgorithm::MCTS;
 
+  // Whether to noise opponent nodes during EMCTS1
+  bool EMCTS1_noiseOppNodes;
+
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
   double staticScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at 0.

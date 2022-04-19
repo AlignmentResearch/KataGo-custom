@@ -982,7 +982,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
               1.0,
               unreducedNumVisits,
               policyTarget0,
-              policyTarget1,
+              useAuxPolicyTarget ? policyTarget1 : NULL,
               data.whiteValueTargetsByTurn,
               turnAfterStart,
               data.nnRawStatsByTurn[turnAfterStart],

@@ -8,24 +8,24 @@
 
 using namespace std;
 
-ConfigParser::ConfigParser()
-  :initialized(false),fileName(),contents(),keyValues(),usedKeysMutex(),usedKeys()
+ConfigParser::ConfigParser(bool keysOverride)
+  :initialized(false),fileName(),contents(),keyValues(),keysOverrideEnabled(keysOverride),usedKeysMutex(),usedKeys()
 {}
 
-ConfigParser::ConfigParser(const string& fname)
-  :initialized(false),fileName(),contents(),keyValues(),usedKeysMutex(),usedKeys()
+ConfigParser::ConfigParser(const string& fname, bool keysOverride)
+  :initialized(false),fileName(),contents(),keyValues(),keysOverrideEnabled(keysOverride),usedKeysMutex(),usedKeys()
 {
   initialize(fname);
 }
 
-ConfigParser::ConfigParser(istream& in)
-  :initialized(false),fileName(),contents(),keyValues(),usedKeysMutex(),usedKeys()
+ConfigParser::ConfigParser(istream& in, bool keysOverride)
+  :initialized(false),fileName(),contents(),keyValues(),keysOverrideEnabled(keysOverride),usedKeysMutex(),usedKeys()
 {
   initialize(in);
 }
 
 ConfigParser::ConfigParser(const map<string, string>& kvs)
-  :initialized(false),fileName(),contents(),keyValues(),usedKeysMutex(),usedKeys()
+  :initialized(false),fileName(),contents(),keyValues(),keysOverrideEnabled(false),usedKeysMutex(),usedKeys()
 {
   initialize(kvs);
 }
@@ -38,6 +38,7 @@ ConfigParser::ConfigParser(const ConfigParser& source) {
   fileName = source.fileName;
   contents = source.contents;
   keyValues = source.keyValues;
+  keysOverrideEnabled = source.keysOverrideEnabled;
   usedKeys = source.usedKeys;
 }
 
@@ -68,10 +69,15 @@ void ConfigParser::initialize(const map<string, string>& kvs) {
 
 
 void ConfigParser::initializeInternal(istream& in) {
+  keyValues.clear();
+  curFilename = fileName;
+  readStreamContent(in);
+}
+
+void ConfigParser::readStreamContent(istream& in) {
   int lineNum = 0;
   string line;
   ostringstream contentStream;
-  keyValues.clear();
   while(getline(in,line)) {
     contentStream << line << "\n";
     lineNum += 1;
@@ -89,8 +95,12 @@ void ConfigParser::initializeInternal(istream& in) {
 
     string key = Global::trim(line.substr(0,pos));
     string value = Global::trim(line.substr(pos+1));
-    if(keyValues.find(key) != keyValues.end())
-      throw IOError("Key '" + key + "' + was specified multiple times in " + fileName + ", you probably didn't mean to do this, please delete one of them");
+    if(keyValues.find(key) != keyValues.end()) {
+      if(!keysOverrideEnabled)
+        throw IOError("Key '" + key + "' + was specified multiple times in " + fileName + ", you probably didn't mean to do this, please delete one of them");
+      else
+        logMessages.push_back("Key '" + key + "' + was overriden by new value '" + value + "'in '" + curFilename + "', line " + to_string(lineNum));
+    }
     keyValues[key] = value;
   }
   contents = contentStream.str();

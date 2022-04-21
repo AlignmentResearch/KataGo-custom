@@ -68,6 +68,9 @@ namespace Tests {
 
   //testnnevalcanary.cpp
   void runCanaryTests(NNEvaluator* nnEval, int symmetry, bool print);
+
+  //testconfig.cpp
+  void runConfigTests();
 }
 
 namespace TestCommon {

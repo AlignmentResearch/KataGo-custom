@@ -1,0 +1,88 @@
+version: 2.1
+
+defaults: &defaults
+  docker:
+    # TODO(adam): build and upload (make script for this?)
+    - image: humancompatibleai/goattack:build-deps
+      auth:
+        username: $DOCKERHUB_USERNAME
+        password: $DOCKERHUB_PASSWORD
+  working_directory: /engines/KataGo-custom
+
+executors:
+  unit-test:
+    <<: *defaults
+    # TODO(adam): GPU executor
+    resource_class: gpu.nvidia.large
+    environment:
+      # more CPUs visible but we're throttled to 8, which breaks auto-detect
+      NUM_CPUS: 8
+
+commands:
+  dependencies:
+    description: "Check out and compile"
+    steps:
+      - checkout
+
+      - run:
+          name: CMake
+          command: cmake . -DUSE_BACKEND=CUDA -DUSE_TCMALLOC=1 -DNO_GIT_REVISION=1
+
+      - run:
+          name: make
+          command: make clean && make -j
+
+jobs:
+  unit-test:
+    executor: unit-test
+    steps:
+      - dependencies
+
+      - run:
+          name: Memory Monitor
+          command: |
+            mkdir /tmp/resource-usage
+            export FILE=/tmp/resource-usage/memory.txt
+            while true; do
+              ps -u root eo pid,%cpu,%mem,args,uname --sort=-%mem >> $FILE
+              echo "----------" >> $FILE
+              sleep 1
+            done
+          background: true
+
+      - run:
+          name: katago runtests
+          command: ./cpp/katago runtests
+
+      - run:
+          name: runcmdtests.sh
+          command: cd cpp && ./runcmdtests.sh
+
+      - run:
+          name: runoutputtests.sh
+          command: cp cpp && ./runoutputtests.sh
+
+      - run:
+          name: runsearchtestslimited.sh
+          command: cd cpp && ./runsearchtestslimited.sh
+
+      # TODO(adam): these search tests may take too long...
+      - run:
+          name: runsearchtestsfp16.sh
+          command: cd cpp && ./runsearchtestsfp16.sh
+
+      - run:
+          name: runsearchtests.sh
+          command: cd cpp && ./runsearchtests.sh
+
+      - store_artifacts:
+          path: /tmp/resource-usage
+          destination: resource-usage
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - unit-test:
+          context:
+          - docker-hub-creds

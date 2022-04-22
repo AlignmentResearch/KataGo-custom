@@ -2,7 +2,9 @@ version: 2.1
 
 defaults: &defaults
   docker:
-    # TODO(adam): build and upload (make script for this?)
+    # To rebuild image, run from root of go_attack repo:
+    # docker build --target=build-deps -t humancompatibleai/goattack:build-deps compose/cpp/
+    # docker push humancompatibleai/goattack:build-deps
     - image: humancompatibleai/goattack:build-deps
       auth:
         username: $DOCKERHUB_USERNAME
@@ -22,11 +24,11 @@ commands:
 
       - run:
           name: CMake
-          command: cmake . -DUSE_BACKEND=CUDA -DUSE_TCMALLOC=1 -DNO_GIT_REVISION=1
+          command: cd cpp && cmake . -DUSE_BACKEND=CUDA -DUSE_TCMALLOC=1 -DNO_GIT_REVISION=1
 
       - run:
           name: make
-          command: make clean && make -j
+          command: cd cpp && make clean && make -j
 
 jobs:
   unit-test:

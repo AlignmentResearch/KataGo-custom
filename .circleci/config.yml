@@ -12,7 +12,7 @@ defaults: &defaults
 executors:
   unit-test:
     <<: *defaults
-    resource_class: large 
+    resource_class: large
 
 commands:
   dependencies:

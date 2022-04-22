@@ -12,11 +12,7 @@ defaults: &defaults
 executors:
   unit-test:
     <<: *defaults
-    # TODO(adam): GPU executor
-    resource_class: gpu.nvidia.large
-    environment:
-      # more CPUs visible but we're throttled to 8, which breaks auto-detect
-      NUM_CPUS: 8
+    resource_class: large 
 
 commands:
   dependencies:
@@ -53,27 +49,6 @@ jobs:
       - run:
           name: katago runtests
           command: ./cpp/katago runtests
-
-      - run:
-          name: runcmdtests.sh
-          command: cd cpp && ./runcmdtests.sh
-
-      - run:
-          name: runoutputtests.sh
-          command: cp cpp && ./runoutputtests.sh
-
-      - run:
-          name: runsearchtestslimited.sh
-          command: cd cpp && ./runsearchtestslimited.sh
-
-      # TODO(adam): these search tests may take too long...
-      - run:
-          name: runsearchtestsfp16.sh
-          command: cd cpp && ./runsearchtestsfp16.sh
-
-      - run:
-          name: runsearchtests.sh
-          command: cd cpp && ./runsearchtests.sh
 
       - store_artifacts:
           path: /tmp/resource-usage

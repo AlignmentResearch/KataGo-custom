@@ -566,3 +566,8 @@ int MainCmds::runsleeptest(const vector<string>& args) {
   return 0;
 
 }
+
+int MainCmds::runconfigtests(const vector<string>& args) {
+  Tests::runConfigTests(args);
+  return 0;
+}

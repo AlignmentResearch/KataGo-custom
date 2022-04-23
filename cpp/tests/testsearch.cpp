@@ -2761,9 +2761,7 @@ void Tests::runSearchTests(const string& modelFile, bool inputsNHWC, bool useNHW
   cout << "Running search tests" << endl;
   NeuralNet::globalInitialize();
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   NNEvaluator* nnEval = startNNEval(modelFile,logger,"",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,symmetry,inputsNHWC,useNHWC,useFP16,false,false);
   runBasicPositions(nnEval, logger);
@@ -2777,9 +2775,7 @@ void Tests::runSearchTestsV3(const string& modelFile, bool inputsNHWC, bool useN
   cout << "Running search tests specifically for v3 or later nets" << endl;
   NeuralNet::globalInitialize();
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   NNEvaluator* nnEval = startNNEval(modelFile,logger,"",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,symmetry,inputsNHWC,useNHWC,useFP16,false,false);
   NNEvaluator* nnEval11 = startNNEval(modelFile,logger,"",11,11,symmetry,inputsNHWC,useNHWC,useFP16,false,false);
@@ -2797,9 +2793,7 @@ void Tests::runSearchTestsV8(const string& modelFile, bool inputsNHWC, bool useN
   cout << "Running search tests introduced after v8 nets" << endl;
   NeuralNet::globalInitialize();
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   NNEvaluator* nnEval;
   NNEvaluator* nnEval19Exact;
@@ -2845,10 +2839,7 @@ void Tests::runNNLessSearchTests() {
   //Placeholder, doesn't actually do anything since we have debugSkipNeuralNet = true
   string modelFile = "/dev/null";
 
-  Logger logger;
-  logger.setLogToStdout(false);
-  logger.setLogTime(false);
-  logger.addOStream(cout);
+  Logger logger(nullptr, true, false, false);
 
   {
     cout << "===================================================================" << endl;
@@ -4227,9 +4218,7 @@ void Tests::runNNOnTinyBoard(const string& modelFile, bool inputsNHWC, bool useN
   Rules rules = Rules::getTrompTaylorish();
   BoardHistory hist(board,nextPla,rules,0);
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   NNEvaluator* nnEval = startNNEval(modelFile,logger,"",6,6,symmetry,inputsNHWC,useNHWC,useFP16,false,false);
 
@@ -4270,9 +4259,7 @@ void Tests::runNNSymmetries(const string& modelFile, bool inputsNHWC, bool useNH
   Rules rules = Rules::getTrompTaylorish();
   BoardHistory hist(board,nextPla,rules,0);
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   NNEvaluator* nnEval = startNNEval(modelFile,logger,"",13,13,0,inputsNHWC,useNHWC,useFP16,false,false);
   for(int symmetry = 0; symmetry<8; symmetry++) {
@@ -4304,10 +4291,7 @@ void Tests::runNNOnManyPoses(const string& modelFile, bool inputsNHWC, bool useN
 
   CompactSgf* sgf = CompactSgf::parse(sgfStr);
 
-  Logger logger;
-  logger.setLogToStdout(false);
-  logger.setLogToStderr(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, false, true, false);
 
   int nnXLen = 19;
   int nnYLen = 19;
@@ -4377,10 +4361,7 @@ STRUCT_NAMED_TRIPLE(Board,board,BoardHistory,hist,Player,nextPla,NNBatchingTestI
 
 void Tests::runNNBatchingTest(const string& modelFile, bool inputsNHWC, bool useNHWC, bool useFP16) {
   TestCommon::overrideForBackends(inputsNHWC, useNHWC);
-  Logger logger;
-  logger.setLogToStdout(false);
-  logger.setLogToStderr(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, false, true, false);
 
   const int nnXLen = 19;
   const int nnYLen = 19;

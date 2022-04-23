@@ -319,9 +319,7 @@ int MainCmds::runtinynntests(const vector<string>& args) {
   Board::initHash();
   ScoreValue::initTables();
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   ConfigParser cfg;
   {
@@ -372,9 +370,7 @@ int MainCmds::runnnevalcanarytests(const vector<string>& args) {
   Board::initHash();
   ScoreValue::initTables();
 
-  Logger logger;
-  logger.setLogToStdout(true);
-  logger.setLogTime(false);
+  Logger logger(nullptr, true, false, false);
 
   ConfigParser cfg(cfgFile);
   Rand seedRand;
@@ -425,8 +421,7 @@ int MainCmds::runbeginsearchspeedtest(const vector<string>& args) {
   }
 
   Rand rand;
-  Logger logger;
-  logger.setLogToStdout(true);
+  Logger logger(nullptr, true);
 
   NNEvaluator* nnEval = NULL;
   const bool loadKomiFromCfg = false;

@@ -58,33 +58,30 @@ bool Logger::isLoggingToStderr() const {
 }
 
 void Logger::setLogToStdout(bool b, bool afterCreation) {
-  if(afterCreation && b && !logToStdout && !logHeader.empty()) {
-    lock_guard<std::mutex> lock(mutex);
-    time_t time = DateTime::getNow();
-    writeLocked(logHeader, true, cout, time);
-  }
+  if(afterCreation && b && !logToStdout && !logHeader.empty())
+    writeAcquireLock(logHeader, cout);
+
   logToStdout = b;
 }
+
 void Logger::setLogToStderr(bool b, bool afterCreation) {
-  if(afterCreation && b && !logToStderr && !logHeader.empty()) {
-    lock_guard<std::mutex> lock(mutex);
-    time_t time = DateTime::getNow();
-    writeLocked(logHeader, true, cerr, time);
-  }
+  if(afterCreation && b && !logToStderr && !logHeader.empty())
+    writeAcquireLock(logHeader, cerr);
+
   logToStderr = b;
 }
+
 void Logger::setLogTime(bool b) {
   logTime = b;
 }
+
 void Logger::addOStream(ostream& out, bool afterCreation) {
   ostreams.push_back(&out);
 
-  if(afterCreation && !logHeader.empty()) {
-    lock_guard<std::mutex> lock(mutex);
-    time_t time = DateTime::getNow();
-    writeLocked(logHeader, true, out, time);
-  }
+  if(afterCreation && !logHeader.empty())
+    writeAcquireLock(logHeader, out);
 }
+
 void Logger::addFile(const string& file, bool afterCreation) {
   if(file == "")
     return;
@@ -101,11 +98,8 @@ void Logger::addFile(const string& file, bool afterCreation) {
   }
   files.push_back(out);
 
-  if(afterCreation && !logHeader.empty()) {
-    lock_guard<std::mutex> lock(mutex);
-    time_t time = DateTime::getNow();
-    writeLocked(logHeader, true, *out, time);
-  }
+  if(afterCreation && !logHeader.empty())
+    writeAcquireLock(logHeader, *out);
 }
 
 void Logger::write(const string& str, bool endLine) {
@@ -135,6 +129,13 @@ void Logger::writeLocked(const std::string &str, bool endLine, std::ostream &out
   if(logTime) {DateTime::writeTimeToStream(out, timeFormat, time); out << str; }
   else out << ": " << str;
   if(endLine) out << std::endl; else out << std::flush;
+}
+
+void Logger::writeAcquireLock(const std::string &str, std::ostream &out)
+{
+  lock_guard<std::mutex> lock(mutex);
+  time_t time = DateTime::getNow();
+  writeLocked(str, true, out, time);
 }
 
 void Logger::write(const string& str) {

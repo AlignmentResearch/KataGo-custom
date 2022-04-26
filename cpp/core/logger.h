@@ -12,7 +12,10 @@ class ConfigParser;
 
 class Logger {
  public:
-  // TODO: Logger(ConfigFile) for proper setup and values logging
+  // if cfg is specified, and it has values related to logging,
+  // they take preference over other specified options.
+  // Please use setLogTo* methods to override the config values
+  // after logger construction
   Logger(ConfigParser *cfg = nullptr, bool logToStdout = false, bool logToStderr = false, bool logTime = true);
   ~Logger();
 
@@ -49,6 +52,7 @@ class Logger {
 
   void write(const std::string& str, bool endLine);
   void writeLocked(const std::string& str, bool endLine, std::ostream& out, const time_t& time);
+  void writeAcquireLock(const std::string& str, std::ostream& out);
 };
 
 class LogBuf final : public std::stringbuf {

@@ -391,7 +391,7 @@ int MainCmds::demoplay(const vector<string>& args) {
     return 1;
   }
 
-  Logger logger(nullptr);
+  Logger logger(&cfg);
   logger.addFile(logFile);
 
   logger.write("Engine starting...");
@@ -990,7 +990,7 @@ int MainCmds::dataminesgfs(const vector<string>& args) {
 
   MakeDir::make(outDir);
 
-  Logger logger(nullptr, true);
+  Logger logger(&cfg, true);
   logger.addFile(outDir + "/" + "log.log");
   for(const string& arg: args)
     logger.write(string("Command: ") + arg);
@@ -1810,7 +1810,7 @@ int MainCmds::trystartposes(const vector<string>& args) {
     return 1;
   }
 
-  Logger logger(nullptr, true);
+  Logger logger(&cfg, true);
 
   SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_ANALYSIS);
   //Ignore temperature, noise
@@ -1967,7 +1967,7 @@ int MainCmds::viewstartposes(const vector<string>& args) {
   }
 
   Rand rand;
-  Logger logger(nullptr, true);
+  Logger logger(&cfg, true);
 
   Rules rules;
   AsyncBot* bot = NULL;
@@ -2113,7 +2113,7 @@ int MainCmds::sampleinitializations(const vector<string>& args) {
   }
 
   Rand rand;
-  Logger logger(nullptr, true);
+  Logger logger(&cfg, true);
 
   NNEvaluator* nnEval = NULL;
   if(cfg.getFileName() != "") {

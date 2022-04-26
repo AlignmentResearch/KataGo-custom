@@ -158,7 +158,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   Logger logger(&cfg);
   //Log to random file name to better support starting/stopping as well as multiple parallel runs
   logger.addFile(outputDir + "/log" + DateTime::getCompactDateTimeString() + "-" + Global::uint64ToHexString(seedRand.nextUInt64()) + ".log");
-  bool logToStdout = cfg.getBool("logToStdout");
 
   logger.write(string(victimplay ? "Victim" : "Self") + " Play Engine starting...");
   logger.write(string("Git revision: ") + Version::getGitRevision());
@@ -208,7 +207,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   //Done loading!
   //------------------------------------------------------------------------------------
   logger.write("Loaded all config stuff, starting play");
-  if(!logToStdout)
+  if(!logger.isLoggingToStdout())
     cout << "Loaded all config stuff, starting play" << endl;
 
   if(!std::atomic_is_lock_free(&shouldStop))

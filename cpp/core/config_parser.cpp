@@ -91,17 +91,17 @@ void ConfigParser::initializeInternal(istream& in) {
 }
 
 void ConfigParser::processIncludedFile(const std::string &fname) {
-  if(fname == fileName || find(includedFiles.begin(), includedFiles.end(), fname) != includedFiles.end()) {
-    throw ConfigParsingError("Circular or multiple inclusion of the same file: '" + fname + "'" + lineAndFileInfo());
-  }
-  includedFiles.push_back(fname);
-  curFilename = fname;
-
   string fpath;
   for(const auto &p: baseDirs) {
     fpath += p;
   }
   fpath += fname;
+
+  if(fpath == fileName || find(includedFiles.begin(), includedFiles.end(), fpath) != includedFiles.end()) {
+    throw ConfigParsingError("Circular or multiple inclusion of the same file: '" + fpath + "'" + lineAndFileInfo());
+  }
+  includedFiles.push_back(fpath);
+  curFilename = fpath;
 
   string baseDir = extractBaseDir(fname);
   if(!baseDir.empty()) {

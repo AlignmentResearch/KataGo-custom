@@ -12,6 +12,13 @@ then
     echo "USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper"
     exit 0
 fi
+
+if [[ -z "${GITROOTDIR}" ]]; then
+   GITROOTDIR="$(git rev-parse --show-toplevel)"
+fi
+
+GITROOTDIR="$(realpath "$GITROOTDIR")"
+
 NAMEPREFIX="$1"
 shift
 BASEDIRRAW="$1"
@@ -24,8 +31,6 @@ BATCHSIZE="$1"
 shift
 USEGATING="$1"
 shift
-
-GITROOTDIR="$(git rev-parse --show-toplevel)"
 
 basedir="$(realpath "$BASEDIRRAW")"
 tmpdir="$(realpath "$TMPDIRRAW")"

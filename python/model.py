@@ -6,6 +6,14 @@ import numpy as np
 
 from board import Board
 
+# workaround for making the placeholders work in tf 2.x
+# see https://stackoverflow.com/questions/56561734/runtimeerror-tf-placeholder-is-not-compatible-with-eager-execution
+if tf.__version__[0] == '1':
+  from tensorflow.nn import softmax_cross_entropy_with_logits_v2
+else:
+  tf.compat.v1.disable_eager_execution()
+  from tensorflow.compat.v1.nn import softmax_cross_entropy_with_logits_v2
+
 #Feature extraction functions-------------------------------------------------------------------
 
 class Model:
@@ -117,14 +125,22 @@ class Model:
     self.build_model(config,placeholders)
 
   def assert_batched_shape(self,name,tensor,shape):
+    if tf.__version__[0] == '1':
+      tensor_shape_vals = [int(tensor.shape[i+1].value) for i in range(len(shape))]
+    else:
+      tensor_shape_vals = [int(tensor.shape[i + 1]) for i in range(len(shape))]
     if (len(tensor.shape) != len(shape)+1 or
-        [int(tensor.shape[i+1].value) for i in range(len(shape))] != [int(x) for x in shape]):
+        tensor_shape_vals != [int(x) for x in shape]):
       raise Exception("%s should have shape %s after a batch dimension but instead it had shape %s" % (
         name, str(shape), str([str(x.value) for x in tensor.shape])))
 
   def assert_shape(self,name,tensor,shape):
+    if tf.__version__[0] == '1':
+      tensor_shape_vals = [int(x.value) for x in tensor.shape]
+    else:
+      tensor_shape_vals = [int(x) for x in tensor.shape]
     if (len(tensor.shape) != len(shape) or
-        [int(x.value) for x in tensor.shape] != [int(x) for x in shape]):
+        tensor_shape_vals != [int(x) for x in shape]):
       raise Exception("%s should have shape %s but instead it had shape %s" % (
         name, str(shape), str([str(x.value) for x in tensor.shape])))
 
@@ -509,28 +525,35 @@ class Model:
       self.lr_adjusted_variables[name] = factor
 
   def batchnorm_and_mask(self,name,tensor,mask,mask_sum,use_gamma_in_fixup=False):
+    if tf.__version__[0] == '1':
+      tensor_shape_val_last = tensor.shape[-1].value
+      tensor_shape_val_3 = tensor.shape[3].value
+    else:
+      tensor_shape_val_last = tensor.shape[-1]
+      tensor_shape_val_3 = tensor.shape[3]
+
     if self.use_fixup:
-      self.batch_norms[name] = (tensor.shape[-1].value,1e-20,True,use_gamma_in_fixup,self.use_fixup)
+      self.batch_norms[name] = (tensor_shape_val_last,1e-20,True,use_gamma_in_fixup,self.use_fixup)
       if use_gamma_in_fixup:
-        gamma = self.weight_variable_init_constant(name+"/gamma", [tensor.shape[3].value], 1.0)
-        beta = self.weight_variable_init_constant(name+"/beta", [tensor.shape[3].value], 0.0, reg="tiny")
+        gamma = self.weight_variable_init_constant(name+"/gamma", [tensor_shape_val_3], 1.0)
+        beta = self.weight_variable_init_constant(name+"/beta", [tensor_shape_val_3], 0.0, reg="tiny")
         return (tensor * gamma + beta) * mask
       else:
-        beta = self.weight_variable_init_constant(name+"/beta", [tensor.shape[3].value], 0.0, reg="tiny")
+        beta = self.weight_variable_init_constant(name+"/beta", [tensor_shape_val_3], 0.0, reg="tiny")
         return (tensor + beta) * mask
 
     epsilon = 0.001
     has_bias = True
     has_scale = False
-    self.batch_norms[name] = (tensor.shape[-1].value,epsilon,has_bias,has_scale,self.use_fixup)
+    self.batch_norms[name] = (tensor_shape_val_last,epsilon,has_bias,has_scale,self.use_fixup)
 
-    num_channels = tensor.shape[3].value
+    num_channels = tensor_shape_val_3
     collections = [tf.compat.v1.GraphKeys.GLOBAL_VARIABLES,tf.compat.v1.GraphKeys.MODEL_VARIABLES,tf.compat.v1.GraphKeys.MOVING_AVERAGE_VARIABLES]
 
     #Define variables to keep track of the mean and variance
     moving_mean = tf.compat.v1.get_variable(initializer=tf.zeros([num_channels]),name=(name+"/moving_mean"),trainable=False,collections=collections)
     moving_var = tf.compat.v1.get_variable(initializer=tf.ones([num_channels]),name=(name+"/moving_variance"),trainable=False,collections=collections)
-    beta = self.weight_variable_init_constant(name+"/beta", [tensor.shape[3].value], 0.0, reg=False)
+    beta = self.weight_variable_init_constant(name+"/beta", [tensor_shape_val_3], 0.0, reg=False)
 
     #This is the mean, computed only over exactly the areas of the mask, weighting each spot equally,
     #even across different elements in the batch that might have different board sizes.
@@ -932,17 +955,29 @@ class Model:
     assert(hist_matrix_base.dtype == tf.float32)
     assert(hist_matrix_builder.dtype == tf.float32)
     assert(len(hist_matrix_builder.shape) == 3)
-    assert(hist_matrix_builder.shape[0].value == 5)
-    assert(hist_matrix_builder.shape[1].value == self.num_bin_input_features)
-    assert(hist_matrix_builder.shape[2].value == self.num_bin_input_features)
+    if tf.__version__[0] == '1':
+      assert(hist_matrix_builder.shape[0].value == 5)
+      assert(hist_matrix_builder.shape[1].value == self.num_bin_input_features)
+      assert(hist_matrix_builder.shape[2].value == self.num_bin_input_features)
+    else:
+      assert (hist_matrix_builder.shape[0] == 5)
+      assert (hist_matrix_builder.shape[1] == self.num_bin_input_features)
+      assert (hist_matrix_builder.shape[2] == self.num_bin_input_features)
 
     hist_filter_matrix = hist_matrix_base + tf.tensordot(include_history, hist_matrix_builder, axes=[[1],[0]]) #[batch,move] * [move,inc,outc] = [batch,inc,outc]
     cur_layer = tf.reshape(cur_layer,[-1,self.pos_len*self.pos_len,self.num_bin_input_features]) #[batch,xy,inc]
     cur_layer = tf.matmul(cur_layer,hist_filter_matrix) #[batch,xy,inc] * [batch,inc,outc] = [batch,xy,outc]
     cur_layer = tf.reshape(cur_layer,[-1,self.pos_len,self.pos_len,self.num_bin_input_features])
 
-    assert(include_history.shape[1].value == 5)
-    transformed_global_inputs = global_inputs * tf.pad(include_history, [(0,0),(0,self.num_global_input_features - include_history.shape[1].value)], constant_values=1.0)
+    if tf.__version__[0] == '1':
+      assert(include_history.shape[1].value == 5)
+      transformed_global_inputs = global_inputs * tf.pad(include_history, [(0, 0), (
+      0, self.num_global_input_features - include_history.shape[1].value)], constant_values=1.0)
+    else:
+      assert (include_history.shape[1] == 5)
+      transformed_global_inputs = global_inputs * tf.pad(include_history, [(0, 0), (
+      0, self.num_global_input_features - include_history.shape[1])], constant_values=1.0)
+
 
     self.transformed_bin_inputs = cur_layer
     self.transformed_global_inputs = transformed_global_inputs
@@ -1347,24 +1382,24 @@ class Target_vars:
 
 
     self.policy_loss_unreduced = self.policy_target_weight * (
-      tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.policy_target, logits=policy_output[:,:,0])
+      softmax_cross_entropy_with_logits_v2(labels=self.policy_target, logits=policy_output[:,:,0])
     )
     self.policy1_loss_unreduced = self.policy_target_weight1 * 0.15 * (
-      tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.policy_target1, logits=policy_output[:,:,1])
+      softmax_cross_entropy_with_logits_v2(labels=self.policy_target1, logits=policy_output[:,:,1])
     )
 
-    self.value_loss_unreduced = 1.20 * tf.nn.softmax_cross_entropy_with_logits_v2(
+    self.value_loss_unreduced = 1.20 * softmax_cross_entropy_with_logits_v2(
       labels=self.value_target,
       logits=value_output
     )
 
     self.td_value_loss_unreduced = tf.constant([0.55,0.55,0.15],dtype=tf.float32) * (
-      tf.nn.softmax_cross_entropy_with_logits_v2(
+      softmax_cross_entropy_with_logits_v2(
         labels=self.td_value_target,
         logits=td_value_prediction
       ) -
       # Subtract out the entropy, so as to get loss 0 at perfect prediction
-      tf.nn.softmax_cross_entropy_with_logits_v2(
+      softmax_cross_entropy_with_logits_v2(
         labels=self.td_value_target,
         logits=tf.math.log(self.td_value_target + 1.0e-30)
       )
@@ -1382,7 +1417,7 @@ class Target_vars:
       )
     )
     self.scorebelief_pdf_loss_unreduced = 0.020 * self.ownership_target_weight * (
-      tf.nn.softmax_cross_entropy_with_logits_v2(
+      softmax_cross_entropy_with_logits_v2(
         labels=self.scorebelief_target,
         logits=scorebelief_output
       )
@@ -1393,7 +1428,7 @@ class Target_vars:
     #Not unlike the way that policy and value loss are also equal-weighted by batch element.
     self.ownership_loss_unreduced = 1.5 * self.ownership_target_weight * (
       tf.reduce_sum(
-        tf.nn.softmax_cross_entropy_with_logits_v2(
+        softmax_cross_entropy_with_logits_v2(
           labels=tf.stack([(1+self.ownership_target)/2,(1-self.ownership_target)/2],axis=3),
           logits=tf.stack([ownership_output,-ownership_output],axis=3)
         ) * tf.reshape(model.mask_before_symmetry,[-1,model.pos_len,model.pos_len]),
@@ -1446,7 +1481,7 @@ class Target_vars:
 
     self.seki_loss_unreduced = (
       tf.reduce_sum(
-        tf.nn.softmax_cross_entropy_with_logits_v2(
+        softmax_cross_entropy_with_logits_v2(
           labels=tf.stack([1.0-tf.square(self.seki_target), tf.nn.relu(self.seki_target), tf.nn.relu(-self.seki_target)],axis=3),
           logits=seki_output[:,:,:,0:3]
         ) * tf.reshape(model.mask_before_symmetry,[-1,model.pos_len,model.pos_len]),
@@ -1455,7 +1490,7 @@ class Target_vars:
     )
     self.seki_loss_unreduced = self.seki_loss_unreduced + 0.5 * (
       tf.reduce_sum(
-        tf.nn.softmax_cross_entropy_with_logits_v2(
+        softmax_cross_entropy_with_logits_v2(
           labels=tf.stack([unowned_target, owned_target],axis=3),
           logits=tf.stack([seki_output[:,:,:,3],tf.zeros_like(self.ownership_target)],axis=3)
         ) * tf.reshape(model.mask_before_symmetry,[-1,model.pos_len,model.pos_len]),
@@ -1592,10 +1627,13 @@ class Metrics:
     #Training results
     policy_target_idxs = tf.argmax(target_vars.policy_target, 1)
     self.top1_prediction = tf.equal(tf.argmax(model.policy_output[:,:,0], 1), policy_target_idxs)
-    self.top4_prediction = tf.nn.in_top_k(model.policy_output[:,:,0],policy_target_idxs,4)
+    if tf.__version__[0] == '1':
+      self.top4_prediction = tf.nn.in_top_k(model.policy_output[:,:,0],policy_target_idxs,4)
+    else:
+      self.top4_prediction = tf.math.in_top_k(policy_target_idxs, model.policy_output[:, :, 0], 4)
     self.accuracy1_unreduced = tf.cast(self.top1_prediction, tf.float32)
     self.accuracy4_unreduced = tf.cast(self.top4_prediction, tf.float32)
-    self.value_entropy_unreduced = tf.nn.softmax_cross_entropy_with_logits_v2(labels=tf.nn.softmax(model.value_output,axis=1), logits=model.value_output)
+    self.value_entropy_unreduced = softmax_cross_entropy_with_logits_v2(labels=tf.nn.softmax(model.value_output,axis=1), logits=model.value_output)
     self.value_conf_unreduced = 4 * tf.square(tf.nn.sigmoid(model.value_output[:,0] - model.value_output[:,1]) - 0.5)
     self.policy_target_entropy_unreduced = target_vars.policy_target_weight * (
       -tf.reduce_sum(target_vars.policy_target * tf.math.log(target_vars.policy_target+(1e-20)), axis=1)
@@ -1646,8 +1684,12 @@ class ModelUtils:
     for variable in tf.compat.v1.trainable_variables():
       shape = variable.get_shape()
       variable_parameters = 1
-      for dim in shape:
-        variable_parameters *= dim.value
+      if tf.__version__[0] == '1':
+        for dim in shape:
+          variable_parameters *= dim.value
+      else:
+        for dim in shape:
+          variable_parameters *= dim
       total_parameters += variable_parameters
       logf("Model variable: %s, %d parameters" % (variable.name,variable_parameters))
 

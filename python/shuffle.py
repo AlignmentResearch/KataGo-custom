@@ -15,7 +15,11 @@ import multiprocessing
 
 import numpy as np
 import tensorflow as tf
-from tensorflow.python_io import TFRecordOptions,TFRecordCompressionType,TFRecordWriter
+
+if tf.__version__[0] == '1':
+  from tensorflow.python_io import TFRecordOptions,TFRecordCompressionType,TFRecordWriter
+else:
+  from tensorflow.compat.v1.python_io import TFRecordOptions, TFRecordCompressionType, TFRecordWriter
 
 import tfrecordio
 

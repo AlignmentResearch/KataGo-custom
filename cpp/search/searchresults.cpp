@@ -199,43 +199,73 @@ bool Search::getPlaySelectionValues(
     }
   }
 
-  const NNOutput* nnOutput = node.getNNOutput();
-
   //If we have no children, then use the policy net directly. Only for the root, though, if calling this on any subtree
   //then just require that we have children, for implementation simplicity (since it requires that we have a board and a boardhistory too)
   //(and we also use isAllowedRootMove and avoidMoveUntilByLoc)
   if(numChildren == 0) {
-    if(nnOutput == NULL || &node != rootNode || !allowDirectPolicyMoves)
+    if(&node != rootNode || !allowDirectPolicyMoves)
       return false;
-
-    bool obeyAllowedRootMove = true;
-    while(true) {
-      for(int movePos = 0; movePos<policySize; movePos++) {
-        Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
-        const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
-        double policyProb = policyProbs[movePos];
-        if(!rootHistory.isLegal(rootBoard,moveLoc,rootPla) || policyProb < 0 || (obeyAllowedRootMove && !isAllowedRootMove(moveLoc)))
-          continue;
-        const std::vector<int>& avoidMoveUntilByLoc = rootPla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
-        if(avoidMoveUntilByLoc.size() > 0) {
-          assert(avoidMoveUntilByLoc.size() >= Board::MAX_ARR_SIZE);
-          int untilDepth = avoidMoveUntilByLoc[moveLoc];
-          if(untilDepth > 0)
-            continue;
-        }
-        locs.push_back(moveLoc);
-        playSelectionValues.push_back(policyProb);
-        numChildren++;
-      }
-      //Still no children? Then at this point just ignore isAllowedRootMove.
-      if(numChildren == 0 && obeyAllowedRootMove) {
-        obeyAllowedRootMove = false;
-        continue;
-      }
-      break;
-    }
+    return getPlaySelectionValuesWithDirectPolicy(
+      node, locs, playSelectionValues, scaleMaxToAtLeast
+    );
   }
 
+  return clipAndScalePlaySelectionValues(
+    playSelectionValues, scaleMaxToAtLeast, numChildren
+  );
+}
+
+bool Search::getPlaySelectionValuesWithDirectPolicy(
+  const SearchNode& node,
+  std::vector<Loc>& locs,
+  std::vector<double>& playSelectionValues,
+  double scaleMaxToAtLeast
+) const {
+  locs.clear();
+  playSelectionValues.clear();
+
+  const NNOutput* nnOutput = node.getNNOutput();
+  if(nnOutput == NULL)
+    return false;
+
+  int numChildren = 0;
+  bool obeyAllowedRootMove = true;
+  while(true) {
+    for(int movePos = 0; movePos<policySize; movePos++) {
+      Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
+      const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
+      double policyProb = policyProbs[movePos];
+      if(!rootHistory.isLegal(rootBoard,moveLoc,rootPla) || policyProb < 0 || (obeyAllowedRootMove && !isAllowedRootMove(moveLoc)))
+        continue;
+      const std::vector<int>& avoidMoveUntilByLoc = rootPla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
+      if(avoidMoveUntilByLoc.size() > 0) {
+        assert(avoidMoveUntilByLoc.size() >= Board::MAX_ARR_SIZE);
+        int untilDepth = avoidMoveUntilByLoc[moveLoc];
+        if(untilDepth > 0)
+          continue;
+      }
+      locs.push_back(moveLoc);
+      playSelectionValues.push_back(policyProb);
+      numChildren++;
+    }
+    //Still no children? Then at this point just ignore isAllowedRootMove.
+    if(numChildren == 0 && obeyAllowedRootMove) {
+      obeyAllowedRootMove = false;
+      continue;
+    }
+    break;
+  }
+
+  return clipAndScalePlaySelectionValues(
+    playSelectionValues, scaleMaxToAtLeast, numChildren
+  );
+}
+
+bool Search::clipAndScalePlaySelectionValues(
+  std::vector<double>& playSelectionValues,
+  const double scaleMaxToAtLeast,
+  const int numChildren
+) const {
   //Might happen absurdly rarely if we both have no children and don't properly have an nnOutput
   //but have a hash collision or something so we "found" an nnOutput anyways.
   //Could also happen if we have avoidMoveUntilByLoc pruning all the allowed moves.
@@ -387,7 +417,7 @@ bool Search::getNodeRawNNValues(const SearchNode& node, ReportedSearchValues& va
   if(winLossValue < -1.0) winLossValue = -1.0;
   values.winLossValue = winLossValue;
 
-  values.weight = computeWeightFromNNOutput(nnOutput);
+  values.weight = computeNodeWeight(node);
   values.visits = 1;
 
   return true;
@@ -1328,7 +1358,7 @@ std::pair<double,double> Search::getAverageShorttermWLAndScoreErrorHelper(const 
   double scoreErrorSum = 0.0;
   double weightSum = 0.0;
   {
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     wlErrorSum += nnOutput->shorttermWinlossError * thisNodeWeight;
     scoreErrorSum += nnOutput->shorttermScoreError * thisNodeWeight;
     weightSum += thisNodeWeight;
@@ -1402,7 +1432,7 @@ bool Search::getSharpScore(const SearchNode* node, double& ret) const {
     if(nnOutput == NULL)
       return false;
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1475,7 +1505,7 @@ double Search::getSharpScoreHelper(const SearchNode* node, double policyProbsBuf
   //Also add in the direct evaluation of this node.
   {
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1535,7 +1565,7 @@ double Search::traverseTreeWithOwnershipAndSelfWeight(
   const SearchChildPointer* children = node->getChildren(childrenCapacity);
 
   double actualWeightFromChildren;
-  double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+  double thisNodeWeight = computeNodeWeight(*node);
   if(childrenCapacity <= 8) {
     double childWeightBuf[8];
     actualWeightFromChildren = traverseTreeWithOwnershipAndSelfWeightHelper(

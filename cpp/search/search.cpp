@@ -914,10 +914,17 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   }
 }
 
-double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
-  double rawHalflives = (rootHistory.initialTurnNumber + rootHistory.moveHistory.size()) / halflife;
+double Search::calculateTemperature(
+  double halflife, double earlyValue, double value, int numMoves
+) const {
+  double rawHalflives = numMoves / halflife;
   double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
   return value + (earlyValue - value) * pow(0.5, halflives);
+}
+
+double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
+  const int numMoves = rootHistory.initialTurnNumber + rootHistory.moveHistory.size();
+  return calculateTemperature(halflife, earlyValue, value, numMoves);
 }
 
 Loc Search::runWholeSearchAndGetMove(Player movePla) {
@@ -1995,8 +2002,30 @@ void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int
 
 
 shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const {
-  if(!isRoot)
-    return NULL;
+  if (
+      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::MCTS
+   || (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+       && !searchParams.EMCTS1_noiseOppNodes)
+  ) {
+    // Regular MCTS behavior:
+    //   - add noise iff we are the root
+    if (isRoot) { /* noise */ }
+    else { return NULL; /* no noise */ }
+  } else if (
+      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+   && searchParams.EMCTS1_noiseOppNodes
+  ) {
+    // EMCTS1 adjusement (when noiseOppNodesDuringEMCTS1 = true):
+    //   - if we are the root, add noise
+    //   - if we are a different color than the root, add noise
+    //   - otherwise don't add noise
+    if (isRoot) { /* noise */ }
+    else if (thread.pla != rootNode->nextPla) { /* noise */ }
+    else { return NULL; /* no noise */ }
+  } else {
+    ASSERT_UNREACHABLE;
+  }
+
   if(!searchParams.rootNoiseEnabled && searchParams.rootPolicyTemperature == 1.0 && searchParams.rootPolicyTemperatureEarly == 1.0 && rootHintLoc == Board::NULL_LOC)
     return NULL;
   if(oldNNOutput == NULL)
@@ -2705,7 +2734,8 @@ double Search::getFpuValueForChildrenAssumeVisited(
   double utilitySqAvg = node.stats.utilitySqAvg.load(std::memory_order_acquire);
 
   assert(visits > 0);
-  assert(weightSum > 0.0);
+  assert(weightSum >= 0.0);
+  assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1);
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;
   double variancePrior = searchParams.cpuctUtilityStdevPrior * searchParams.cpuctUtilityStdevPrior;
@@ -2833,6 +2863,46 @@ void Search::selectBestChildToDescend(
   }
 
   const std::vector<int>& avoidMoveUntilByLoc = thread.pla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
+
+  // If we are searching with EMCTS1 and are on an opponents move,
+  // we sample directly from the opponents policy.
+  if (
+    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+    && node.nextPla != rootNode->nextPla
+  ) {
+    // EMCTS1 does not support avoidMoveUntilByLoc.
+    assert(avoidMoveUntilByLoc.size() == 0);
+
+    // bestChildMoveLoc is sampled directly from policy
+    // (with an appropriately calcuated temperature).
+    {
+      vector<Loc> locs;
+      vector<double> playSelectionValues;
+      getPlaySelectionValuesWithDirectPolicy(node, locs, playSelectionValues);
+      assert(locs.size() == playSelectionValues.size());
+
+      const double temperature = calculateTemperature(
+        searchParams.chosenMoveTemperatureHalflife,
+        searchParams.chosenMoveTemperatureEarly,
+        searchParams.chosenMoveTemperature,
+        thread.history.initialTurnNumber + thread.history.moveHistory.size()
+      );
+      const uint32_t idxChosen = chooseIndexWithTemperature(
+        thread.rand, playSelectionValues.data(), playSelectionValues.size(), temperature
+      );
+      bestChildMoveLoc = locs[idxChosen];
+    }
+
+    // Check if bestChildMoveLoc is an existing child node.
+    bestChildIdx = numChildrenFound;
+    for (int i = 0; i < numChildrenFound; i++) {
+      if (bestChildMoveLoc == children[i].getIfAllocated()->prevMoveLoc) {
+        bestChildIdx = i;
+        break;
+      }
+    }
+    return;
+  }
 
   //Try the new child with the best policy value
   Loc bestNewMoveLoc = Board::NULL_LOC;
@@ -3096,7 +3166,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       //desiredSelfWeight *= weightSum / (1.0-biasFactor) / std::max(0.001, (weightSum + desiredSelfWeight - desiredSelfWeight / (1.0-biasFactor)));
     }
 
-    double weight = computeWeightFromNNOutput(nnOutput);
+    double weight = computeNodeWeight(node);
     winLossValueSum += (winProb - lossProb) * weight;
     noResultValueSum += noResultProb * weight;
     scoreMeanSum += scoreMean * weight;
@@ -3367,12 +3437,23 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
   double scoreMean = (double)nnOutput->whiteScoreMean;
   double scoreMeanSq = (double)nnOutput->whiteScoreMeanSq;
   double lead = (double)nnOutput->whiteLead;
-  double weight = computeWeightFromNNOutput(nnOutput);
+  double weight = computeNodeWeight(node);
   addLeafValue(node,winProb-lossProb,noResultProb,scoreMean,scoreMeanSq,lead,weight,false,assumeNoExistingWeight);
 }
 
 
-double Search::computeWeightFromNNOutput(const NNOutput* nnOutput) const {
+double Search::computeNodeWeight(const SearchNode& node) const {
+  // If doing EMCTS1, we weight opponent nodes as zero.
+  if (
+    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+    && node.nextPla != rootNode->nextPla
+  ) {
+    return 0.0;
+  }
+
+  const NNOutput* nnOutput = node.getNNOutput();
+  assert(nnOutput != NULL);
+
   if(!searchParams.useUncertainty)
     return 1.0;
   if(!nnEvaluator->supportsShorttermError())

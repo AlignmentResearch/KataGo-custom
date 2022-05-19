@@ -42,7 +42,12 @@ struct Rules {
   static constexpr float MIN_USER_KOMI = -150.0f;
   static constexpr float MAX_USER_KOMI = 150.0f;
 
-  // Can be used to prevent one player from passing first
+  // Player(s) that can pass first.
+  // Can be one of P_NONE, P_BLACK, P_WHITE, or P_ANY.
+  //
+  // If a player is not the playerThatCanPassFirst, passing before the other
+  // player has passed is considered an illegal move. The only exception to
+  // this if the only legal move is to pass. In this case, passing is allowed.
   Player playerThatCanPassFirst;
 
   // TODO: Implement an alternate flag that allows passing after a certain

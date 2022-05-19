@@ -121,8 +121,17 @@ struct BoardHistory {
   //Requires that numMovesAgo < NUM_RECENT_BOARDS
   const Board& getRecentBoard(int numMovesAgo) const;
 
-  //Check if a move on the board is legal, taking into account the full game state and superko
+  //Check if a move on the board is legal
+  //Takes into account: full game state, superko, pass logic
   bool isLegal(const Board& board, Loc moveLoc, Player movePla) const;
+
+  //Check if there exists a legal (modulo passing) move that is not a pass.
+  bool existsNonPassingLegalMove(const Board& board, Player movePla) const;
+
+  //Check if a move on the board is legal
+  //Takes into account: full game state, superko
+  bool isLegalModuloPassing(const Board& board, Loc moveLoc, Player movePla) const;
+
   //Check if passing right now would end the current phase of play, or the entire game
   bool passWouldEndPhase(const Board& board, Player movePla) const;
   bool passWouldEndGame(const Board& board, Player movePla) const;

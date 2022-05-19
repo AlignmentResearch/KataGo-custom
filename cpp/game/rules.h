@@ -3,6 +3,7 @@
 
 #include "../core/global.h"
 #include "../core/hash.h"
+#include "../game/board.h"
 
 #include "../external/nlohmann_json/json.hpp"
 
@@ -41,6 +42,12 @@ struct Rules {
   static constexpr float MIN_USER_KOMI = -150.0f;
   static constexpr float MAX_USER_KOMI = 150.0f;
 
+  // Can be used to prevent one player from passing first
+  Player playerThatCanPassFirst;
+
+  // TODO: Implement an alternate flag that allows passing after a certain
+  //       number of turns have occurred.
+
   Rules();
   Rules(
     int koRule,
@@ -50,7 +57,8 @@ struct Rules {
     bool hasButton,
     int whiteHandicapBonusRule,
     bool friendlyPassOk,
-    float komi
+    float komi,
+    Player playerThatCanPassFirst = P_ANY
   );
   ~Rules();
 

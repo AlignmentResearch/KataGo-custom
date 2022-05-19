@@ -13,6 +13,9 @@ struct KoHashTable;
 struct BoardHistory {
   Rules rules;
 
+  // Used for handling firstColorAllowedToPass;
+  bool someoneHasPassed;
+
   //Chronological history of moves
   std::vector<Move> moveHistory;
   //Chronological history of hashes, including the latest board's hash.

@@ -2878,7 +2878,8 @@ void Search::selectBestChildToDescend(
     {
       vector<Loc> locs;
       vector<double> playSelectionValues;
-      getPlaySelectionValuesWithDirectPolicy(node, locs, playSelectionValues);
+      const bool suc = getPlaySelectionValuesWithDirectPolicy(thread, node, locs, playSelectionValues);
+      assert(suc);
       assert(locs.size() == playSelectionValues.size());
 
       const double temperature = calculateTemperature(

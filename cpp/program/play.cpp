@@ -2277,9 +2277,12 @@ FinishedGameData* GameRunner::runGame(
     SearchParams params = botSpecB.baseParams;
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,params,initialPosition,playSettings,otherGameProps,startPosSample);
     botSpecB.baseParams = params;
-    botSpecW.baseParams = params;
-  }
-  else {
+
+    // These are the only fields of baseParams mutated by createGame.
+    // If createGame is changed, this code needs to be re-checked for correctness.
+    botSpecW.baseParams.noResultUtilityForWhite = params.noResultUtilityForWhite;
+    botSpecW.baseParams.drawEquivalentWinsForWhite = params.drawEquivalentWinsForWhite;
+  } else {
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,initialPosition,playSettings,otherGameProps,startPosSample);
 
     bool rulesWereSupported;

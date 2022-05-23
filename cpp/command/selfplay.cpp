@@ -109,7 +109,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   ConfigParser cfg;
   string modelsDir;
   string outputDir;
-  string nnVictimFile;
+  string nnVictimPath;
   int64_t maxGamesTotal = ((int64_t)1) << 62;
   try {
     KataGoCommandLine cmd("Generate training data via self play.");
@@ -118,11 +118,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     TCLAP::ValueArg<string> modelsDirArg("","models-dir","Dir to poll and load models from",true,string(),"DIR");
     TCLAP::ValueArg<string> outputDirArg("","output-dir","Dir to output files",true,string(),"DIR");
     TCLAP::ValueArg<string> maxGamesTotalArg("","max-games-total","Terminate after this many games",false,string(),"NGAMES");
-    TCLAP::ValueArg<string> nnVictimFileArg("","nn-victim-file","Path to victim model",victimplay,string(),"VICTIM");
+    TCLAP::ValueArg<string> nnVictimPathArg("","nn-victim-path","Path to victim model(s)",victimplay,string(),"VICTIM");
     cmd.add(modelsDirArg);
     cmd.add(outputDirArg);
     cmd.add(maxGamesTotalArg);
-    cmd.add(nnVictimFileArg);
+    cmd.add(nnVictimPathArg);
     cmd.parseArgs(args);
 
     modelsDir = modelsDirArg.getValue();
@@ -141,7 +141,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     checkDirNonEmpty("models-dir",modelsDir);
     checkDirNonEmpty("output-dir",outputDir);
 
-    nnVictimFile = nnVictimFileArg.getValue();
+    nnVictimPath = nnVictimPathArg.getValue();
 
     cmd.getConfig(cfg);
   }
@@ -242,9 +242,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     logger.write("Loaded" + modelName + " neural net from: " + modelFile);
     return nnEval;
   };
-
-  NNEvaluator* victimNNEval = victimplay ?
-    loadNN("victim", nnVictimFile) : nullptr;
 
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
@@ -361,17 +358,45 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &advSearchParams,
     &gameSeedBase,
     &victimplay,
-    &victimNNEval
+    &nnVictimPath,
+    &loadNN
   ](int threadIdx) {
     auto shouldStopFunc = []() {
       return shouldStop.load();
     };
+
+    bool reloadVictims = false;
+    NNEvaluator* victimNNEval = nullptr;
+    if(victimplay) {
+      if(FileUtils::isDirectory(nnVictimPath)) {
+        reloadVictims = true;
+      } else {
+        victimNNEval = loadNN("victim", nnVictimPath);
+      }
+    }
 
     string prevModelName;
     Rand thisLoopSeedRand;
     while(true) {
       if(shouldStop.load())
         break;
+
+      if(reloadVictims) {
+        string modelName;
+        string modelFile;
+        string modelDir;
+        time_t modelTime;
+        bool foundModel = LoadModel::findLatestModel(
+              nnVictimPath, logger, modelName, modelFile, modelDir, modelTime, false);
+        if(foundModel && (!victimNNEval || modelName != victimNNEval->getModelFileName())) {
+          // all threads using victimNNEval should finish by now
+          // and it should be safe to delete the current evaluator.
+          // Makes sense to check it though
+          delete victimNNEval;
+          victimNNEval = loadNN(modelName, modelFile);
+        }
+      }
+
       NNEvaluator* nnEval = manager->acquireLatest();
       assert(nnEval != NULL);
 
@@ -402,6 +427,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       if (gameIdx >= maxGamesTotal) {
         // Do nothing.
       } else if(victimplay) {
+
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = runOneVictimplayGame(
@@ -442,6 +468,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       if(!shouldContinue)
         break;
     }
+
+    delete victimNNEval;
+    victimNNEval = nullptr;
 
     logger.write("Game loop thread " + Global::intToString(threadIdx) + " terminating");
   };
@@ -498,10 +527,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     modelLoadSleepVar.notify_all();
   }
   modelLoadLoopThread.join();
-
-  if (victimplay) {
-    delete victimNNEval;
-  }
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

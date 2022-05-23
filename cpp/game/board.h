@@ -127,6 +127,7 @@ struct Board
   static Hash128 ZOBRIST_SECOND_ENCORE_START_HASH[MAX_ARR_SIZE][4];
   static const Hash128 ZOBRIST_PASS_ENDS_PHASE;
   static const Hash128 ZOBRIST_GAME_IS_OVER;
+  static const Hash128 ZOBRIST_SOMEONE_HAS_PASSED;
 
   //Structs---------------------------------------
 

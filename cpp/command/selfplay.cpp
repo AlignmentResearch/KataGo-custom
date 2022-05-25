@@ -388,12 +388,13 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         time_t modelTime;
         bool foundModel = LoadModel::findLatestModel(
               nnVictimPath, logger, modelName, modelFile, modelDir, modelTime, false);
+        modelName = "victim-" + modelName;
         if(foundModel && (!victimNNEval || modelName != victimNNEval->getModelFileName())) {
           // all threads using victimNNEval should finish by now
           // and it should be safe to delete the current evaluator.
           // Makes sense to check it though
           delete victimNNEval;
-          victimNNEval = loadNN("victim-" + modelName, modelFile);
+          victimNNEval = loadNN(modelName, modelFile);
         }
       }
 

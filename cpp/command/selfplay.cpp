@@ -393,7 +393,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           // and it should be safe to delete the current evaluator.
           // Makes sense to check it though
           delete victimNNEval;
-          victimNNEval = loadNN(modelName, modelFile);
+          victimNNEval = loadNN("victim-" + modelName, modelFile);
         }
       }
 

@@ -388,6 +388,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         time_t modelTime;
         bool foundModel = LoadModel::findLatestModel(
               nnVictimPath, logger, modelName, modelFile, modelDir, modelTime, false);
+        if (modelName == "random") {
+          logger.write("No victims available yet, waiting 30 sec...");
+          std::this_thread::sleep_for(std::chrono::seconds(30));
+          continue;
+        }
         modelName = "victim-" + modelName;
         if(foundModel && (!victimNNEval || modelName != victimNNEval->getModelFileName())) {
           // all threads using victimNNEval should finish by now

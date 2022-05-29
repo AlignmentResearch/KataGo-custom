@@ -11,10 +11,19 @@ from sgfmill import sgf
 
 # format: victim name, conditions for moving on: win rate, diff score, diff score without komi, policy_loss
 curriculum_conf = [
-  ['kata1-b6c96-s41312768-d6061202.txt.gz', 75, None, None, None],
-  ['kata1-b40c256-s7186724608-d1743537710.bin.gz', 75, None, None, None],
-  ['g170-b30c320x2-s4824661760-d1229536699.bin.gz', 75, None, None, None]
+  ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, None, None, None],
+  ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, None, None, None],
+  ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, None, None, None]
 ]
+
+# for quick copy as a JSON
+'''
+[
+  ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, null, null, null],
+  ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, null, null, null],
+  ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, null, null, null]
+]
+'''
 
 
 class AdvGameInfo:

@@ -243,7 +243,7 @@ if __name__ == '__main__':
   parser.add_argument('-selfplay-dir', required=True, help='Directory with selfplay data')
   parser.add_argument('-input-models-dir', required=True, help='Input dir with victim model files')
   parser.add_argument('-output-models-dir', required=True, help='Output dir for adding new victims')
-  parser.add_argument('-games-for-compute', type=int, required=False, default=1000, help='Number of last games number for statistics computation')
+  parser.add_argument('-games-for-compute', type=int, required=False, default=1000, help='Number of last games for statistics computation')
   parser.add_argument('-checking-periodicity', type=int, required=False, default=60, help='Statistics computation periodicity in seconds')
 
   args = parser.parse_args()

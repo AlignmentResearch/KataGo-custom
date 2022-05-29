@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import json
 import shutil
 import time
 from threading import Thread
@@ -48,7 +49,7 @@ class PlayerStat:
 
   # check if adv_stat has a greater value of enabled criteria
   def check_if_gt(self, adv_stat) -> bool:
-    criteria = self.get_criteria()
+    criteria = self.get_stat_members()
     adv_vals = adv_stat.get_stat_members()
     for idx in range(len(criteria)):
       if criteria[idx] is not None and adv_vals[idx] > criteria[idx]:
@@ -160,7 +161,19 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int):
 
 
 class Curriculum:
-  def __init__(self, config, victims_input_dir, victims_output_dir):
+  def __init__(self, victims_input_dir, victims_output_dir, config=None, config_json=None, config_json_file=None):
+    if config_json_file is not None:
+      print("Curriculum: loading JSON config")
+      with open(config_json_file) as f:
+        config = json.load(f)
+    elif config_json is not None:
+      print("Curriculum: loading JSON string")
+      config = json.loads(config_json)
+    elif config is not None:
+      print("Using python list as a config")
+    else:
+      raise ValueError("Either config or config_json or config_json_file must be provided as a curriculum")
+
     if len(config) < 1:
       raise ValueError("Empty config for the curriculum play!")
 
@@ -175,6 +188,9 @@ class Curriculum:
       if not cond.can_be_victim_criteria():
         raise ValueError("Incorrect victim change criteria for victim '{}': should be a single value enabled".format(line[0]))
       self.victims.append(cond)
+
+    print("Loaded curriculum with the following params:")
+    print(*config, sep='\n')
 
   def cur_victim(self):
     return self.victims[self.victim_idx]
@@ -224,6 +240,7 @@ class Curriculum:
         if curriculum.finished:
           print("Curriculum is done. Stopping")
           break
+      print("Curriculum is alive, current victim idx: {}".format(self.victim_idx))
       time.sleep(checking_periodicity)
 
   def run_thread(
@@ -232,7 +249,7 @@ class Curriculum:
           games_for_compute,
           checking_periodicity):
     thread = Thread(target=self.threaded_loop,
-                    args=(self, selfplay_dir, games_for_compute, checking_periodicity))
+                    args=(selfplay_dir, games_for_compute, checking_periodicity))
     thread.start()
     thread.join()
     print("Curriculum thread finished!")
@@ -245,10 +262,19 @@ if __name__ == '__main__':
   parser.add_argument('-output-models-dir', required=True, help='Output dir for adding new victims')
   parser.add_argument('-games-for-compute', type=int, required=False, default=1000, help='Number of last games for statistics computation')
   parser.add_argument('-checking-periodicity', type=int, required=False, default=60, help='Statistics computation periodicity in seconds')
+  parser.add_argument('-config-json-string', required=False, help='Curriculum JSON config with victims sequence (JSON content)')
+  parser.add_argument('-config-json-file', required=False,
+                      help='Curriculum JSON config with victims sequence (JSON file path)')
 
   args = parser.parse_args()
 
-  curriculum = Curriculum(curriculum_conf, args.input_models_dir, args.output_models_dir)
+  if args.config_json_file is not None:
+    curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json_file=args.config_json_file)
+  elif args.config_json_string is not None:
+    curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json=args.config_json_string)
+  else:
+    curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config=curriculum_conf)
+
   curriculum.run_thread(
           args.selfplay_dir,
           args.games_for_compute,

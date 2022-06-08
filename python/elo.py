@@ -101,7 +101,7 @@ class Likelihood:
 
   LOG_ONE_OVER_SQRT_TWO_PI = math.log(1.0 / math.sqrt(2.0 * math.pi))
 
-  def get_loglikelihood(self, strengths: np.array) -> float:
+  def get_loglikelihood(self, strengths: np.ndarray) -> float:
     strength_total = self.offset + sum(strengths[pidx] * coeff for (pidx,coeff) in self.pidxcombo)
     if self.kind == Likelihood.SIGMOID_KIND:
       if strength_total < -40:
@@ -110,7 +110,7 @@ class Likelihood:
     else:
       return self.weight * (Likelihood.LOG_ONE_OVER_SQRT_TWO_PI - 0.5 * strength_total * strength_total)
 
-  def accum_dloglikelihood_dstrength(self, strengths: np.array, accum: np.array):
+  def accum_dloglikelihood_dstrength(self, strengths: np.ndarray, accum: np.ndarray):
     strength_total = self.offset + sum(strengths[pidx] * coeff for (pidx,coeff) in self.pidxcombo)
     if self.kind == Likelihood.SIGMOID_KIND:
       dloglikelihood_dstrength_total = self.weight / (1.0 + math.exp(strength_total))
@@ -119,7 +119,7 @@ class Likelihood:
     for (pidx,coeff) in self.pidxcombo:
       accum[pidx] += coeff * dloglikelihood_dstrength_total
 
-  def accum_d2loglikelihood_dstrength2(self, strengths: np.array, accum: np.array):
+  def accum_d2loglikelihood_dstrength2(self, strengths: np.ndarray, accum: np.ndarray):
     strength_total = self.offset + sum(strengths[pidx] * coeff for (pidx,coeff) in self.pidxcombo)
     if self.kind == Likelihood.SIGMOID_KIND:
       denom = math.exp(-0.5 * strength_total) + math.exp(0.5 * strength_total)
@@ -131,7 +131,7 @@ class Likelihood:
       for (pidx2,coeff2) in self.pidxcombo:
         accum[pidx1,pidx2] += coeff1 * coeff2 * d2loglikelihood_dstrength_total2
 
-  def accum_d2loglikelihood_dstrength2_scalepow(self, strengths: np.array, accum: np.array, scale: float, power: float):
+  def accum_d2loglikelihood_dstrength2_scalepow(self, strengths: np.ndarray, accum: np.ndarray, scale: float, power: float):
     strength_total = self.offset + sum(strengths[pidx] * coeff for (pidx,coeff) in self.pidxcombo)
     if self.kind == Likelihood.SIGMOID_KIND:
       denom = math.exp(-0.5 * strength_total) + math.exp(0.5 * strength_total)
@@ -373,14 +373,14 @@ def compute_elos(
 
   num_players = len(players)
 
-  def compute_loglikelihood(strengths: np.array) -> float:
+  def compute_loglikelihood(strengths: np.ndarray) -> float:
     total = 0.0
     for d in data:
       total += d.get_loglikelihood(strengths)
     return total
 
   # Gauss newton
-  def find_ascent_vector(strengths: np.array) -> np.array:
+  def find_ascent_vector(strengths: np.ndarray) -> np.ndarray:
     dloglikelihood_dstrength = np.zeros(num_players,dtype=np.float64)
     d2loglikelihood_dstrength2 = np.zeros((num_players,num_players),dtype=np.float64)
 
@@ -391,7 +391,7 @@ def compute_elos(
     ascent = -np.linalg.solve(d2loglikelihood_dstrength2,dloglikelihood_dstrength)
     return ascent
 
-  def line_search_ascend(strengths: np.array, cur_loglikelihood: float) -> Tuple[np.array,float]:
+  def line_search_ascend(strengths: np.ndarray, cur_loglikelihood: float) -> Tuple[np.ndarray,float]:
     ascent = find_ascent_vector(strengths)
     # Try up to this many times to find an improvement
     for i in range(30):

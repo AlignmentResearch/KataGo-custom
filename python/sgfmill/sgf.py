@@ -447,7 +447,7 @@ class Tree_node(Node):
 
 class _Root_tree_node(Tree_node):
     """Variant of Tree_node used for a game root."""
-    def __init__(self, property_map, owner):
+    def __init__(self, property_map, owner: "Sgf_game"):
         self.owner = owner
         self.parent = None
         self._children = []
@@ -522,6 +522,7 @@ class Sgf_game:
         return game
 
     def __init__(self, *args, **kwargs):
+        # pytype:disable=attribute-error (confused by __new__)
         self.root = _Root_tree_node({}, self)
         self.root.set_raw('FF', b"4")
         self.root.set_raw('GM', b"1")

@@ -183,6 +183,7 @@ def _parse_sgf_game(bb, start_position):
                 if not prop_values:
                     raise ValueError("property with no values")
                 try:
+                    assert properties is not None
                     if prop_ident in properties:
                         properties[prop_ident] += prop_values
                     else:

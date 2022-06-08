@@ -111,7 +111,7 @@ with tf.compat.v1.Session(config=tfconfig) as session:
     f = open(export_dir + "/" + filename_prefix + extension, mode)
     def writeln(s):
       if binary_floats:
-        f.write((str(s)+"\n").encode(encoding="ascii",errors="backslashreplace"))
+        f.write((str(s)+"\n").encode(encoding="ascii",errors="backslashreplace"))  # pytype: disable=wrong-arg-types
       else:
         f.write(str(s)+"\n")
     def writestr(s):
@@ -138,11 +138,11 @@ with tf.compat.v1.Session(config=tfconfig) as session:
         reshaped = np.reshape(weights,[-1])
         num_weights = len(reshaped)
         writestr("@BIN@")
-        f.write(struct.pack(f'<{num_weights}f',*reshaped))
+        f.write(struct.pack(f'<{num_weights}f',*reshaped))  # pytype: disable=wrong-arg-types
         writestr("\n")
       else:
         if len(weights.shape) == 0:
-          f.write(weights)
+          f.write(weights)  # pytype: disable=wrong-arg-types
         elif len(weights.shape) == 1:
           f.write(" ".join(str(weights[x0]) for x0 in range(weights.shape[0])))
         elif len(weights.shape) == 2:
@@ -257,7 +257,7 @@ with tf.compat.v1.Session(config=tfconfig) as session:
         write_conv(name+"/w2",diam,mid_num_channels,trunk_num_channels,1,get_weights(name+"/w2"))
 
       elif block[0] == "dilated_block":
-        (kind,name,diam,trunk_num_channels,regular_num_channels,dilated_num_channels,dilation) = block
+        (kind,name,diam,trunk_num_channels,regular_num_channels,dilated_num_channels,dilation) = block  # pytype:disable=bad-unpacking
         writeln(name)
         write_bn(name+"/norm1",trunk_num_channels)
         write_activation(name+"/actv1")
@@ -268,7 +268,7 @@ with tf.compat.v1.Session(config=tfconfig) as session:
         write_conv(name+"/w2",diam,regular_num_channels+dilated_num_channels,trunk_num_channels,1,get_weights(name+"/w2"))
 
       elif block[0] == "gpool_block":
-        (kind,name,diam,trunk_num_channels,regular_num_channels,gpool_num_channels) = block
+        (kind,name,diam,trunk_num_channels,regular_num_channels,gpool_num_channels) = block    # pytype:disable=bad-unpacking
         writeln(name)
         write_bn(name+"/norm1",trunk_num_channels)
         write_activation(name+"/actv1")

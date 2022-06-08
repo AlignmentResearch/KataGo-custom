@@ -332,6 +332,7 @@ def model_fn(features,labels,mode,params):
 
   if mode == tf.estimator.ModeKeys.PREDICT:
     model = built
+    assert isinstance(model, Model)
     predictions = {}
     predictions["policy_output"] = model.policy_output
     predictions["value_output"] = model.value_output

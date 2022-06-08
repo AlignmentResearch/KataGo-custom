@@ -431,7 +431,7 @@ if __name__ == '__main__':
     #Scale so that we have the desired initial slope, and add back the minimum random rows
     return int(scaled_power_law * expand_window_per_row + min_rows)
 
-  for (filename,mtime,num_rows) in all_files:
+  for filename, mtime, num_rows in all_files:  # pytype:disable=bad-unpacking
     if num_rows <= 0:
       continue
     row_range = (num_rows_total, num_rows_total + num_rows)

@@ -522,13 +522,13 @@ class Sgf_game:
         return game
 
     def __init__(self, *args, **kwargs):
-        # pytype:disable=attribute-error (confused by __new__)
         self.root = _Root_tree_node({}, self)
         self.root.set_raw('FF', b"4")
         self.root.set_raw('GM', b"1")
-        self.root.set_raw('SZ', sgf_properties.serialise_number(self.size))
+        # pytype gets confused by __new__
+        self.root.set_raw('SZ', sgf_properties.serialise_number(self.size))  # pytype:disable=attribute-error
         # Read the encoding back so we get the normalised form
-        self.root.set_raw('CA', self.presenter.encoding.encode())
+        self.root.set_raw('CA', self.presenter.encoding.encode())  # pytype:disable=attribute-error
 
     @classmethod
     def from_coarse_game_tree(cls, coarse_game, override_encoding=None):

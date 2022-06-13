@@ -74,7 +74,7 @@ jobs:
       FULL_LINT_FILES: "python/sgfmill/__init__.py"  # placeholder!
       # We type most files, but exclude a few that depend on torch that
       # we don't have installed. (And don't want to, as it's not needed for training.)
-      PYTYPE_EXCLUDE_FILES: "genboard_common.py genboard_run.py genboard_train.py upload_model.py"
+      PYTYPE_EXCLUDE_FILES: genboard_common.py genboard_run.py genboard_train.py upload_model.py
     steps:
       - checkout
 

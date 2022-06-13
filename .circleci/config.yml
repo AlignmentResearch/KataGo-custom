@@ -12,7 +12,7 @@ executors:
     <<: *defaults
     docker:
       # To rebuild image, run from root of go_attack repo:
-      # docker build --target=build-deps -t humancompatibleai/goattack:cpp-build-deps compose/cpp/
+      # docker build --target=build-deps -t humancompatibleai/goattack:cpp-build-deps . -f compose/cpp/Dockerfile
       # docker push humancompatibleai/goattack:cpp-build-deps
       - image: humancompatibleai/goattack:cpp-build-deps
     resource_class: xlarge
@@ -20,9 +20,9 @@ executors:
     <<: *defaults
     docker:
       # To rebuild image, run from root of go_attack repo:
-      # docker build --target=build-deps -t humancompatibleai/goattack:python-build-deps compose/python/
-      # docker push humancompatibleai/goattack:python-build-deps
-      - image: humancompatibleai/goattack:python-build-deps
+      # docker build --target=python-deps -t humancompatibleai/goattack:python-deps . -f compose/python/Dockerfile
+      # docker push humancompatibleai/goattack:python-deps
+      - image: humancompatibleai/goattack:python-deps
     resource_class: large
 
 commands:

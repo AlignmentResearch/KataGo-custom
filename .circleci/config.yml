@@ -92,6 +92,10 @@ jobs:
           name: black
           command: black ${FULL_LINT_FILES}
 
+      - run:
+          name: codespell
+          command: codespell -I .codespell.skip --skip='*.pyc,*.ipynb' ./python/
+
 workflows:
   version: 2
   test:

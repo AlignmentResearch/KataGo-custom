@@ -8,6 +8,7 @@ __pycache__
 
 tmp*.txt
 
+cpp/.cmake
 cpp/write
 cpp/runtests
 cpp/example

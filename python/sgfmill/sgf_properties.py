@@ -607,7 +607,7 @@ class Presenter(_Context):
     def get_property_type(self, identifier):
         """Return the Property_type for the specified PropIdent.
 
-        Rasies KeyError if the property is unknown.
+        Raises KeyError if the property is unknown.
 
         """
         return self.property_types_by_ident[identifier]

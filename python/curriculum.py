@@ -6,7 +6,7 @@ import json
 import shutil
 import time
 from threading import Thread
-from typing import Optional
+from typing import Optional, Union
 
 from sgfmill import sgf
 
@@ -36,17 +36,22 @@ class AdvGameInfo:
 
 class PlayerStat:
   # for victim only one criteria can be enabled, all others should be None
-  def __init__(self, player_name=None, win_rate=None, score_diff=None, score_wo_komi_diff=None, policy_loss=None):
+  def __init__(self,
+               player_name: str = None,
+               win_rate: float = None,
+               score_diff: float = None,
+               score_wo_komi_diff: float = None,
+               policy_loss: float = None):
     self.name = player_name
     self.win_rate = win_rate
     self.score_diff = score_diff
     self.score_wo_komi_diff = score_wo_komi_diff
     self.policy_loss = policy_loss
 
-  def get_stat_members(self):
+  def get_stat_members(self) -> list[float, float, float, float]:
     return [self.win_rate, self.score_diff, self.score_wo_komi_diff, self.policy_loss]
 
-  def can_be_victim_criteria(self):
+  def can_be_victim_criteria(self) -> bool:
     criteria = self.get_stat_members()
     num_enabled = len([x for x in criteria if x is not None])
     return num_enabled == 1
@@ -61,7 +66,7 @@ class PlayerStat:
     return False
 
 
-def get_game_info(sgf_str: str):
+def get_game_info(sgf_str: str) -> AdvGameInfo:
   sgf_game = sgf.Sgf_game.from_string(sgf_str)
 
   b_name = sgf_game.get_player_name('b')
@@ -113,6 +118,7 @@ def get_game_info(sgf_str: str):
 
   return AdvGameInfo(winner, adv_minus_victim_score, adv_minus_victim_score_wo_komi)
 
+
 def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> tuple[list, int]:
   all_sgfs = []
   for (path, dirnames, filenames) in os.walk(selfplay_dir, followlinks=True):
@@ -131,6 +137,7 @@ def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> tuple[list, int
         if len(sgf_strings) >= games_for_compute:
           return sgf_strings, files_checked
   return sgf_strings, files_checked
+
 
 def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[PlayerStat]:
 
@@ -163,7 +170,12 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
 
 
 class Curriculum:
-  def __init__(self, victims_input_dir, victims_output_dir, config=None, config_json=None, config_json_file=None):
+  def __init__(self,
+               victims_input_dir: str,
+               victims_output_dir: str,
+               config: list = None,
+               config_json: str = None,
+               config_json_file: str = None):
     self.MAX_VICTIM_COPYING_EFFORTS = 10
     self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
@@ -197,10 +209,10 @@ class Curriculum:
     print("Loaded curriculum with the following params:")
     print(*config, sep='\n')
 
-  def __cur_victim(self):
+  def __cur_victim(self) -> PlayerStat:
     return self.victims[self.victim_idx]
 
-  def try_move_on(self, adv_stat=None, policy_loss=None):
+  def try_move_on(self, adv_stat: PlayerStat = None, policy_loss: float = None):
     if self.finished:
       return
 
@@ -235,9 +247,9 @@ class Curriculum:
 
   def threaded_loop(
           self,
-          selfplay_dir,
-          games_for_compute,
-          checking_periodicity):
+          selfplay_dir: str,
+          games_for_compute: int,
+          checking_periodicity: int):
     while True:
       adv_stat = recompute_statistics(selfplay_dir, games_for_compute)
       if adv_stat is not None:
@@ -250,9 +262,9 @@ class Curriculum:
 
   def run_thread(
           self,
-          selfplay_dir,
-          games_for_compute,
-          checking_periodicity):
+          selfplay_dir: str,
+          games_for_compute: int,
+          checking_periodicity: int):
     thread = Thread(target=self.threaded_loop,
                     args=(selfplay_dir, games_for_compute, checking_periodicity))
     thread.start()

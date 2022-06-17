@@ -6,7 +6,7 @@ import os
 import shutil
 import time
 from threading import Thread
-from typing import Optional, Union
+from typing import Optional, List, Tuple, Union
 
 from sgfmill import sgf
 
@@ -29,7 +29,7 @@ CURRICULUM_CONF = [
 
 
 class AdvGameInfo:
-    def __init__(self, winner, diff_score, diff_score_wo_komi):
+    def __init__(self, winner: Optional[bool], diff_score: float, diff_score_wo_komi: float):
         self.winner = winner  # can be None!
         self.diff_score = diff_score
         self.diff_score_wo_komi = diff_score_wo_komi
@@ -49,7 +49,7 @@ class PlayerStat:
         self.score_wo_komi_diff = score_wo_komi_diff
         self.policy_loss = policy_loss
 
-    def get_stat_members(self) -> list[float, float, float, float]:
+    def get_stat_members(self) -> List[float, float, float, float]:
         return [self.win_rate, self.score_diff, self.score_wo_komi_diff, self.policy_loss]
 
     def can_be_victim_criteria(self) -> bool:
@@ -120,7 +120,7 @@ def get_game_info(sgf_str: str) -> AdvGameInfo:
     return AdvGameInfo(winner, adv_minus_victim_score, adv_minus_victim_score_wo_komi)
 
 
-def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> tuple[list, int]:
+def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
     all_sgfs = []
     for (path, dirnames, filenames) in os.walk(selfplay_dir, followlinks=True):
         for f in filenames:

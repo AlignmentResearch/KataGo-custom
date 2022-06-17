@@ -46,7 +46,7 @@ function uploadStuff() {
 
             if [ -d "$BASEDIR"/modelsuploaded/"$NAME" ]
             then
-                echo "Model with same name aleady exists, so skipping:" "$SRC"
+                echo "Model with same name already exists, so skipping:" "$SRC"
             else
                 rm -rf "$TMPDST"
                 mkdir "$TMPDST"

@@ -6,11 +6,12 @@ import json
 import shutil
 import time
 from threading import Thread
+from typing import Optional
 
 from sgfmill import sgf
 
 # format: victim name, conditions for moving on: win rate, diff score, diff score without komi, policy_loss
-curriculum_conf = [
+CURRICULUM_CONF = [
   ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, None, None, None],
   ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, None, None, None],
   ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, None, None, None]
@@ -47,21 +48,15 @@ class PlayerStat:
 
   def can_be_victim_criteria(self):
     criteria = self.get_stat_members()
-    num_enabled = 0
-    for cond in criteria:
-      if cond is not None:
-        num_enabled += 1
-    if num_enabled == 1:
-      return True
-    else:
-      return False
+    num_enabled = len([x for x in criteria if x is not None])
+    return num_enabled == 1
 
   # check if adv_stat has a greater value of enabled criteria
   def check_if_gt(self, adv_stat) -> bool:
     criteria = self.get_stat_members()
     adv_vals = adv_stat.get_stat_members()
-    for idx in range(len(criteria)):
-      if criteria[idx] is not None and adv_vals[idx] > criteria[idx]:
+    for c, a in zip(criteria, adv_vals):
+      if c is not None and a > c:
         return True
     return False
 
@@ -118,8 +113,7 @@ def get_game_info(sgf_str: str):
 
   return AdvGameInfo(winner, adv_minus_victim_score, adv_minus_victim_score_wo_komi)
 
-
-def recompute_statistics(selfplay_dir: str, games_for_compute: int):
+def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> tuple[list, int]:
   all_sgfs = []
   for (path, dirnames, filenames) in os.walk(selfplay_dir, followlinks=True):
     for f in filenames:
@@ -128,20 +122,19 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int):
   all_sgfs.sort(key=lambda x: x[1], reverse=True)
 
   sgf_strings = []
-  counter = 0
   files_checked = 0
-  stop = False
   for sgf_file in all_sgfs:
     with open(sgf_file[0]) as f:
+      files_checked += 1
       for line in f.readlines():
         sgf_strings.append(line.strip())
-        counter += 1
-        if counter >= games_for_compute:
-          stop = True
-          break
-    files_checked += 1
-    if stop:
-      break
+        if len(sgf_strings) >= games_for_compute:
+          return sgf_strings, files_checked
+  return sgf_strings, files_checked
+
+def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[PlayerStat]:
+
+  sgf_strings, files_checked = read_sgf_files(selfplay_dir, games_for_compute)
 
   # don't have enough data
   if len(sgf_strings) < games_for_compute:
@@ -171,6 +164,9 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int):
 
 class Curriculum:
   def __init__(self, victims_input_dir, victims_output_dir, config=None, config_json=None, config_json_file=None):
+    self.MAX_VICTIM_COPYING_EFFORTS = 10
+    self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
+
     if config_json_file is not None:
       print("Curriculum: loading JSON config")
       with open(config_json_file) as f:
@@ -195,13 +191,13 @@ class Curriculum:
     for line in config:
       cond = PlayerStat(line[0], win_rate=line[1], score_diff=line[2], score_wo_komi_diff=line[3], policy_loss=line[4])
       if not cond.can_be_victim_criteria():
-        raise ValueError("Incorrect victim change criteria for victim '{}': should be a single value enabled".format(line[0]))
+        raise ValueError("Incorrect victim change criteria for victim '{}': exactly one value should be non-None".format(line[0]))
       self.victims.append(cond)
 
     print("Loaded curriculum with the following params:")
     print(*config, sep='\n')
 
-  def cur_victim(self):
+  def __cur_victim(self):
     return self.victims[self.victim_idx]
 
   def try_move_on(self, adv_stat=None, policy_loss=None):
@@ -210,7 +206,7 @@ class Curriculum:
 
     print("Checking whether we need to move to the next victim...")
     want_victim_update = False
-    if adv_stat is not None and self.cur_victim().check_if_gt(adv_stat):
+    if adv_stat is not None and self.__cur_victim().check_if_gt(adv_stat):
       want_victim_update = True
     if policy_loss is not None:
       raise NotImplementedError("Policy loss check is not implemented yet")
@@ -223,19 +219,19 @@ class Curriculum:
       self.finished = True
       return
 
-    print("Moving to the next victim '{}'".format(self.cur_victim().name))
+    print("Moving to the next victim '{}'".format(self.__cur_victim().name))
     num_efforts = 0
-    while num_efforts < 10:
+    for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
       try:
-        shutil.copy(os.path.join(self.victims_input_dir, self.cur_victim().name), self.victims_output_dir)
+        shutil.copy(os.path.join(self.victims_input_dir, self.__cur_victim().name), self.victims_output_dir)
         return
       except:
-        print("Cannot copy victim '{}', maybe filesystem problem? Waiting 10 sec...".format(self.cur_victim().name))
+        print("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
+          self.__cur_victim().name, self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
         num_efforts += 1
-        time.sleep(10)
+        time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
 
-    if num_efforts == 10:
-      raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.cur_victim().name))
+    raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
 
   def threaded_loop(
           self,
@@ -282,7 +278,7 @@ if __name__ == '__main__':
   elif args.config_json_string is not None:
     curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json=args.config_json_string)
   else:
-    curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config=curriculum_conf)
+    curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config=CURRICULUM_CONF)
 
   curriculum.run_thread(
           args.selfplay_dir,

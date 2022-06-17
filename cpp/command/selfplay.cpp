@@ -433,7 +433,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       if (gameIdx >= maxGamesTotal) {
         // Do nothing.
       } else if(victimplay) {
-
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = runOneVictimplayGame(

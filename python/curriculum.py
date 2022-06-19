@@ -12,12 +12,6 @@ from sgfmill import sgf
 
 # format: victim name, conditions for moving on:
 # win rate, diff score, diff score without komi, policy_loss
-CURRICULUM_CONF = [
-    ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, None, None, None],
-    ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, None, None, None],
-    ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, None, None, None],
-]
-
 # for quick copy as a JSON
 """
 [
@@ -122,7 +116,7 @@ def get_game_info(sgf_str: str) -> AdvGameInfo:
 
 def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
     all_sgfs = []
-    for (path, dirnames, filenames) in os.walk(selfplay_dir, followlinks=True):
+    for path, dirnames, filenames in os.walk(selfplay_dir, followlinks=True):
         for f in filenames:
             if os.path.splitext(f)[1] == '.sgfs':
                 all_sgfs.append([os.path.join(path, f), os.path.getmtime(path)])
@@ -250,11 +244,18 @@ class Curriculum:
 
         raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
 
-    def threaded_loop(
+    """
+    Run curriculum checking.
+    @param selfplay_dir: Folder with selfplay results.
+    @param games_for_compute: Number of games to compute statistics.
+    @param checking_periodicity: Checking interval in seconds.
+    """
+    def checking_loop(
             self,
             selfplay_dir: str,
             games_for_compute: int,
             checking_periodicity: int):
+        print("Starting curriculum loop")
         while True:
             adv_stat = recompute_statistics(selfplay_dir, games_for_compute)
             if adv_stat is not None:
@@ -265,16 +266,23 @@ class Curriculum:
             print("Curriculum is alive, current victim idx: {}".format(self.victim_idx))
             time.sleep(checking_periodicity)
 
+    """
+    Run curriculum checking and return control to the main script.
+    @param selfplay_dir: Folder with selfplay results.
+    @param games_for_compute: Number of games to compute statistics.
+    @param checking_periodicity: Checking interval in seconds.
+    @return: created thread (for using thread.join() in the main script)
+    """
     def run_thread(
             self,
             selfplay_dir: str,
             games_for_compute: int,
-            checking_periodicity: int):
-        thread = Thread(target=self.threaded_loop,
+            checking_periodicity: int) -> Thread:
+        thread = Thread(target=self.checking_loop,
                         args=(selfplay_dir, games_for_compute, checking_periodicity))
         thread.start()
-        thread.join()
-        print("Curriculum thread finished!")
+        print("Curriculum models update thread started")
+        return thread
 
 
 if __name__ == '__main__':
@@ -288,7 +296,7 @@ if __name__ == '__main__':
                         help='Statistics computation periodicity in seconds')
     parser.add_argument('-config-json-string', required=False,
                         help='Curriculum JSON config with victims sequence (JSON content)')
-    parser.add_argument('-config-json-file', required=False,
+    parser.add_argument('-config-json-file', default='configs/curriculum_conf.json',
                         help='Curriculum JSON config with victims sequence (JSON file path)')
 
     args = parser.parse_args()
@@ -298,9 +306,11 @@ if __name__ == '__main__':
     elif args.config_json_string is not None:
         curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json=args.config_json_string)
     else:
-        curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config=CURRICULUM_CONF)
+        raise ValueError("Curriculum: either path to JSON config or JSON config string must be provided")
 
-    curriculum.run_thread(
+    curriculum.checking_loop(
         args.selfplay_dir,
         args.games_for_compute,
         args.checking_periodicity)
+
+    print("Curriculum finished!")

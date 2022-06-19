@@ -1,6 +1,24 @@
 [
-  ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, null, null, null],
-  ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, null, null, null],
-  ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, null, null, null]
+    {
+        "name": "kata1-b6c96-s41312768-d6061202.txt.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    },
+    {
+        "name": "kata1-b40c256-s7186724608-d1743537710.bin.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    },
+    {
+        "name": "g170-b30c320x2-s4824661760-d1229536699.bin.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    }
 ]
 

@@ -5,8 +5,11 @@ import json
 import os
 import shutil
 import time
+import logging
 from threading import Thread
-from typing import Optional, List, Tuple, Union
+from typing import Optional, Dict, Tuple, Union
+from dataclasses import dataclass
+from dataclasses import asdict
 
 from sgfmill import sgf
 
@@ -15,53 +18,69 @@ from sgfmill import sgf
 # for quick copy as a JSON
 """
 [
-  ["kata1-b6c96-s41312768-d6061202.txt.gz", 0.75, null, null, null],
-  ["kata1-b40c256-s7186724608-d1743537710.bin.gz", 0.75, null, null, null],
-  ["g170-b30c320x2-s4824661760-d1229536699.bin.gz", 0.75, null, null, null]
+    {
+        "name": "kata1-b6c96-s41312768-d6061202.txt.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    },
+    {
+        "name": "kata1-b40c256-s7186724608-d1743537710.bin.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    },
+    {
+        "name": "g170-b30c320x2-s4824661760-d1229536699.bin.gz",
+        "win_rate": 0.75,
+        "diff_score": null,
+        "diff_score_wo_komi": null,
+        "policy_loss": null
+    }
 ]
 """
 
 
+@dataclass
 class AdvGameInfo:
-    def __init__(self, winner: Optional[bool], diff_score: float, diff_score_wo_komi: float):
-        self.winner = winner  # can be None!
-        self.diff_score = diff_score
-        self.diff_score_wo_komi = diff_score_wo_komi
+    """Class for storing game result from the adversary perspective."""
+    winner: Optional[bool]
+    diff_score: float
+    diff_score_wo_komi: float
 
 
+@dataclass
 class PlayerStat:
     # for victim only one criteria can be enabled, all others should be None
-    def __init__(self,
-                 player_name: str = None,
-                 win_rate: float = None,
-                 score_diff: float = None,
-                 score_wo_komi_diff: float = None,
-                 policy_loss: float = None):
-        self.name = player_name
-        self.win_rate = win_rate
-        self.score_diff = score_diff
-        self.score_wo_komi_diff = score_wo_komi_diff
-        self.policy_loss = policy_loss
+    name: str = None
+    win_rate: float = None
+    score_diff: float = None
+    score_wo_komi_diff: float = None
+    policy_loss: float = None
 
-    def get_stat_members(self) -> List[float, float, float, float]:
-        return [self.win_rate, self.score_diff, self.score_wo_komi_diff, self.policy_loss]
+    def get_stat_members(self) -> Dict[str, float]:
+        d = asdict(self)
+        del d['name']
+        return d
 
     def can_be_victim_criteria(self) -> bool:
         criteria = self.get_stat_members()
-        num_enabled = len([x for x in criteria if x is not None])
+        num_enabled = len([v for k, v in criteria if v is not None])
         return num_enabled == 1
 
     # check if adv_stat has a greater value of enabled criteria
     def check_if_gt(self, adv_stat) -> bool:
         criteria = self.get_stat_members()
         adv_vals = adv_stat.get_stat_members()
-        for c, a in zip(criteria, adv_vals):
-            if c is not None and a > c:
+        for k, v in criteria:
+            if v is not None and adv_vals[k] > v:
                 return True
         return False
 
 
-def get_game_info(sgf_str: str) -> AdvGameInfo:
+def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     sgf_game = sgf.Sgf_game.from_string(sgf_str)
 
     b_name = sgf_game.get_player_name("b")
@@ -96,11 +115,25 @@ def get_game_info(sgf_str: str) -> AdvGameInfo:
     komi = sgf_game.get_komi()
     adv_komi = {"w": komi, "b": -komi}[adv_color]
 
+    win_score = 0
+    try:
+        result = sgf_game.get_root.get("RE")
+        win_score = result.split("+")[1]
+        win_score = float(win_score)
+    except KeyError:
+        logging.warning("No result (RE tag) present in SGF game: '%s'", sgf_str)
+        return None
+    except IndexError:
+        logging.warning("No winner in result '%s'", result)
+        return None
+    except ValueError:
+        logging.warning("Game score is not numeric: '%s'", win_score)
+        return None
+
     if win_color is None:
         adv_minus_victim_score = 0
         adv_minus_victim_score_wo_komi = 0
     else:
-        win_score = float(sgf_game.get_root().get("RE").split("+")[1])
         adv_minus_victim_score = {
             win_color: win_score,
             lose_color: -win_score,
@@ -142,23 +175,21 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
         return None
 
     sum_wins = 0
-    sum_loses = 0
     sum_score = 0
     sum_score_wo_komi = 0
-    for sgf_str in sgf_strings:
-        game = get_game_info(sgf_str)
+    games = [x for x in filter(None, [get_game_info(sgf_str) for sgf_str in sgf_strings])]
+    for game in games:
+        # game.winner can be None (for ties), but a tie is still not a win
         if game.winner:
             sum_wins += 1
-        elif game.winner is not None:
-            sum_loses = 0
         sum_score += game.diff_score
         sum_score_wo_komi += game.diff_score_wo_komi
 
-    win_rate = float(sum_wins) / len(sgf_strings)
-    mean_diff_score = float(sum_score) / len(sgf_strings)
+    win_rate = float(sum_wins) / len(games)
+    mean_diff_score = float(sum_score) / len(games)
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(sgf_strings)
 
-    print("Files checked: %d" % files_checked, flush=True)
+    logging.info("Files checked: %d", files_checked)
 
     return PlayerStat(
         win_rate=win_rate,
@@ -178,16 +209,16 @@ class Curriculum:
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
         if config_json_file is not None:
-            print("Curriculum: loading JSON config")
+            logging.info("Curriculum: loading JSON config from '%s'", config_json_file)
             with open(config_json_file) as f:
                 config = json.load(f)
         elif config_json is not None:
-            print("Curriculum: loading JSON string")
+            logging.info("Curriculum: loading JSON config from a string")
             config = json.loads(config_json)
         elif config is not None:
-            print("Using python list as a config")
+            logging.info("Using python list as a config")
 
-        if len(config) < 1:
+        if not config:
             raise ValueError("Empty config for the curriculum play!")
 
         self.victims_input_dir = victims_input_dir
@@ -197,16 +228,20 @@ class Curriculum:
         self.finished = False
         self.victims = []
         for line in config:
-            cond = PlayerStat(line[0], win_rate=line[1], score_diff=line[2], score_wo_komi_diff=line[3],
-                              policy_loss=line[4])
+            cond = PlayerStat(
+                name=line["name"],
+                win_rate=line["win_rate"],
+                score_diff=line["diff_score"],
+                score_wo_komi_diff=line["diff_score_wo_komi"],
+                policy_loss=line["policy_loss"])
             if not cond.can_be_victim_criteria():
                 raise ValueError(
                     "Incorrect victim change criteria for victim '{}': exactly one value should be non-None".format(
                         line[0]))
             self.victims.append(cond)
 
-        print("Loaded curriculum with the following params:")
-        print(*config, sep='\n')
+        logging.info("Loaded curriculum with the following params:")
+        logging.info("\n".join([str(x) for x in config]))
 
     def __cur_victim(self) -> PlayerStat:
         return self.victims[self.victim_idx]
@@ -215,7 +250,7 @@ class Curriculum:
         if self.finished:
             return
 
-        print("Checking whether we need to move to the next victim...")
+        logging.info("Checking whether we need to move to the next victim...")
         want_victim_update = False
         if adv_stat is not None and self.__cur_victim().check_if_gt(adv_stat):
             want_victim_update = True
@@ -230,14 +265,14 @@ class Curriculum:
             self.finished = True
             return
 
-        print("Moving to the next victim '{}'".format(self.__cur_victim().name))
+        logging.info("Moving to the next victim '{}'".format(self.__cur_victim().name))
         num_efforts = 0
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
                 shutil.copy(os.path.join(self.victims_input_dir, self.__cur_victim().name), self.victims_output_dir)
                 return
             except:
-                print("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
+                logging.warning("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
                     self.__cur_victim().name, self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
                 num_efforts += 1
                 time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
@@ -255,15 +290,15 @@ class Curriculum:
             selfplay_dir: str,
             games_for_compute: int,
             checking_periodicity: int):
-        print("Starting curriculum loop")
+        logging.info("Starting curriculum loop")
         while True:
             adv_stat = recompute_statistics(selfplay_dir, games_for_compute)
             if adv_stat is not None:
                 curriculum.try_move_on(adv_stat=adv_stat)
                 if curriculum.finished:
-                    print("Curriculum is done. Stopping")
+                    logging.info("Curriculum is done. Stopping")
                     break
-            print("Curriculum is alive, current victim idx: {}".format(self.victim_idx))
+            logging.info("Curriculum is alive, current victim idx: {}".format(self.victim_idx))
             time.sleep(checking_periodicity)
 
     """
@@ -281,7 +316,7 @@ class Curriculum:
         thread = Thread(target=self.checking_loop,
                         args=(selfplay_dir, games_for_compute, checking_periodicity))
         thread.start()
-        print("Curriculum models update thread started")
+        logging.info("Curriculum models update thread started")
         return thread
 
 
@@ -313,4 +348,4 @@ if __name__ == '__main__':
         args.games_for_compute,
         args.checking_periodicity)
 
-    print("Curriculum finished!")
+    logging.info("Curriculum finished!")

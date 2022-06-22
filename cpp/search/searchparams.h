@@ -9,10 +9,13 @@ struct SearchParams {
   enum class SearchAlgorithm { MCTS, EMCTS1 };
   static SearchAlgorithm strToSearchAlgorithm(const std::string& algoStr);
   static std::string searchAlgorithmToStr(SearchAlgorithm algo);
-  SearchAlgorithm searchAlgorithm = SearchAlgorithm::MCTS;
+  SearchAlgorithm searchAlgorithm;
 
   // Whether to noise opponent nodes during EMCTS1
   bool EMCTS1_noiseOppNodes;
+
+  // Whether we are allowed to be the first player that passes in a game.
+  bool canPassFirst;
 
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing

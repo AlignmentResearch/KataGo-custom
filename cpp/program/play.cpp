@@ -2300,6 +2300,11 @@ FinishedGameData* GameRunner::runGame(
     }
   }
 
+  // Handle canPassFirst logic
+  hist.rules.playerThatCanPassFirst =
+      (botSpecB.baseParams.canPassFirst ? P_BLACK : 0)
+    | (botSpecW.baseParams.canPassFirst ? P_WHITE : 0);
+
   bool clearBotBeforeSearchThisGame = clearBotBeforeSearch;
   if (botSpecB.botIdx == botSpecW.botIdx) {
     //Avoid interactions between the two bots since they're the same.

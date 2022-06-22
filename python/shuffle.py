@@ -2,10 +2,7 @@
 import sys
 import os
 import argparse
-import traceback
-import math
 import time
-import logging
 import zipfile
 import shutil
 import psutil
@@ -14,8 +11,7 @@ import json
 import multiprocessing
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.python_io import TFRecordOptions,TFRecordCompressionType,TFRecordWriter
+from tensorflow import python_io
 
 import tfrecordio
 
@@ -127,8 +123,8 @@ def shardify(input_idx, input_file_group, num_out_files, out_tmp_dirs, keep_prob
 def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_batch_multiple):
   np.random.seed([int.from_bytes(os.urandom(4), byteorder='little') for i in range(5)])
 
-  tfoptions = TFRecordOptions(TFRecordCompressionType.ZLIB)
-  record_writer = TFRecordWriter(filename,tfoptions)
+  tfoptions = python_io.TFRecordOptions(python_io.TFRecordCompressionType.ZLIB)
+  record_writer = python_io.TFRecordWriter(filename,tfoptions)
 
   binaryInputNCHWPackeds = []
   globalInputNCs = []
@@ -431,7 +427,7 @@ if __name__ == '__main__':
     #Scale so that we have the desired initial slope, and add back the minimum random rows
     return int(scaled_power_law * expand_window_per_row + min_rows)
 
-  for (filename,mtime,num_rows) in all_files:
+  for filename, mtime, num_rows in all_files:  # pytype:disable=bad-unpacking
     if num_rows <= 0:
       continue
     row_range = (num_rows_total, num_rows_total + num_rows)

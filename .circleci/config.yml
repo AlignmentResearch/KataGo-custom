@@ -2,22 +2,31 @@ version: 2.1
 
 defaults: &defaults
   docker:
-    # To rebuild image, run from root of go_attack repo:
-    # docker build --target=build-deps -t humancompatibleai/goattack:build-deps compose/cpp/
-    # docker push humancompatibleai/goattack:build-deps
-    - image: humancompatibleai/goattack:build-deps
       auth:
         username: $DOCKERHUB_USERNAME
         password: $DOCKERHUB_PASSWORD
   working_directory: /engines/KataGo-custom
 
 executors:
-  unit-test:
+  cpp:
     <<: *defaults
+    docker:
+      # To rebuild image, run from root of go_attack repo:
+      # docker build --target=build-deps -t humancompatibleai/goattack:cpp-build-deps . -f compose/cpp/Dockerfile
+      # docker push humancompatibleai/goattack:cpp-build-deps
+      - image: humancompatibleai/goattack:cpp-build-deps
     resource_class: xlarge
+  python:
+    <<: *defaults
+    docker:
+      # To rebuild image, run from root of go_attack repo:
+      # docker build --target=python-deps -t humancompatibleai/goattack:python-deps . -f compose/python/Dockerfile
+      # docker push humancompatibleai/goattack:python-deps
+      - image: humancompatibleai/goattack:python-deps
+    resource_class: large
 
 commands:
-  dependencies:
+  cpp-dependencies:
     description: "Check out and compile"
     steps:
       - checkout
@@ -31,10 +40,10 @@ commands:
           command: cd cpp && make clean && make -j
 
 jobs:
-  unit-test:
-    executor: unit-test
+  cpp-unit-test:
+    executor: cpp
     steps:
-      - dependencies
+      - cpp-dependencies
 
       - run:
           name: Memory Monitor
@@ -56,10 +65,44 @@ jobs:
           path: /tmp/resource-usage
           destination: resource-usage
 
+  python-lint:
+    executor: python
+    environment:
+      # Most of KataGo files won't pass linting, and we don't want to change
+      # all of them as it will make merging upstream changes tricky. So only
+      # lint files we add, or have substantially modified.
+      FULL_LINT_FILES: "python/sgfmill/__init__.py"  # placeholder!
+      # We type most files, but exclude a few that depend on torch that
+      # we don't have installed. (And don't want to, as it's not needed for training.)
+      PYTYPE_EXCLUDE_FILES: python/genboard_common.py python/genboard_run.py python/genboard_train.py python/upload_model.py
+    steps:
+      - checkout
+
+      # Run pytype against most files.
+      - run:
+          name: pytype
+          command: pytype ./python/ -x ${PYTYPE_EXCLUDE_FILES}
+
+      # Lint a select few files that we maintain (not upstream).
+      - run:
+          name: flake8
+          command: flake8 ${FULL_LINT_FILES}
+
+      - run:
+          name: black
+          command: black ${FULL_LINT_FILES}
+
+      - run:
+          name: codespell
+          command: codespell -I .codespell.skip --skip='*.pyc,*.ipynb' ./python/
+
 workflows:
   version: 2
   test:
     jobs:
-      - unit-test:
+      - cpp-unit-test:
           context:
           - docker-hub-creds
+      - python-lint:
+          context:
+            - docker-hub-creds

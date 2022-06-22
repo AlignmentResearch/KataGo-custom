@@ -437,18 +437,18 @@ struct Search {
     bool allowDirectPolicyMoves
   ) const;
 
-  bool getPlaySelectionValuesWithDirectPolicy(
-    const SearchNode& node,
-    std::vector<Loc>& locs,
-    std::vector<double>& playSelectionValues,
-    double scaleMaxToAtLeast = 0.0
-  ) const;
-
   // Given some playSelectionValues, scale the max to at least scaleMaxToAtLeast.
   bool clipAndScalePlaySelectionValues(
     std::vector<double>& playSelectionValues,
-    const double scaleMaxToAtLeast,
-    const int numChildren
+    const int numChildren,
+    const double scaleMaxToAtLeast = 0.0
+  ) const;
+
+  bool getPlaySelectionValuesWithDirectPolicy(
+    const SearchThread& thread,
+    const SearchNode& node,
+    std::vector<Loc>& locs,
+    std::vector<double>& playSelectionValues
   ) const;
 
   //Useful utility function exposed for outside use

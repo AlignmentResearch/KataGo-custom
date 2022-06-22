@@ -26,6 +26,7 @@ static Hash128 getKoHashAfterMoveNonEncore(const Rules& rules, Hash128 posHashAf
 
 BoardHistory::BoardHistory()
   :rules(),
+   someoneHasPassed(false),
    moveHistory(),koHashHistory(),
    firstTurnIdxWithKoHistory(0),
    initialBoard(),
@@ -60,6 +61,7 @@ BoardHistory::~BoardHistory()
 
 BoardHistory::BoardHistory(const Board& board, Player pla, const Rules& r, int ePhase)
   :rules(r),
+   someoneHasPassed(false),
    moveHistory(),koHashHistory(),
    firstTurnIdxWithKoHistory(0),
    initialBoard(),
@@ -93,6 +95,7 @@ BoardHistory::BoardHistory(const Board& board, Player pla, const Rules& r, int e
 
 BoardHistory::BoardHistory(const BoardHistory& other)
   :rules(other.rules),
+   someoneHasPassed(other.someoneHasPassed),
    moveHistory(other.moveHistory),koHashHistory(other.koHashHistory),
    firstTurnIdxWithKoHistory(other.firstTurnIdxWithKoHistory),
    initialBoard(other.initialBoard),
@@ -129,6 +132,7 @@ BoardHistory& BoardHistory::operator=(const BoardHistory& other)
   if(this == &other)
     return *this;
   rules = other.rules;
+  someoneHasPassed = other.someoneHasPassed;
   moveHistory = other.moveHistory;
   koHashHistory = other.koHashHistory;
   firstTurnIdxWithKoHistory = other.firstTurnIdxWithKoHistory;
@@ -168,6 +172,7 @@ BoardHistory& BoardHistory::operator=(const BoardHistory& other)
 
 BoardHistory::BoardHistory(BoardHistory&& other) noexcept
  :rules(other.rules),
+  someoneHasPassed(other.someoneHasPassed),
   moveHistory(std::move(other.moveHistory)),koHashHistory(std::move(other.koHashHistory)),
   firstTurnIdxWithKoHistory(other.firstTurnIdxWithKoHistory),
   initialBoard(other.initialBoard),
@@ -201,6 +206,7 @@ BoardHistory::BoardHistory(BoardHistory&& other) noexcept
 BoardHistory& BoardHistory::operator=(BoardHistory&& other) noexcept
 {
   rules = other.rules;
+  someoneHasPassed = other.someoneHasPassed;
   moveHistory = std::move(other.moveHistory);
   koHashHistory = std::move(other.koHashHistory);
   firstTurnIdxWithKoHistory = other.firstTurnIdxWithKoHistory;
@@ -240,6 +246,7 @@ BoardHistory& BoardHistory::operator=(BoardHistory&& other) noexcept
 
 void BoardHistory::clear(const Board& board, Player pla, const Rules& r, int ePhase) {
   rules = r;
+  someoneHasPassed = false;
   moveHistory.clear();
   koHashHistory.clear();
   firstTurnIdxWithKoHistory = 0;
@@ -715,6 +722,35 @@ void BoardHistory::setKoRecapBlocked(Loc loc, bool b) {
 }
 
 bool BoardHistory::isLegal(const Board& board, Loc moveLoc, Player movePla) const {
+  if(!isLegalModuloPassing(board, moveLoc, movePla))
+    return false;
+
+  if (
+      moveLoc == Board::PASS_LOC
+   && !someoneHasPassed
+   && !playersMatch(movePla, rules.playerThatCanPassFirst)
+   && existsNonPassingLegalMove(board, movePla)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+bool BoardHistory::existsNonPassingLegalMove(const Board& board, Player movePla) const {
+  // Iterate through all possible non-passing moves
+  // and check if they are legal modulo passing
+  for(int y = 0; y<board.y_size; y++) {
+    for(int x = 0; x<board.x_size; x++) {
+      Loc loc = Location::getLoc(x,y,board.x_size);
+      if (isLegalModuloPassing(board, loc, movePla))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool BoardHistory::isLegalModuloPassing(const Board& board, Loc moveLoc, Player movePla) const {
   //Ko-moves in the encore that are recapture blocked are interpreted as pass-for-ko, so they are legal
   if(encorePhase > 0) {
     if(moveLoc >= 0 && moveLoc < Board::MAX_ARR_SIZE && moveLoc != Board::PASS_LOC) {
@@ -1008,6 +1044,10 @@ void BoardHistory::makeBoardMoveAssumeLegal(Board& board, Loc moveLoc, Player mo
   if(assumeMultipleStartingBlackMovesAreHandicap && !whiteHasMoved && movePla == P_BLACK && rules.whiteHandicapBonusRule != Rules::WHB_ZERO) {
     whiteHandicapBonusScore = computeWhiteHandicapBonus();
   }
+
+  // Update someoneHasPassed
+  if(moveLoc == Board::PASS_LOC)
+    someoneHasPassed = true;
 
   //Phase transitions and game end
   if(consecutiveEndingPasses >= 2 || isSpightlikeEndingPass) {

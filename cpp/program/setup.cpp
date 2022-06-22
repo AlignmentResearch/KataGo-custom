@@ -373,6 +373,8 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("EMCTS1_noiseOppNodes"+idxStr)) params.EMCTS1_noiseOppNodes = cfg.getBool("EMCTS1_noiseOppNodes"+idxStr);
     else                                            params.EMCTS1_noiseOppNodes = cfg.getBool("EMCTS1_noiseOppNodes");
 
+    if(cfg.contains("canPassFirst"+idxStr)) params.canPassFirst = cfg.getBool("canPassFirst"+idxStr);
+
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayouts"))   params.maxPlayouts = cfg.getInt64("maxPlayouts",        (int64_t)1, (int64_t)1 << 50);
     if(cfg.contains("maxVisits"+idxStr)) params.maxVisits = cfg.getInt64("maxVisits"+idxStr, (int64_t)1, (int64_t)1 << 50);

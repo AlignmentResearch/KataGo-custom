@@ -21,6 +21,7 @@ std::string SearchParams::searchAlgorithmToStr(SearchAlgorithm algo) {
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
   :searchAlgorithm(SearchAlgorithm::MCTS),
+   canPassFirst(true),
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),

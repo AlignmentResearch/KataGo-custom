@@ -306,7 +306,7 @@ bool Search::getPlaySelectionValuesWithDirectPolicy(
   for (int movePos = 0; movePos < policySize; movePos++) {
     const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
     const double policyProb = policyProbs[movePos];
-    if (policyProb < 0)
+    if (policyProb <= 0)
       continue;
 
     const Loc moveLoc = NNPos::posToLoc(

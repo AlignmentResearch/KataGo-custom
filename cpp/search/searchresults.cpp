@@ -294,6 +294,11 @@ bool Search::getPlaySelectionValuesWithDirectPolicy(
   std::vector<Loc>& locs,
   std::vector<double>& playSelectionValues
 ) const {
+  // Returns the selection values for all legal moves suggested by policy with non-negative policy probability.
+  //
+  // Iterates over all moves, filtering out any where the policy probability is negative (which may occur
+  // due to the addition of noise) or illegal (based on board history). Then scales the (noised) policy
+  // probabilities with clipAndScalePlaySelectionValues.
   assert(node.nextPla == thread.pla);
 
   locs.clear();

@@ -13,35 +13,6 @@ from dataclasses import asdict
 
 from sgfmill import sgf
 
-# format: victim name, conditions for moving on:
-# win rate, diff score, diff score without komi, policy_loss
-# for quick copy as a JSON
-"""
-[
-    {
-        "name": "kata1-b6c96-s41312768-d6061202.txt.gz",
-        "win_rate": 0.75,
-        "diff_score": null,
-        "diff_score_wo_komi": null,
-        "policy_loss": null
-    },
-    {
-        "name": "kata1-b40c256-s7186724608-d1743537710.bin.gz",
-        "win_rate": 0.75,
-        "diff_score": null,
-        "diff_score_wo_komi": null,
-        "policy_loss": null
-    },
-    {
-        "name": "g170-b30c320x2-s4824661760-d1229536699.bin.gz",
-        "win_rate": 0.75,
-        "diff_score": null,
-        "diff_score_wo_komi": null,
-        "policy_loss": null
-    }
-]
-"""
-
 
 @dataclass
 class AdvGameInfo:
@@ -67,14 +38,14 @@ class PlayerStat:
 
     def can_be_victim_criteria(self) -> bool:
         criteria = self.get_stat_members()
-        num_enabled = len([v for k, v in criteria if v is not None])
+        num_enabled = len([v for k, v in criteria.items() if v is not None])
         return num_enabled == 1
 
     # check if adv_stat has a greater value of enabled criteria
     def check_if_gt(self, adv_stat) -> bool:
         criteria = self.get_stat_members()
         adv_vals = adv_stat.get_stat_members()
-        for k, v in criteria:
+        for k, v in criteria.items():
             if v is not None and adv_vals[k] > v:
                 return True
         return False
@@ -177,7 +148,7 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
     sum_wins = 0
     sum_score = 0
     sum_score_wo_komi = 0
-    games = [x for x in filter(None, [get_game_info(sgf_str) for sgf_str in sgf_strings])]
+    games = list(filter(None, [get_game_info(sgf_str) for sgf_str in sgf_strings]))
     for game in games:
         # game.winner can be None (for ties), but a tie is still not a win
         if game.winner:

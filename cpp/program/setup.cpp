@@ -368,10 +368,10 @@ vector<SearchParams> Setup::loadParams(
     string idxStr = Global::intToString(i);
 
     if(cfg.contains("searchAlgorithm"+idxStr)) params.searchAlgorithm = SearchParams::strToSearchAlgorithm(cfg.getString("searchAlgorithm"+idxStr));
-    else                                       params.searchAlgorithm = SearchParams::strToSearchAlgorithm(cfg.getString("searchAlgorithm"));
+    else if (cfg.contains("searchAlgorithm"))  params.searchAlgorithm = SearchParams::strToSearchAlgorithm(cfg.getString("searchAlgorithm"));
 
     if(cfg.contains("EMCTS1_noiseOppNodes"+idxStr)) params.EMCTS1_noiseOppNodes = cfg.getBool("EMCTS1_noiseOppNodes"+idxStr);
-    else                                            params.EMCTS1_noiseOppNodes = cfg.getBool("EMCTS1_noiseOppNodes");
+    else if (cfg.contains("EMCTS1_noiseOppNodes"))  params.EMCTS1_noiseOppNodes = cfg.getBool("EMCTS1_noiseOppNodes");
 
     if(cfg.contains("canPassFirst"+idxStr)) params.canPassFirst = cfg.getBool("canPassFirst"+idxStr);
 

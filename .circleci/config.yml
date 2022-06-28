@@ -86,11 +86,11 @@ jobs:
       # Lint a select few files that we maintain (not upstream).
       - run:
           name: flake8
-          command: flake8 ${FULL_LINT_FILES}
+          command: flake8 --version && flake8 -j "${NUM_CPUS}" ${FULL_LINT_FILES}
 
       - run:
           name: black
-          command: black ${FULL_LINT_FILES}
+          command: black --version && black --check --diff ${FULL_LINT_FILES}
 
       - run:
           name: codespell

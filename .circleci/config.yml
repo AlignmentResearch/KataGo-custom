@@ -24,6 +24,8 @@ executors:
       # docker push humancompatibleai/goattack:python-deps
       - image: humancompatibleai/goattack:python-deps
     resource_class: large
+    environment:
+      NUM_CPUS: 4
 
 commands:
   cpp-dependencies:

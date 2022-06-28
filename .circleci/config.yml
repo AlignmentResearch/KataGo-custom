@@ -81,7 +81,7 @@ jobs:
       # Run pytype against most files.
       - run:
           name: pytype
-          command: pytype ./python/ -x ${PYTYPE_EXCLUDE_FILES}
+          command: pytype --version && pytype ./python/ -j "${NUM_CPUS}" -x ${PYTYPE_EXCLUDE_FILES}
 
       # Lint a select few files that we maintain (not upstream).
       - run:

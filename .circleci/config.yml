@@ -16,6 +16,9 @@ executors:
       # docker push humancompatibleai/goattack:cpp-build-deps
       - image: humancompatibleai/goattack:cpp-build-deps
     resource_class: xlarge
+  cpp-gpu:
+    machine: true
+    resource_class: humancompatibleai/go-attack-linux-gpu
   python:
     <<: *defaults
     docker:
@@ -43,7 +46,7 @@ commands:
 
 jobs:
   cpp-unit-test:
-    executor: cpp
+    executor: cpp-gpu
     steps:
       - cpp-dependencies
 

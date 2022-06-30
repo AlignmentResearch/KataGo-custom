@@ -92,6 +92,10 @@ jobs:
           name: katago runexpensivetests
           command: ./cpp/katago runexpensivetests
 
+      - run:
+          name: katago runnnlayertests
+          command: ./cpp/katago runnnlayertests
+
       - store_artifacts:
           path: /tmp/resource-usage
           destination: resource-usage

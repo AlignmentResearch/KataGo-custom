@@ -53,7 +53,7 @@ commands:
       - run:
           name: Memory Monitor
           command: |
-            mkdir /tmp/resource-usage
+            rm -rf /tmp/resource-usage && mkdir -p /tmp/resource-usage
             export FILE=/tmp/resource-usage/memory.txt
             while true; do
               ps -u <<parameters.user>> eo pid,%cpu,%mem,args,uname --sort=-%mem >> $FILE

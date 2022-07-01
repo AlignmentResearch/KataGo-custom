@@ -16,6 +16,7 @@ import json
 import datetime
 import struct
 import gzip
+from typing import TextIO
 
 import tensorflow as tf
 import numpy as np
@@ -127,7 +128,7 @@ with tf.compat.v1.Session(config=tfconfig) as session:
   else:
     extension = (".bin.gz" if binary_floats else ".txt.gz")
     mode = ("wb" if binary_floats else "w")
-    f = gzip.open(export_dir + "/" + filename_prefix + extension, mode)
+    f: TextIO = gzip.open(export_dir + "/" + filename_prefix + extension, mode) # pytype: disable=annotation-type-mismatch
     def writeln(s):
       if binary_floats:
         f.write((str(s)+"\n").encode(encoding="ascii",errors="backslashreplace"))  # pytype: disable=wrong-arg-types
@@ -135,7 +136,7 @@ with tf.compat.v1.Session(config=tfconfig) as session:
         f.write(str(s)+"\n")
     def writestr(s):
       if binary_floats:
-        f.write(s.encode(encoding="ascii",errors="backslashreplace"))
+        f.write(s.encode(encoding="ascii",errors="backslashreplace"))  # pytype: disable=wrong-arg-types
       else:
         f.write(s)
 

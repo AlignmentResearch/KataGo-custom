@@ -14,6 +14,7 @@ namespace MainCmds {
   int selfplay(const std::vector<std::string>& args, const bool victimplay = false);
 
   int runtests(const std::vector<std::string>& args);
+  int runexpensivetests(const std::vector<std::string>& args);
   int runnnlayertests(const std::vector<std::string>& args);
   int runnnontinyboardtest(const std::vector<std::string>& args);
   int runnnsymmetriestest(const std::vector<std::string>& args);

@@ -16,6 +16,9 @@ executors:
       # docker push humancompatibleai/goattack:cpp-build-deps
       - image: humancompatibleai/goattack:cpp-build-deps
     resource_class: xlarge
+  cpp-gpu:
+    machine: true
+    resource_class: humancompatibleai/go-attack-linux-gpu
   python:
     <<: *defaults
     docker:
@@ -40,28 +43,58 @@ commands:
       - run:
           name: make
           command: cd cpp && make clean && make -j
-
-jobs:
-  cpp-unit-test:
-    executor: cpp
+  memory-monitor:
+    description: "Memory Monitor"
+    parameters:
+      user:
+        default: "root"
+        type: "string"
     steps:
-      - cpp-dependencies
-
       - run:
           name: Memory Monitor
           command: |
-            mkdir /tmp/resource-usage
+            rm -rf /tmp/resource-usage && mkdir -p /tmp/resource-usage
             export FILE=/tmp/resource-usage/memory.txt
             while true; do
-              ps -u root eo pid,%cpu,%mem,args,uname --sort=-%mem >> $FILE
+              ps -u <<parameters.user>> eo pid,%cpu,%mem,args,uname --sort=-%mem >> $FILE
               echo "----------" >> $FILE
               sleep 1
             done
           background: true
 
+jobs:
+  cpp-unit-test-cpuonly:
+    executor: cpp
+    steps:
+      - cpp-dependencies
+      - memory-monitor
+
       - run:
           name: katago runtests
           command: ./cpp/katago runtests
+
+      - store_artifacts:
+          path: /tmp/resource-usage
+          destination: resource-usage
+
+  cpp-unit-test-gpu:
+    executor: cpp-gpu
+    steps:
+      - cpp-dependencies
+      - memory-monitor:
+          user: circleci
+
+      - run:
+          name: katago runtests
+          command: ./cpp/katago runtests
+
+      - run:
+          name: katago runexpensivetests
+          command: ./cpp/katago runexpensivetests
+
+      - run:
+          name: katago runnnlayertests
+          command: ./cpp/katago runnnlayertests
 
       - store_artifacts:
           path: /tmp/resource-usage
@@ -102,9 +135,12 @@ workflows:
   version: 2
   test:
     jobs:
-      - cpp-unit-test:
+      - cpp-unit-test-cpuonly:
           context:
           - docker-hub-creds
+      - cpp-unit-test-gpu:
+          context:
+            - docker-hub-creds
       - python-lint:
           context:
             - docker-hub-creds

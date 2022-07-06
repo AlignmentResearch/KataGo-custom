@@ -195,8 +195,7 @@ class MatchPairer {
     const std::vector<SearchParams>& baseParamss,
     bool forSelfPlay,
     bool forGateKeeper,
-    const std::vector<bool>& excludeBot,
-    const std::vector<bool>& useVictimplays = std::vector<bool>()
+    const std::vector<bool>& excludeBot
   );
 
   ~MatchPairer();
@@ -206,7 +205,6 @@ class MatchPairer {
     std::string botName;
     NNEvaluator* nnEval;
     SearchParams baseParams;
-    bool victimplay = false;
   };
 
   MatchPairer(const MatchPairer&) = delete;

@@ -167,7 +167,7 @@ Loc PlayUtils::getGameInitializationMove(
   Search* botB, Search* botW, Board& board, const BoardHistory& hist, Player pla, NNResultBuf& buf,
   Rand& gameRand, double temperature
 ) {
-  NNEvaluator* nnEval = (pla == P_BLACK ? botB : botW)->nnEvaluator;
+  NNEvaluator* nnEval = (pla == P_BLACK ? botB : botW)->getNNEvaluator();
   MiscNNInputParams nnInputParams;
   nnInputParams.drawEquivalentWinsForWhite = (pla == P_BLACK ? botB : botW)->searchParams.drawEquivalentWinsForWhite;
   nnEval->evaluate(board,hist,pla,nnInputParams,buf,false,false);
@@ -253,7 +253,7 @@ void PlayUtils::playExtraBlack(
   for(int i = 0; i<numExtraBlack; i++) {
     MiscNNInputParams nnInputParams;
     nnInputParams.drawEquivalentWinsForWhite = bot->searchParams.drawEquivalentWinsForWhite;
-    bot->nnEvaluator->evaluate(board,hist,pla,nnInputParams,buf,false,false);
+    bot->getNNEvaluator()->evaluate(board,hist,pla,nnInputParams,buf,false,false);
     std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
 
     bool allowPass = false;
@@ -1198,4 +1198,3 @@ Loc PlayUtils::maybeFriendlyPass(
 
   return moveLoc;
 }
-

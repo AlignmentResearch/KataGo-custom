@@ -311,7 +311,12 @@ struct Search {
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;
-  NNEvaluator* nnEvaluator; //externally owned
+private: // SHOULD NOT BE ACCESSED EXCEPT THROUGH getNNEvaluator or setNNEval
+  NNEvaluator* nnEval__; //externally owned
+  NNEvaluator* oppNNEval__; //externally owned
+public:
+  NNEvaluator* getNNEvaluator(const SearchNode& node) const;
+  NNEvaluator* getNNEvaluator() const; // returns nnEval__
   int nnXLen;
   int nnYLen;
   int policySize;
@@ -340,7 +345,13 @@ struct Search {
 
   //Note - randSeed controls a few things in the search, but a lot of the randomness actually comes from
   //random symmetries of the neural net evaluations, see nneval.h
-  Search(SearchParams params, NNEvaluator* nnEval, Logger* logger, const std::string& randSeed);
+  Search(
+    SearchParams params,
+    NNEvaluator* nnEval,
+    Logger* logger,
+    const std::string& randSeed,
+    NNEvaluator* oppNNEval = nullptr
+  );
   ~Search();
 
   Search(const Search&) = delete;

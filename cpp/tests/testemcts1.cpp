@@ -27,6 +27,7 @@ void EMCTS1Tests::testConstPolicies() {
   testAssert(searchParamss.size() == 2);
 
   SearchParams mctsParams = searchParamss[0];
+  mctsParams.maxVisits = 1;
   {  // Remove all randomness from policy.
     mctsParams.chosenMoveTemperatureEarly = 0;
     mctsParams.chosenMoveTemperature = 0;
@@ -41,7 +42,7 @@ void EMCTS1Tests::testConstPolicies() {
   auto nnEval2 = get_nneval(CONST_POLICY_2_PATH, cfg, logger, 42);
 
   {  // Check argmax-bot1 policy
-    Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two");
+    Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two", nullptr);
     Player pla = P_BLACK;
     for (int i = 0; i < 30; i++) {
       const Loc loc = bot1.runWholeSearchAndGetMove(pla);
@@ -58,8 +59,8 @@ void EMCTS1Tests::testConstPolicies() {
   }
 
   {  // Check argmax-bot1 and argmax-bot2 interaction.
-    Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two");
-    Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two");
+    Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two", nullptr);
+    Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two", nullptr);
     testAssert(bot1.rootHistory.rules.multiStoneSuicideLegal);
     testAssert(bot1.rootHistory.rules.koRule == Rules::KO_POSITIONAL);
 

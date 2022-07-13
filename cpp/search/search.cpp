@@ -1711,10 +1711,12 @@ void Search::recursivelyRecomputeStats(SearchNode& n) {
       double scoreMeanAvg = node->stats.scoreMeanAvg.load(std::memory_order_acquire);
       double scoreMeanSqAvg = node->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
 
-      //It's possible that this node has 0 weight in the case where it's the root node
-      //and has 0 visits because we began a search and then stopped it before any playouts happened.
-      //In that case, there's not much to recompute.
-      if(weightSum <= 0.0) {
+      //It's possible that this node has 0 weight, there are two possibilities:
+      //  1. In the case where it's the root node and has 0 visits, it's because
+      //     we began a search and then stopped it before any playouts happened.
+      //     In that case, there's not much to recompute.
+      //  2. We could be doing EMCTS1.
+      if(weightSum <= 0.0 && searchParams.searchAlgo != SearchParams::SearchAlgorithm::EMCTS1) {
         assert(numVisits == 0);
         assert(isRoot);
       }

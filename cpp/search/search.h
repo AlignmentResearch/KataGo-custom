@@ -587,7 +587,7 @@ private:
   double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
   double getApproxScoreUtilityDerivative(double scoreMean) const;
   double getUtilityFromNN(const NNOutput& nnOutput) const;
-  double computeNodeWeight(const SearchNode& node) const;
+  public: double computeNodeWeight(const SearchNode& node) const; private:
 
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
 

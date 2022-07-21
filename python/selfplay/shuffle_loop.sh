@@ -20,7 +20,10 @@ shift
 BATCHSIZE="$1"
 shift
 
-GITROOTDIR="$(git rev-parse --show-toplevel)"
+if [ -z ${GITROOTDIR+x} ]; then
+    GITROOTDIR="$(git rev-parse --show-toplevel)"
+fi
+GITROOTDIR="$(realpath "$GITROOTDIR")"
 
 basedir="$(realpath "$BASEDIRRAW")"
 tmpdir="$(realpath "$TMPDIRRAW")"

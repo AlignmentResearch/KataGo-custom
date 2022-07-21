@@ -18,10 +18,9 @@ then
     exit 0
 fi
 
-if [[ -z "${GITROOTDIR}" ]]; then
+if [ -z ${GITROOTDIR+x} ]; then
    GITROOTDIR="$(git rev-parse --show-toplevel)"
 fi
-
 GITROOTDIR="$(realpath "$GITROOTDIR")"
 
 BASEDIR="$1"

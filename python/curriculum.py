@@ -145,6 +145,7 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
 
     # don't have enough data
     if len(sgf_strings) < games_for_compute:
+        logging.info("Incomplete statistics, got only {} games".format(len(sgf_strings)))
         return None
 
     sum_wins = 0

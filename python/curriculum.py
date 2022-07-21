@@ -214,8 +214,29 @@ class Curriculum:
         logging.info("Loaded curriculum with the following params:")
         logging.info("\n".join([str(x) for x in config]))
 
+        logging.info("Copying the first victim '{}'...".format(self.__cur_victim().name))
+        self.__try_victim_copy()
+        logging.info("Curriculum initial setup is complete")
+
     def __cur_victim(self) -> PlayerStat:
         return self.victims[self.victim_idx]
+
+    def __try_victim_copy(self, force_if_exists=False):
+        num_efforts = 0
+        victim_name = self.__cur_victim().name
+        if os.path.exists(os.path.join(self.victims_output_dir, victim_name)) and not force_if_exists:
+            return
+        for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
+            try:
+                shutil.copy(os.path.join(self.victims_input_dir, victim_name), self.victims_output_dir)
+                return
+            except:
+                logging.warning("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
+                    self.__cur_victim().name, self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
+                num_efforts += 1
+                time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
+
+        raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
 
     def try_move_on(self, adv_stat: PlayerStat = None, policy_loss: float = None):
         if self.finished:
@@ -237,18 +258,7 @@ class Curriculum:
             return
 
         logging.info("Moving to the next victim '{}'".format(self.__cur_victim().name))
-        num_efforts = 0
-        for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
-            try:
-                shutil.copy(os.path.join(self.victims_input_dir, self.__cur_victim().name), self.victims_output_dir)
-                return
-            except:
-                logging.warning("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
-                    self.__cur_victim().name, self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
-                num_efforts += 1
-                time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
-
-        raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
+        self.__try_victim_copy(True)
 
     """
     Run curriculum checking.

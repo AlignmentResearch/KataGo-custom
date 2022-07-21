@@ -46,8 +46,10 @@ class PlayerStat:
         criteria = self.get_stat_members()
         adv_vals = adv_stat.get_stat_members()
         for k, v in criteria.items():
-            if v is not None and adv_vals[k] > v:
-                return True
+            if v is not None:
+                logging.info("{}: {} (adv) <-> {} (threshold)".format(k, adv_vals[k], v))
+                if adv_vals[k] > v:
+                    return True
         return False
 
 

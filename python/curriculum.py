@@ -292,6 +292,9 @@ class Curriculum:
 
 
 if __name__ == '__main__':
+    stdout_logger = logging.getLogger()
+    stdout_logger.setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(description='Run victim replacement based on win rate.')
     parser.add_argument('-selfplay-dir', required=True, help='Directory with selfplay data')
     parser.add_argument('-input-models-dir', required=True, help='Input dir with victim model files')

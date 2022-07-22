@@ -182,6 +182,8 @@ class Curriculum:
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
+        self.stat_files = []
+
         if config_json_file is not None:
             logging.info("Curriculum: loading JSON config from '%s'", config_json_file)
             with open(config_json_file) as f:

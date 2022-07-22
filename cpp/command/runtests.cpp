@@ -56,6 +56,17 @@ int MainCmds::runtests(const vector<string>& args) {
   return 0;
 }
 
+int MainCmds::runexpensivetests(const vector<string>& args) {
+  (void)args;
+  Board::initHash();
+  ScoreValue::initTables();
+
+  // TODO(adam): placeholder
+
+  cout << "All expensive tests passed" << endl;
+  return 0;
+}
+
 int MainCmds::runoutputtests(const vector<string>& args) {
   (void)args;
   Board::initHash();

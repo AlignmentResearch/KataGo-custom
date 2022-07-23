@@ -243,6 +243,16 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     return nnEval;
   };
 
+  NNEvaluator* victimNNEval = nullptr;
+  bool reloadVictims = false;
+  if(victimplay) {
+    if(FileUtils::isDirectory(nnVictimPath)) {
+      reloadVictims = true;
+    } else {
+      victimNNEval = loadNN("victim", nnVictimPath);
+    }
+  }
+
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
     [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
@@ -358,22 +368,14 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &advSearchParams,
     &gameSeedBase,
     &victimplay,
+    &reloadVictims,
+    &victimNNEval,
     &nnVictimPath,
     &loadNN
   ](int threadIdx) {
     auto shouldStopFunc = []() {
       return shouldStop.load();
     };
-
-    bool reloadVictims = false;
-    NNEvaluator* victimNNEval = nullptr;
-    if(victimplay) {
-      if(FileUtils::isDirectory(nnVictimPath)) {
-        reloadVictims = true;
-      } else {
-        victimNNEval = loadNN("victim", nnVictimPath);
-      }
-    }
 
     string prevModelName;
     Rand thisLoopSeedRand;
@@ -474,9 +476,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         break;
     }
 
-    delete victimNNEval;
-    victimNNEval = nullptr;
-
     logger.write("Game loop thread " + Global::intToString(threadIdx) + " terminating");
   };
   auto gameLoopProtected = [&logger,&gameLoop](int threadIdx) {
@@ -532,6 +531,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     modelLoadSleepVar.notify_all();
   }
   modelLoadLoopThread.join();
+
+  delete victimNNEval;
+  victimNNEval = nullptr;
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

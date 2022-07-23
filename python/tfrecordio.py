@@ -42,7 +42,7 @@ def make_tf_record_parser(model_config,pos_len,batch_size,multi_num_gpus=None):
   def parse_input(serialized_example):
     example = tf.io.parse_single_example(serialized_example,raw_input_features)
     if tf.__version__[0] == '1':
-      binchwp = tf.decode_raw(example["binchwp"],tf.uint8)
+      binchwp = tf.decode_raw(example["binchwp"], tf.uint8)
     else:
       binchwp = tf.io.decode_raw(example["binchwp"], tf.uint8)
     ginc = example["ginc"]

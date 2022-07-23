@@ -87,17 +87,15 @@ static FinishedGameData* runOneVictimplayGame(
     (victimIsBlack ? -1 : 1)
     * gameData->finalWhiteMinusBlackScore();
 
-  vector<string> adversaryNetNames = { "0:" + adversaryBotSpec.botName };
-  for (auto &x : gameData->changedNeuralNets) {
-    adversaryNetNames.push_back(Global::intToString(x->turnIdx) + ":" + x->name);
-  }
-
   logger.write(
     "Game #" + Global::int64ToString(gameIdx) +
     " victim (" + victimColorStr + ")" +
     " - adv (" + adversaryColorStr + ")" +
     " score: " + Global::floatToString(victimMinusAdvScore) +
-    "; adv_nets: " + Global::vectorToString(adversaryNetNames, ",")
+    "; victim_" + SearchParams::searchAlgorithmToStr(victimSearchParams.searchAlgorithm) +
+            "@" + Global::intToString(victimSearchParams.maxVisits) +
+    " adv_" + SearchParams::searchAlgorithmToStr(advSearchParams.searchAlgorithm) +
+        "@" + Global::intToString(advSearchParams.maxVisits)
   );
 
   return gameData;
@@ -187,6 +185,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
   else assert(paramss.size() == 1);
+
   SearchParams baseParams = paramss[0];
   SearchParams victimSearchParams = paramss[0];
   SearchParams advSearchParams = paramss[paramss.size() - 1];
@@ -321,6 +320,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
     tdataWriter->forVictimPlay = victimplay;
     vdataWriter->forVictimPlay = victimplay;
+
+    tdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
+    vdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
 
     ofstream* sgfOut = NULL;
     if(sgfOutputDir.length() > 0) {

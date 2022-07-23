@@ -236,6 +236,16 @@ bool Search::getPlaySelectionValues(
     }
   }
 
+  return clipAndScalePlaySelectionValues(
+    playSelectionValues, numChildren, scaleMaxToAtLeast
+  );
+}
+
+bool Search::clipAndScalePlaySelectionValues(
+  std::vector<double>& playSelectionValues,
+  const int numChildren,
+  const double scaleMaxToAtLeast
+) const {
   //Might happen absurdly rarely if we both have no children and don't properly have an nnOutput
   //but have a hash collision or something so we "found" an nnOutput anyways.
   //Could also happen if we have avoidMoveUntilByLoc pruning all the allowed moves.
@@ -276,6 +286,44 @@ bool Search::getPlaySelectionValues(
   }
 
   return true;
+}
+
+bool Search::getPlaySelectionValuesWithDirectPolicy(
+  const SearchThread& thread,
+  const SearchNode& node,
+  std::vector<Loc>& locs,
+  std::vector<double>& playSelectionValues
+) const {
+  // Returns the selection values for all legal moves suggested by policy with non-negative policy probability.
+  //
+  // Iterates over all moves, filtering out any where the policy probability is negative (which may occur
+  // due to the addition of noise) or illegal (based on board history). Then scales the (noised) policy
+  // probabilities with clipAndScalePlaySelectionValues.
+  assert(node.nextPla == thread.pla);
+
+  locs.clear();
+  playSelectionValues.clear();
+
+  const NNOutput* nnOutput = node.getNNOutput();
+  if (nnOutput == NULL)
+    return false;
+
+  for (int movePos = 0; movePos < policySize; movePos++) {
+    const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
+    const double policyProb = policyProbs[movePos];
+    if (policyProb <= 0)
+      continue;
+
+    const Loc moveLoc = NNPos::posToLoc(
+      movePos, thread.board.x_size, thread.board.y_size, nnXLen, nnYLen);
+    if (!thread.history.isLegal(thread.board, moveLoc, thread.pla))
+      continue;
+
+    locs.push_back(moveLoc);
+    playSelectionValues.push_back(policyProb);
+  }
+
+  return clipAndScalePlaySelectionValues(playSelectionValues, locs.size());
 }
 
 void Search::maybeRecomputeNormToTApproxTable() {
@@ -387,7 +435,7 @@ bool Search::getNodeRawNNValues(const SearchNode& node, ReportedSearchValues& va
   if(winLossValue < -1.0) winLossValue = -1.0;
   values.winLossValue = winLossValue;
 
-  values.weight = computeWeightFromNNOutput(nnOutput);
+  values.weight = computeNodeWeight(node);
   values.visits = 1;
 
   return true;
@@ -1328,7 +1376,7 @@ std::pair<double,double> Search::getAverageShorttermWLAndScoreErrorHelper(const 
   double scoreErrorSum = 0.0;
   double weightSum = 0.0;
   {
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     wlErrorSum += nnOutput->shorttermWinlossError * thisNodeWeight;
     scoreErrorSum += nnOutput->shorttermScoreError * thisNodeWeight;
     weightSum += thisNodeWeight;
@@ -1402,7 +1450,7 @@ bool Search::getSharpScore(const SearchNode* node, double& ret) const {
     if(nnOutput == NULL)
       return false;
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1475,7 +1523,7 @@ double Search::getSharpScoreHelper(const SearchNode* node, double policyProbsBuf
   //Also add in the direct evaluation of this node.
   {
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeNodeWeight(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1535,7 +1583,7 @@ double Search::traverseTreeWithOwnershipAndSelfWeight(
   const SearchChildPointer* children = node->getChildren(childrenCapacity);
 
   double actualWeightFromChildren;
-  double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+  double thisNodeWeight = computeNodeWeight(*node);
   if(childrenCapacity <= 8) {
     double childWeightBuf[8];
     actualWeightFromChildren = traverseTreeWithOwnershipAndSelfWeightHelper(

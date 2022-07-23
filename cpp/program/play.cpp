@@ -2277,9 +2277,12 @@ FinishedGameData* GameRunner::runGame(
     SearchParams params = botSpecB.baseParams;
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,params,initialPosition,playSettings,otherGameProps,startPosSample);
     botSpecB.baseParams = params;
-    botSpecW.baseParams = params;
-  }
-  else {
+
+    // These are the only fields of baseParams mutated by createGame.
+    // If createGame is changed, this code needs to be re-checked for correctness.
+    botSpecW.baseParams.noResultUtilityForWhite = params.noResultUtilityForWhite;
+    botSpecW.baseParams.drawEquivalentWinsForWhite = params.drawEquivalentWinsForWhite;
+  } else {
     gameInit->createGame(board,pla,hist,extraBlackAndKomi,initialPosition,playSettings,otherGameProps,startPosSample);
 
     bool rulesWereSupported;
@@ -2294,6 +2297,11 @@ FinishedGameData* GameRunner::runGame(
         logger.write("WARNING: Match is running bot on rules that it does not support: " + botSpecW.botName);
     }
   }
+
+  // Handle canPassFirst logic
+  hist.rules.playerThatCanPassFirst =
+      (botSpecB.baseParams.canPassFirst ? P_BLACK : 0)
+    | (botSpecW.baseParams.canPassFirst ? P_WHITE : 0);
 
   bool clearBotBeforeSearchThisGame = clearBotBeforeSearch;
   if (botSpecB.botIdx == botSpecW.botIdx) {

@@ -7,7 +7,7 @@ These are the critical scripts needed for training neural nets.
 * `tfrecordio.py` - Used by `shuffle.py`, helpers for the TFRecord format for shuffling.
 * `shuffle.py` - Shuffles the data for neural net training and writes it into TFRecords, `used by selfplay/shuffle.sh`.
 * `model.py` - Implementation of the neural net and loss functions in Tensorflow 1.15.
-  * Also contains implementations of the input features, which are NOT used during training because all of it has been computed by the C++ already. But they should work and allong with `board.py` and `data.py` should allow the ability to apply the raw neural net to board positions and SGF files from the python code.
+  * Also contains implementations of the input features, which are NOT used during training because all of it has been computed by the C++ already. But they should work and along with `board.py` and `data.py` should allow the ability to apply the raw neural net to board positions and SGF files from the python code.
 * `modelconfigs.py` - Specific channel and block configurations for different-sized nets. These are codes that you can supply to `train.py` as an argument to pick the net size.
 * `train.py` - Trains the neural net using the shuffled data and saves it to a SavedModel periodically, used by `selfplay/train.sh`.
 * `export_model.py` - Exports the trained neural net SavedModel to KataGo's .bin.gz format. Used by `selfplay/export_model_for_selfplay.sh`.

@@ -437,6 +437,20 @@ struct Search {
     bool allowDirectPolicyMoves
   ) const;
 
+  // Given some playSelectionValues, scale the max to at least scaleMaxToAtLeast.
+  bool clipAndScalePlaySelectionValues(
+    std::vector<double>& playSelectionValues,
+    const int numChildren,
+    const double scaleMaxToAtLeast = 0.0
+  ) const;
+
+  bool getPlaySelectionValuesWithDirectPolicy(
+    const SearchThread& thread,
+    const SearchNode& node,
+    std::vector<Loc>& locs,
+    std::vector<double>& playSelectionValues
+  ) const;
+
   //Useful utility function exposed for outside use
   static uint32_t chooseIndexWithTemperature(Rand& rand, const double* relativeProbs, int numRelativeProbs, double temperature);
   static void computeDirichletAlphaDistribution(int policySize, const float* policyProbs, double* alphaDistr);
@@ -532,6 +546,8 @@ private:
 
   double getResultUtility(double winlossValue, double noResultValue) const;
   double getResultUtilityFromNN(const NNOutput& nnOutput) const;
+
+  double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
 
   void spawnThreadsIfNeeded();
@@ -560,7 +576,7 @@ private:
   double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
   double getApproxScoreUtilityDerivative(double scoreMean) const;
   double getUtilityFromNN(const NNOutput& nnOutput) const;
-  double computeWeightFromNNOutput(const NNOutput* nnOutput) const;
+  double computeNodeWeight(const SearchNode& node) const;
 
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
 

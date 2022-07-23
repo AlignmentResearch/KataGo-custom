@@ -91,6 +91,8 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::selfplay(subArgs, true);
   else if(subcommand == "runtests")
     return MainCmds::runtests(subArgs);
+  else if(subcommand == "runexpensivetests")
+    return MainCmds::runexpensivetests(subArgs);
   else if(subcommand == "runnnlayertests")
     return MainCmds::runnnlayertests(subArgs);
   else if(subcommand == "runnnontinyboardtest")

@@ -261,6 +261,7 @@ class TrainingDataWriter {
   int64_t numRowsInBuffer() const;
 
   bool forVictimPlay = false;
+  bool useAuxPolicyTarget = true;
 
  private:
   std::string outputDir;

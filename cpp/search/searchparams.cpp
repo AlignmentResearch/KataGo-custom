@@ -1,12 +1,28 @@
 #include "../search/searchparams.h"
 
+SearchParams::SearchAlgorithm SearchParams::strToSearchAlgorithm(const std::string& algoStr) {
+  if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
+  if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
+  ASSERT_UNREACHABLE;
+}
+
+std::string SearchParams::searchAlgorithmToStr(SearchAlgorithm algo) {
+  switch(algo) {
+    case SearchAlgorithm::MCTS: return "MCTS";
+    case SearchAlgorithm::EMCTS1: return "EMCTS1";
+    default: ASSERT_UNREACHABLE;
+  }
+}
+
 //Default search params
 //The intent is that the are good default guesses for values of the parameters,
 //with deterministic behavior (no noise, no randomization) and no bounds (unbounded time and visits).
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :winLossUtilityFactor(1.0),
+  :searchAlgorithm(SearchAlgorithm::MCTS),
+   canPassFirst(true),
+   winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),
    dynamicScoreCenterZeroWeight(0.0),

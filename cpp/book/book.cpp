@@ -123,6 +123,10 @@ static Hash128 getStateHash(const BoardHistory& hist) {
   if(hist.isGameFinished)
     hash ^= Board::ZOBRIST_GAME_IS_OVER;
 
+  //Fold in whether someone has passed
+  if(hist.someoneHasPassed)
+    hash ^= Board::ZOBRIST_SOMEONE_HAS_PASSED;
+
   // Fold in consecutive pass count. Probably usually redundant with history tracking. Use some standard LCG constants.
   static constexpr uint64_t CONSECPASS_MULT0 = 2862933555777941757ULL;
   static constexpr uint64_t CONSECPASS_MULT1 = 3202034522624059733ULL;
@@ -2152,5 +2156,3 @@ Book* Book::loadFromFile(const std::string& fileName, double sharpScoreOutlierCa
   }
   return ret;
 }
-
-

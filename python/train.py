@@ -122,7 +122,7 @@ def trainlog(s):
   print(s,flush=True)
   trainlogger.info(s)
 
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)  # type: ignore
 
 num_batches_per_epoch = int(round(samples_per_epoch / batch_size))
 
@@ -161,9 +161,9 @@ initial_weights_already_loaded = os.path.exists(os.path.join(traindir,"checkpoin
 
 if swa_sub_epoch_scale is not None:
   with tf.device("/cpu:0"):
-    with tf.compat.v1.variable_scope("swa_model"):
+    with tf.compat.v1.variable_scope("swa_model"):  # type: ignore
       swa_model = Model(model_config,pos_len,placeholders={})
-      swa_saver = tf.compat.v1.train.Saver(
+      swa_saver = tf.compat.v1.train.Saver(  # type: ignore
         max_to_keep = 10000000,
         save_relative_paths = True,
       )
@@ -171,10 +171,10 @@ if swa_sub_epoch_scale is not None:
     swa_wvalues = {}
     swa_weight = 0.0
     assign_ops = []
-    for variable in itertools.chain(tf.compat.v1.model_variables(), tf.compat.v1.trainable_variables()):
+    for variable in itertools.chain(tf.compat.v1.model_variables(), tf.compat.v1.trainable_variables()):  # type: ignore
       if variable.name.startswith("swa_model/"):
-        placeholder = tf.compat.v1.placeholder(variable.dtype,variable.shape)
-        assign_ops.append(tf.compat.v1.assign(variable,placeholder))
+        placeholder = tf.compat.v1.placeholder(variable.dtype,variable.shape)  # type: ignore
+        assign_ops.append(tf.compat.v1.assign(variable,placeholder))  # type: ignore
         swa_assign_placeholders[variable.name] = placeholder
         if tf.__version__[0] == '1':
           swa_wvalues[variable.name] = np.zeros([elt.value for elt in variable.shape])
@@ -210,8 +210,8 @@ def save_swa(savedir):
     assert(swa_variable_name.startswith("swa_model/"))
     assignments[swa_assign_placeholders[swa_variable_name]] = swa_wvalues[swa_variable_name] / swa_weight
 
-  with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(device_count={'GPU':0})) as sess:
-    sess.run(tf.compat.v1.global_variables_initializer())
+  with tf.compat.v1.Session(config=tf.compat.v1.ConfigProto(device_count={'GPU':0})) as sess:  # type: ignore
+    sess.run(tf.compat.v1.global_variables_initializer())  # type: ignore
     sess.run(swa_assign_op, assignments)
     if not os.path.exists(savedir):
       os.mkdir(savedir)
@@ -242,11 +242,11 @@ def update_global_latest_extra_stats(results):
 def moving_mean(name: str, x, weights):
   sumwx = tf.reduce_sum(x*weights,name="printstats/wx/"+name)
   sumw = tf.reduce_sum(weights,name="printstats/w/"+name)
-  moving_wx = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_wx"),trainable=False)
-  moving_w = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_w"),trainable=False)
+  moving_wx = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_wx"),trainable=False)  # type: ignore
+  moving_w = tf.compat.v1.get_variable(initializer=tf.zeros([]),name=(name+"/moving_w"),trainable=False)  # type: ignore
 
   decay = 0.999
-  with tf.compat.v1.variable_scope(name):
+  with tf.compat.v1.variable_scope(name):  # type: ignore
     wx_op = tf.keras.backend.moving_average_update(moving_wx,sumwx,decay)
     w_op = tf.keras.backend.moving_average_update(moving_w,sumw,decay)
     op = tf.group(wx_op,w_op)
@@ -308,7 +308,7 @@ def build_metrics(model, target_vars, metrics, estimator: bool):
     eval_metric_ops = {}
     for k, v in means.items():
       w = weights.get(k, default_weight)
-      eval_metric_ops[k] = tf.compat.v1.metrics.mean(v, weights=w)
+      eval_metric_ops[k] = tf.compat.v1.metrics.mean(v, weights=w)  # type: ignore
     return eval_metric_ops
   else:
     logvars = {}
@@ -357,7 +357,7 @@ def model_fn(features,labels,mode,params):
     printed_model_yet = True
 
     logvars, log_ops = build_metrics(model, target_vars, metrics, estimator=False)
-    wmean, wmean_op = tf.compat.v1.metrics.mean(target_vars.weight_sum)
+    wmean, wmean_op = tf.compat.v1.metrics.mean(target_vars.weight_sum)  # type: ignore
     log_ops.append(wmean_op)
     logvars.update({
       "wmean": wmean,
@@ -407,7 +407,7 @@ def model_fn(features,labels,mode,params):
         sys.stdout.flush()
         sys.stderr.flush()
 
-        variables_to_restore = tf.compat.v1.global_variables()
+        variables_to_restore = tf.compat.v1.global_variables()  # type: ignore
         assignment_mapping = {}
         for v in variables_to_restore:
           name = v.name.split(":")[0] # drop the ":0" at the end of each var
@@ -416,7 +416,7 @@ def model_fn(features,labels,mode,params):
           elif ("swa_model/"+name) in varname_in_checkpoint:
             assignment_mapping[("swa_model/"+name)] = v
 
-        tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)
+        tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)  # type: ignore
         initial_weights_already_loaded = True
 
     ops = [train_step] + log_ops
@@ -472,7 +472,7 @@ def build_estimator() -> tf.estimator.Estimator:
     save_summary_steps=log_every_n_steps,
   )
   if multi_gpus is None:
-    session_config = tf.compat.v1.ConfigProto()
+    session_config = tf.compat.v1.ConfigProto()  # type: ignore
     session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
     return tf.estimator.Estimator(
       model_fn=model_fn,
@@ -484,7 +484,7 @@ def build_estimator() -> tf.estimator.Estimator:
       )
     )
   else:
-    session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
+    session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)  # type: ignore
     session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
     multigpu_strategy = tf.distribute.MirroredStrategy(
       devices=multi_gpu_device_ids,

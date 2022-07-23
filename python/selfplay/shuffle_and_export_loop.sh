@@ -13,10 +13,8 @@ then
     exit 0
 fi
 
-if [ -z ${GITROOTDIR+x} ]; then
-   GITROOTDIR="$(git rev-parse --show-toplevel)"
-fi
-GITROOTDIR="$(realpath "$GITROOTDIR")"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. "$SCRIPT_DIR/guess_git_root.sh"
 
 NAMEPREFIX="$1"
 shift

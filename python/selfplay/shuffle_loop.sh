@@ -20,10 +20,8 @@ shift
 BATCHSIZE="$1"
 shift
 
-if [ -z ${GITROOTDIR+x} ]; then
-    GITROOTDIR="$(git rev-parse --show-toplevel)"
-fi
-GITROOTDIR="$(realpath "$GITROOTDIR")"
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. "$SCRIPT_DIR/guess_git_root.sh"
 
 basedir="$(realpath "$BASEDIRRAW")"
 tmpdir="$(realpath "$TMPDIRRAW")"

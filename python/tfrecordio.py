@@ -23,12 +23,12 @@ def make_raw_input_feature_placeholders(model_config,pos_len,batch_size):
   num_global_input_features = Model.get_num_global_input_features(model_config)
 
   return {
-    "binchwp": tf.compat.v1.placeholder(tf.uint8,[batch_size,num_bin_input_features,(pos_len*pos_len+7)//8]),
-    "ginc": tf.compat.v1.placeholder(tf.float32,[batch_size,num_global_input_features]),
-    "ptncm": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_POLICY_TARGETS,pos_len*pos_len+1]),
-    "gtnc": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_GLOBAL_TARGETS]),
-    "sdn": tf.compat.v1.placeholder(tf.float32,[batch_size,pos_len*pos_len*2+Model.EXTRA_SCORE_DISTR_RADIUS*2]),
-    "vtnchw": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_VALUE_SPATIAL_TARGETS,pos_len,pos_len])
+    "binchwp": tf.compat.v1.placeholder(tf.uint8,[batch_size,num_bin_input_features,(pos_len*pos_len+7)//8]),# type: ignore
+    "ginc": tf.compat.v1.placeholder(tf.float32,[batch_size,num_global_input_features]),# type: ignore
+    "ptncm": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_POLICY_TARGETS,pos_len*pos_len+1]),# type: ignore
+    "gtnc": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_GLOBAL_TARGETS]),# type: ignore
+    "sdn": tf.compat.v1.placeholder(tf.float32,[batch_size,pos_len*pos_len*2+Model.EXTRA_SCORE_DISTR_RADIUS*2]),# type: ignore
+    "vtnchw": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_VALUE_SPATIAL_TARGETS,pos_len,pos_len])# type: ignore
   }
 
 # Return a function for parsing a tfrecord
@@ -42,7 +42,7 @@ def make_tf_record_parser(model_config,pos_len,batch_size,multi_num_gpus=None):
   def parse_input(serialized_example):
     example = tf.io.parse_single_example(serialized_example,raw_input_features)
     if tf.__version__[0] == '1':
-      binchwp = tf.decode_raw(example["binchwp"],tf.uint8)
+      binchwp = tf.decode_raw(example["binchwp"], tf.uint8)
     else:
       binchwp = tf.io.decode_raw(example["binchwp"], tf.uint8)
     ginc = example["ginc"]

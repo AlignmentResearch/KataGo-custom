@@ -39,32 +39,32 @@ with open(model_config_json) as f:
   model_config = json.load(f)
 
 if name_scope is not None:
-  with tf.compat.v1.variable_scope(name_scope):  # type: ignore
+  with tf.compat.v1.variable_scope(name_scope):
     model = Model(model_config,pos_len,{})
 else:
   model = Model(model_config,pos_len,{})
-policy0_output = tf.nn.softmax(model.policy_output[:,:,0])  # type: ignore
-policy1_output = tf.nn.softmax(model.policy_output[:,:,1])  # type: ignore
-value_output = tf.nn.softmax(model.value_output)  # type: ignore
+policy0_output = tf.nn.softmax(model.policy_output[:,:,0])
+policy1_output = tf.nn.softmax(model.policy_output[:,:,1])
+value_output = tf.nn.softmax(model.value_output)
 scoremean_output = 20.0 * model.miscvalues_output[:,0]
 scorestdev_output = 20.0 * tf.math.softplus(model.miscvalues_output[:,1])
 lead_output = 20.0 * model.miscvalues_output[:,2]
 vtime_output = 40.0 * tf.math.softplus(model.miscvalues_output[:,3])
 estv_output = tf.sqrt(0.25 * tf.math.softplus(model.moremiscvalues_output[:,0]))
 ests_output = tf.sqrt(30.0 * tf.math.softplus(model.moremiscvalues_output[:,1]))
-td_value_output = tf.nn.softmax(model.miscvalues_output[:,4:7])  # type: ignore
-td_value_output2 = tf.nn.softmax(model.miscvalues_output[:,7:10])  # type: ignore
-td_value_output3 = tf.nn.softmax(model.moremiscvalues_output[:,2:5])  # type: ignore
+td_value_output = tf.nn.softmax(model.miscvalues_output[:,4:7])
+td_value_output2 = tf.nn.softmax(model.miscvalues_output[:,7:10])
+td_value_output3 = tf.nn.softmax(model.moremiscvalues_output[:,2:5])
 td_score_output = model.moremiscvalues_output[:,5:8] * 20.0
 vtime_output = 40.0 * tf.math.softplus(model.miscvalues_output[:,3])
 vtime_output = 40.0 * tf.math.softplus(model.miscvalues_output[:,3])
 ownership_output = tf.tanh(model.ownership_output)
 scoring_output = model.scoring_output
 futurepos_output = tf.tanh(model.futurepos_output)
-seki_output = tf.nn.softmax(model.seki_output[:,:,:,0:3])  # type: ignore
+seki_output = tf.nn.softmax(model.seki_output[:,:,:,0:3])
 seki_output = seki_output[:,:,:,1] - seki_output[:,:,:,2]
 seki_output2 = tf.sigmoid(model.seki_output[:,:,:,3])
-scorebelief_output = tf.nn.softmax(model.scorebelief_output)  # type: ignore
+scorebelief_output = tf.nn.softmax(model.scorebelief_output)
 sbscale_output = model.sbscale3_layer
 
 class GameState:
@@ -615,7 +615,7 @@ def run_gtp(session):
 
   layerdict = dict(model.outputs_by_layer)
   weightdict = dict()
-  for v in tf.compat.v1.trainable_variables():  # type: ignore
+  for v in tf.compat.v1.trainable_variables():
     weightdict[v.name] = v
 
   layer_command_lookup = dict()
@@ -846,7 +846,7 @@ def run_gtp(session):
       print('?%s ???\n\n' % (cmdid,), end='')
     sys.stdout.flush()
 
-saver = tf.compat.v1.train.Saver(  # type: ignore
+saver = tf.compat.v1.train.Saver(
   max_to_keep = 10000,
   save_relative_paths = True,
 )
@@ -854,6 +854,6 @@ saver = tf.compat.v1.train.Saver(  # type: ignore
 
 # session_config = tf.compat.v1.ConfigProto(allow_soft_placement=True)
 # session_config.gpu_options.per_process_gpu_memory_fraction = 0.3
-with tf.compat.v1.Session() as session:  # type: ignore
+with tf.compat.v1.Session() as session:
   saver.restore(session, model_variables_prefix)
   run_gtp(session)

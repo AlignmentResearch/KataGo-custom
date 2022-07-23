@@ -45,7 +45,6 @@ BASEDIR="$(realpath "$BASEDIR")"
 #------------------------------------------------------------------------------
 set -x
 
-CUR_DIR=`pwd`
 mkdir -p "$BASEDIR"/train/"$TRAININGNAME"
 pushd "$GITROOTDIR"
 git show --no-patch --no-color > "$BASEDIR"/train/"$TRAININGNAME"/version.txt
@@ -59,12 +58,11 @@ DATED_ARCHIVE="$BASEDIR"/scripts/train/dated/"$DATE_FOR_FILENAME"
 mkdir -p "$DATED_ARCHIVE"
 cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/train.sh "$DATED_ARCHIVE"
 
-CUR_DIR=`pwd`
-cd "$GITROOTDIR"
+pushd "$GITROOTDIR"
 git show --no-patch --no-color > "$DATED_ARCHIVE"/version.txt
 git diff --no-color > "$DATED_ARCHIVE"/diff.txt
 git diff --staged --no-color > "$DATED_ARCHIVE"/diffstaged.txt
-cd "$CUR_DIR"
+popd
 
 if [ "$EXPORTMODE" == "main" ]
 then

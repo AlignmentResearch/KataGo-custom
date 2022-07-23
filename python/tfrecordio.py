@@ -23,12 +23,12 @@ def make_raw_input_feature_placeholders(model_config,pos_len,batch_size):
   num_global_input_features = Model.get_num_global_input_features(model_config)
 
   return {
-    "binchwp": tf.compat.v1.placeholder(tf.uint8,[batch_size,num_bin_input_features,(pos_len*pos_len+7)//8]),# type: ignore
-    "ginc": tf.compat.v1.placeholder(tf.float32,[batch_size,num_global_input_features]),# type: ignore
-    "ptncm": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_POLICY_TARGETS,pos_len*pos_len+1]),# type: ignore
-    "gtnc": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_GLOBAL_TARGETS]),# type: ignore
-    "sdn": tf.compat.v1.placeholder(tf.float32,[batch_size,pos_len*pos_len*2+Model.EXTRA_SCORE_DISTR_RADIUS*2]),# type: ignore
-    "vtnchw": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_VALUE_SPATIAL_TARGETS,pos_len,pos_len])# type: ignore
+    "binchwp": tf.compat.v1.placeholder(tf.uint8,[batch_size,num_bin_input_features,(pos_len*pos_len+7)//8]),
+    "ginc": tf.compat.v1.placeholder(tf.float32,[batch_size,num_global_input_features]),
+    "ptncm": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_POLICY_TARGETS,pos_len*pos_len+1]),
+    "gtnc": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_GLOBAL_TARGETS]),
+    "sdn": tf.compat.v1.placeholder(tf.float32,[batch_size,pos_len*pos_len*2+Model.EXTRA_SCORE_DISTR_RADIUS*2]),
+    "vtnchw": tf.compat.v1.placeholder(tf.float32,[batch_size,Model.NUM_VALUE_SPATIAL_TARGETS,pos_len,pos_len])
   }
 
 # Return a function for parsing a tfrecord

@@ -25,11 +25,11 @@ class AdvGameInfo:
 @dataclass
 class PlayerStat:
     # for victim only one criteria can be enabled, all others should be None
-    name: str = None
-    win_rate: float = None
-    score_diff: float = None
-    score_wo_komi_diff: float = None
-    policy_loss: float = None
+    name: Optional[str] = None
+    win_rate: Optional[float] = None
+    score_diff: Optional[float] = None
+    score_wo_komi_diff: Optional[float] = None
+    policy_loss: Optional[float] = None
 
     def get_stat_members(self) -> Dict[str, float]:
         d = asdict(self)
@@ -89,6 +89,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     adv_komi = {"w": komi, "b": -komi}[adv_color]
 
     win_score = 0
+    result = 'undefined'
     try:
         result = sgf_game.get_root.get("RE")
         win_score = result.split("+")[1]
@@ -176,9 +177,9 @@ class Curriculum:
     def __init__(self,
                  victims_input_dir: str,
                  victims_output_dir: str,
-                 config: list = None,
-                 config_json: str = None,
-                 config_json_file: str = None):
+                 config: Optional[list] = None,
+                 config_json: Optional[str] = None,
+                 config_json_file: Optional[str] = None):
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
@@ -243,7 +244,7 @@ class Curriculum:
 
         raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
 
-    def try_move_on(self, adv_stat: PlayerStat = None, policy_loss: float = None):
+    def try_move_on(self, adv_stat: Optional[PlayerStat] = None, policy_loss: Optional[float] = None):
         if self.finished:
             return
 

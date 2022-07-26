@@ -946,10 +946,11 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   Player nextPlayer = data.startPla;
 
   if (forVictimPlay) {
-    // When doing victimplay, exactly one side should be named "victim".
-    assert((data.bName == "victim") ^ (data.wName == "victim"));
+    // When doing victimplay, exactly one side should contain "victim".
+    assert((data.bName.find("victim") != std::string::npos) ^
+           (data.wName.find("victim") != std::string::npos));
   }
-  Player victimPlayer = (data.bName == "victim" ? P_BLACK : P_WHITE);
+  Player victimPlayer = (data.bName.find("victim") != std::string::npos ? P_BLACK : P_WHITE);
 
   //Write main game rows
   int startTurnIdx = (int)data.startHist.moveHistory.size();

@@ -239,17 +239,26 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       Setup::SETUP_FOR_OTHER
     );
 
-    logger.write("Loaded" + modelName + " neural net from: " + modelFile);
+    logger.write("Loaded " + modelName + " neural net from: " + modelFile);
     return nnEval;
   };
 
-  NNEvaluator* victimNNEval = nullptr;
+  // keep weak references to the victims loaded by game threads
+  // for being able to find the model by name if at least one thread is using it
+  // and allowing to automatically destroy the model when nobody uses it
+  vector<weak_ptr<NNEvaluator> > victimNNEval;
+  mutex victimMutex;
+
+  // keep model ownership if we have only one victim for all games
+  shared_ptr<NNEvaluator> singleVictim;
   bool reloadVictims = false;
+
   if(victimplay) {
     if(FileUtils::isDirectory(nnVictimPath)) {
       reloadVictims = true;
     } else {
-      victimNNEval = loadNN("victim", nnVictimPath);
+      singleVictim.reset(loadNN("victim", nnVictimPath));
+      victimNNEval.push_back(singleVictim);
     }
   }
 
@@ -370,6 +379,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &victimplay,
     &reloadVictims,
     &victimNNEval,
+    &victimMutex,
     &nnVictimPath,
     &loadNN
   ](int threadIdx) {
@@ -383,6 +393,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       if(shouldStop.load())
         break;
 
+      shared_ptr<NNEvaluator> curVictimNNEval;
       if(reloadVictims) {
         string modelName;
         string modelFile;
@@ -390,19 +401,62 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         time_t modelTime;
         bool foundModel = LoadModel::findLatestModel(
               nnVictimPath, logger, modelName, modelFile, modelDir, modelTime, false);
-        if (modelName == "random") {
+        if (modelName == "random" || !foundModel) {
           logger.write("No victims available yet, waiting 30 sec...");
           std::this_thread::sleep_for(std::chrono::seconds(30));
           continue;
         }
+
         modelName = "victim-" + modelName;
-        if(foundModel && (!victimNNEval || modelName != victimNNEval->getModelFileName())) {
-          // all threads using victimNNEval should finish by now
-          // and it should be safe to delete the current evaluator.
-          // Makes sense to check it though
-          delete victimNNEval;
-          victimNNEval = loadNN(modelName, modelFile);
+        bool modelLoaded = false;
+        int modelsReleased = 0;
+        // scope for the mutex
+        {
+          lock_guard<mutex> lock(victimMutex);
+
+          // do not increase loop iterator by default
+          // since we'd like to sanitize the container in-place
+          for(auto it = victimNNEval.begin(); it != victimNNEval.end(); ) {
+            shared_ptr<NNEvaluator> eval = it->lock();
+            if (!eval) {
+              // all references released, we can safely remove it
+              it = victimNNEval.erase(it);
+              ++modelsReleased;
+              continue;
+            }
+
+            if (eval->getModelName() == modelName) {
+              // found it already loaded, transfer ownership
+              swap(eval, curVictimNNEval);
+              break;
+            }
+            ++it;
+          }
+
+          // nothing was found, load the new model
+          if(!curVictimNNEval) {
+            modelLoaded = true;
+            curVictimNNEval.reset(loadNN(modelName, modelFile));
+            victimNNEval.push_back(curVictimNNEval);
+          }
         }
+
+        // we must have the evaluator here (either found of loaded)
+        // since the model definitely exists
+        assert(curVictimNNEval);
+
+        if(modelLoaded) {
+          logger.write("Game loop thread " + Global::intToString(threadIdx) +
+                       " loaded victim: " + modelName);
+        }
+        if(modelsReleased > 0) {
+          logger.write("Game loop thread " + Global::intToString(threadIdx) +
+                       ": sanitized " + to_string(modelsReleased) + " victims");
+        }
+      } else if (victimplay) {
+        // no need for the mutex here since we never modify victimNNEval
+        assert(victimNNEval.size() == 1);
+        curVictimNNEval = victimNNEval[0].lock();
       }
 
       NNEvaluator* nnEval = manager->acquireLatest();
@@ -438,7 +492,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = runOneVictimplayGame(
-          victimNNEval, nnEval,
+          curVictimNNEval.get(), nnEval,
           victimSearchParams, advSearchParams,
           gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
           gameRunner, shouldStopFunc, logger,
@@ -471,6 +525,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         manager->enqueueDataToWrite(nnEval,gameData);
 
       manager->release(nnEval);
+      curVictimNNEval.reset();
 
       if(!shouldContinue)
         break;
@@ -532,8 +587,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   }
   modelLoadLoopThread.join();
 
-  delete victimNNEval;
-  victimNNEval = nullptr;
+  singleVictim.reset();
+  // no actual deallocation, just tidying up the vector
+  victimNNEval.clear();
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

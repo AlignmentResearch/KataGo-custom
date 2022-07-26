@@ -5,9 +5,11 @@ import json
 import os
 import shutil
 import time
-import logging
 from threading import Thread
-from typing import Optional, Dict, Tuple, Union
+from typing import Optional, Dict, Tuple
+
+import logging
+
 from dataclasses import dataclass
 from dataclasses import asdict
 
@@ -47,7 +49,8 @@ class PlayerStat:
         adv_vals = adv_stat.get_stat_members()
         for k, v in criteria.items():
             if v is not None:
-                logging.info("{}: {} (adv) <-> {} (threshold)".format(k, adv_vals[k], v))
+                logging.info("{}: {} (adv) <-> {} (threshold)"
+                             .format(k, adv_vals[k], v))
                 if adv_vals[k] > v:
                     return True
         return False
@@ -68,7 +71,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     victim_color = {b_name: "b", w_name: "w"}[victim_name]
     adv_color = {"b": "w", "w": "b"}[victim_color]
 
-    adv_raw_name = {"b": b_name, "w": w_name}[adv_color]
+    # adv_raw_name = {"b": b_name, "w": w_name}[adv_color]
 
     #  currently the model name will not be just 'victim'
     #  this code was NOT tested so commented out yet
@@ -91,7 +94,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     win_score = 0
     result = 'undefined'
     try:
-        result = sgf_game.get_root.get("RE")
+        result = sgf_game.get_root().get("RE")
         win_score = result.split("+")[1]
         win_score = float(win_score)
     except KeyError:
@@ -213,8 +216,8 @@ class Curriculum:
                 policy_loss=line["policy_loss"])
             if not cond.can_be_victim_criteria():
                 raise ValueError(
-                    "Incorrect victim change criteria for victim '{}': exactly one value should be non-None".format(
-                        line[0]))
+                    "Incorrect victim change criteria for victim '{}': "
+                    "exactly one value should be non-None".format(line[0]))
             self.victims.append(cond)
 
         logging.info("Loaded curriculum with the following params:")

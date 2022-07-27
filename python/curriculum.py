@@ -129,15 +129,19 @@ def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int
     for path, dirnames, filenames in os.walk(selfplay_dir, followlinks=True):
         for f in filenames:
             if os.path.splitext(f)[1] == '.sgfs':
-                all_sgfs.append([os.path.join(path, f), os.path.getmtime(path)])
+                file_path = os.path.join(path, f)
+                all_sgfs.append([file_path, os.path.getmtime(file_path)])
     all_sgfs.sort(key=lambda x: x[1], reverse=True)
 
     sgf_strings = []
     files_checked = 0
     for sgf_file in all_sgfs:
         with open(sgf_file[0]) as f:
+            logging.info("Processing SGF file '{}'".format(sgf_file[0]))
             files_checked += 1
-            for line in f.readlines():
+            all_lines = list(f.readlines())
+
+            for line in reversed(all_lines):
                 sgf_strings.append(line.strip())
                 if len(sgf_strings) >= games_for_compute:
                     return sgf_strings, files_checked
@@ -153,16 +157,25 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
         return None
 
     sum_wins = 0
+    sum_ties = 0
     sum_score = 0
     sum_score_wo_komi = 0
-    games = list(filter(None, [get_game_info(sgf_str) for sgf_str in sgf_strings]))
+    all_game_results = [get_game_info(sgf_str) for sgf_str in sgf_strings]
+    games = list(filter(None, all_game_results))
+    logging.info("Got {} results from {} games".
+                 format(len(all_game_results), len(games)))
+
     for game in games:
         # game.winner can be None (for ties), but a tie is still not a win
         if game.winner:
             sum_wins += 1
+        elif game.winner is None:
+            sum_ties += 1
         sum_score += game.diff_score
         sum_score_wo_komi += game.diff_score_wo_komi
 
+    logging.info("Got {} wins and {} ties from {} games".
+                 format(sum_wins, sum_ties, len(games)))
     win_rate = float(sum_wins) / len(games)
     mean_diff_score = float(sum_score) / len(games)
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(sgf_strings)

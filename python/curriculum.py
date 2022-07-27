@@ -122,6 +122,8 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     if win_color is not None:
         winner = win_color == adv_color
 
+    # drop 'victim-' prefix from the name
+    victim_name = victim_name[7:]
     return AdvGameInfo(victim_name,
                        winner,
                        adv_minus_victim_score,

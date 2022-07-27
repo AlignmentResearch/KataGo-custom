@@ -19,6 +19,7 @@ from sgfmill import sgf
 @dataclass
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
+    victim: str
     winner: Optional[bool]
     diff_score: float
     diff_score_wo_komi: float
@@ -121,7 +122,10 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     if win_color is not None:
         winner = win_color == adv_color
 
-    return AdvGameInfo(winner, adv_minus_victim_score, adv_minus_victim_score_wo_komi)
+    return AdvGameInfo(victim_name,
+                       winner,
+                       adv_minus_victim_score,
+                       adv_minus_victim_score_wo_komi)
 
 
 def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
@@ -148,7 +152,9 @@ def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int
     return sgf_strings, files_checked
 
 
-def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[PlayerStat]:
+def recompute_statistics(selfplay_dir: str,
+                         games_for_compute: int,
+                         current_victim_name: str) -> Optional[PlayerStat]:
     sgf_strings, files_checked = read_sgf_files(selfplay_dir, games_for_compute)
 
     # don't have enough data
@@ -164,6 +170,11 @@ def recompute_statistics(selfplay_dir: str, games_for_compute: int) -> Optional[
     games = list(filter(None, all_game_results))
     logging.info("Got {} results from {} games".
                  format(len(all_game_results), len(games)))
+    games_cur_victim = [g for g in games if g.victim == current_victim_name]
+    if len(games_cur_victim) < len(games):
+        logging.info("Incomplete statistics for current victim, got only {} games".
+                     format(len(games_cur_victim)))
+        return None
 
     for game in games:
         # game.winner can be None (for ties), but a tie is still not a win
@@ -295,13 +306,15 @@ class Curriculum:
             checking_periodicity: int):
         logging.info("Starting curriculum loop")
         while True:
-            adv_stat = recompute_statistics(selfplay_dir, games_for_compute)
+            adv_stat = recompute_statistics(selfplay_dir,
+                                            games_for_compute,
+                                            self.__cur_victim().name)
             if adv_stat is not None:
-                curriculum.try_move_on(adv_stat=adv_stat)
-                if curriculum.finished:
+                self.try_move_on(adv_stat=adv_stat)
+                if self.finished:
                     logging.info("Curriculum is done. Stopping")
                     break
-            logging.info("Curriculum is alive, current victim idx: {}".format(self.victim_idx))
+            logging.info("Curriculum is alive, current victim : {}".format(self.__cur_victim().name))
             time.sleep(checking_periodicity)
 
     """

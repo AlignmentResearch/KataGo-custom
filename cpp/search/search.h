@@ -555,8 +555,8 @@ private:
   static constexpr double FUTILE_VISITS_PRUNE_VALUE = -1e40;
   static constexpr double EVALUATING_SELECTION_VALUE_PENALTY = 1e20;
 
-  double getResultUtility(double winlossValue, double noResultValue) const;
-  double getResultUtilityFromNN(const NNOutput& nnOutput) const;
+  public: double getResultUtility(double winlossValue, double noResultValue) const; private:
+  public: double getResultUtilityFromNN(const NNOutput& nnOutput) const; private:
 
   double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
@@ -583,7 +583,7 @@ private:
   );
   double recomputeSearchTimeLimit(const TimeControls& tc, double timeUsed, double searchFactor, int64_t rootVisits);
 
-  double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const;
+  public: double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const; private:
   double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
   double getApproxScoreUtilityDerivative(double scoreMean) const;
   double getUtilityFromNN(const NNOutput& nnOutput) const;
@@ -630,12 +630,12 @@ private:
     double parentUtility, double parentWeightPerVisit, double parentUtilityStdevFactor,
     bool isDuringSearch, bool antiMirror, double maxChildWeight, SearchThread* thread
   ) const;
-  double getNewExploreSelectionValue(
+  public: double getNewExploreSelectionValue(
     const SearchNode& parent, float nnPolicyProb,
     double totalChildWeight, double fpuValue,
     double parentWeightPerVisit, double parentUtilityStdevFactor,
     double maxChildWeight, SearchThread* thread
-  ) const;
+  ) const; private:
 
   //Parent must be locked
   double getReducedPlaySelectionWeight(
@@ -643,10 +643,10 @@ private:
     double totalChildWeight, double parentUtilityStdevFactor, double bestChildExploreSelectionValue
   ) const;
 
-  double getFpuValueForChildrenAssumeVisited(
+  public: double getFpuValueForChildrenAssumeVisited(
     const SearchNode& node, Player pla, bool isRoot, double policyProbMassVisited,
     double& parentUtility, double& parentWeightPerVisit, double& parentUtilityStdevFactor
-  ) const;
+  ) const; private:
 
   double pruneNoiseWeight(std::vector<MoreNodeStats>& statsBuf, int numChildren, double totalChildWeight, const double* policyProbsBuf) const;
 

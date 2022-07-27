@@ -16,7 +16,7 @@ void runAllEMCTS1Tests();
 void testConstPolicies();
 
 // Test our modifications didn't break the original EMCTS.
-void testEMCTSStats();
+void testMCTSStats();
 void testEMCTS1Stats();
 
 // Helper functions
@@ -24,9 +24,8 @@ void testEMCTS1Stats();
 // Returns one sample of possible rules.
 Rules parseRules(ConfigParser& cfg, Logger& logger);
 
-std::shared_ptr<NNEvaluator> get_nneval(std::string modelFile,
-                                        ConfigParser& cfg, Logger& logger,
-                                        uint64_t seed);
+std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
+                                       Logger& logger, uint64_t seed);
 
 std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
                                       Board& board, BoardHistory& hist,
@@ -34,6 +33,20 @@ std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
                                       bool includeOwnerMap = true);
 
 void resetBot(Search& bot, int board_size, const Rules& rules);
+
+// Search tree utilities
+
+struct SearchTree {
+  std::vector<const SearchNode*> all_nodes;
+  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>> adj;
+
+  SearchTree(const Search& bot);
+
+  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*) const;
+};
+
+NodeStats averageStats(const Search& bot,
+                       const std::vector<const SearchNode*>& nodes);
 
 // Constants
 

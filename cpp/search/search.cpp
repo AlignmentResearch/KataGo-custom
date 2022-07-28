@@ -471,8 +471,15 @@ Search::Search(
    oldNNOutputsToCleanUpMutex(),
    oldNNOutputsToCleanUp()
 {
-  if(searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
-    assert(oppNNEval != nullptr);
+  switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      assert(oppNNEval == nullptr);
+      break;
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      assert(oppNNEval != nullptr);
+      break;
+    default:
+      ASSERT_UNREACHABLE;
   }
 
   assert(logger != NULL);

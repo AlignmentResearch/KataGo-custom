@@ -16,13 +16,24 @@ void runAllEMCTS1Tests();
 void testConstPolicies();
 
 // Test our modifications didn't break the original EMCTS.
-void testMCTSStats();
-void testEMCTS1Stats();
+void testMCTS();
 
-// Helper functions
+// Checks one move's worth of MCTS search
+void checkMCTSSearch(const Search& bot, const float win_prob,
+                     const float loss_prob);
+
+// Test EMCTS1
+void testEMCTS1();
+
+// Checks one move's worth of EMCTS1 search
+void checkEMCTS1Search(const Search& bot, const float win_prob1,
+                       const float loss_prob1, const float win_prob2,
+                       const float loss_prob2);
 
 // Returns one sample of possible rules.
 Rules parseRules(ConfigParser& cfg, Logger& logger);
+
+// Helper functions
 
 std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
                                        Logger& logger, uint64_t seed);

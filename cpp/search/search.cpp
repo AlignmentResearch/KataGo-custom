@@ -473,10 +473,10 @@ Search::Search(
 {
   switch (searchParams.searchAlgo) {
     case SearchParams::SearchAlgorithm::MCTS:
-      assert(oppNNEval == nullptr);
+      oppNNEval__ = nullptr;
       break;
     case SearchParams::SearchAlgorithm::EMCTS1:
-      assert(oppNNEval != nullptr);
+      assert(oppNNEval__ != nullptr);
       break;
     default:
       ASSERT_UNREACHABLE;

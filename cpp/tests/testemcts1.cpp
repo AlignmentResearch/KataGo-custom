@@ -7,6 +7,13 @@
 
 using namespace std;
 
+void EMCTS1Tests::runAllEMCTS1Tests() {
+  cout << "Running EMCTS1 tests" << endl;
+  testConstPolicies();
+  testMCTS();
+  testEMCTS1();
+}
+
 static constexpr double TOTALCHILDWEIGHT_PUCT_OFFSET = 0.01;
 
 static bool approxEqual(float x, float y) {
@@ -38,11 +45,56 @@ static bool approxEqual(const NodeStats& s1, const NodeStats& s2) {
          approxEqual(s1.weightSqSum, s2.weightSqSum);
 }
 
-void EMCTS1Tests::runAllEMCTS1Tests() {
-  cout << "Running EMCTS1 tests" << endl;
-  // testConstPolicies();
-  testMCTS();
-  // testEMCTS1();
+// Sets SearchParams in a such a way that makes checking (E)MCTS easy.
+static void setSimpleSearchParams(SearchParams& params) {
+  // Force bot to weight purely by visits for tests.
+  // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
+  params.valueWeightExponent = 0;
+
+  // We turn off subtree utility bias correction so backup is easier to check.
+  // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
+  params.subtreeValueBiasFactor = 0;
+
+  // Disable rootNoise so playouts are deterministic and can be checked.
+  params.rootNoiseEnabled = false;
+
+  // Disable rootEndingBonusPoints to remove complex hand-engineered scoring
+  // adjustment.
+  params.rootEndingBonusPoints = 0;
+
+  // TODO: Support this into the playout check.
+  params.rootDesiredPerChildVisitsCoeff = 0;
+
+  params.maxVisits = 1000;
+  testAssert(params.cpuctExplorationLog == 0);
+  testAssert(params.cpuctUtilityStdevScale == 0);
+  testAssert(params.wideRootNoise == 0);
+  testAssert(params.fpuParentWeight == 0);
+  testAssert(!params.useNoisePruning);
+  testAssert(!params.useUncertainty);
+  testAssert(!params.antiMirror);
+}
+
+static double getFpuValue(const Search& bot, const SearchNode* node,
+                          const double utilityAvg,
+                          const double policyProbMassVisited) {
+  const bool isRoot = node == bot.rootNode;
+  const double fpuReductionMax = isRoot ? bot.searchParams.rootFpuReductionMax
+                                        : bot.searchParams.fpuReductionMax;
+  const double fpuLossProp =
+      isRoot ? bot.searchParams.rootFpuLossProp : bot.searchParams.fpuLossProp;
+  const double utilityRadius = bot.searchParams.winLossUtilityFactor +
+                               bot.searchParams.staticScoreUtilityFactor +
+                               bot.searchParams.dynamicScoreUtilityFactor;
+
+  const double reduction = fpuReductionMax * sqrt(policyProbMassVisited);
+
+  double fpuValue = node->nextPla == P_WHITE ? utilityAvg - reduction
+                                             : utilityAvg + reduction;
+  double lossValue = node->nextPla == P_WHITE ? -utilityRadius : utilityRadius;
+  fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
+
+  return fpuValue;
 }
 
 void EMCTS1Tests::testConstPolicies() {
@@ -158,6 +210,7 @@ void EMCTS1Tests::testMCTS() {
   for (auto bot_ptr : {&bot1, &bot2}) {
     Search& bot = *bot_ptr;
     resetBot(bot, 9, Rules::getTrompTaylorish());
+    setSimpleSearchParams(bot.searchParams);
 
     // The initial board we perform tests on.
     // It has 8 placed stones that are at the top left corner that look like
@@ -172,33 +225,6 @@ void EMCTS1Tests::testMCTS() {
     for (auto& m : initSgf->moves) {
       bot.makeMove(m.loc, m.pla);
     }
-
-    // Force bot to weight purely by visits for tests.
-    // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
-    bot.searchParams.valueWeightExponent = 0;
-
-    // We turn off subtree utility bias correction so backup is easier to check.
-    // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
-    bot.searchParams.subtreeValueBiasFactor = 0;
-
-    // Disable rootNoise so playouts are deterministic and can be checked.
-    bot.searchParams.rootNoiseEnabled = false;
-
-    // Disable rootEndingBonusPoints to remove complex hand-engineered scoring
-    // adjustment.
-    bot.searchParams.rootEndingBonusPoints = 0;
-
-    // TODO: Support this into the playout check.
-    bot.searchParams.rootDesiredPerChildVisitsCoeff = 0;
-
-    bot.searchParams.maxVisits = 1000;
-    testAssert(bot.searchParams.cpuctExplorationLog == 0);
-    testAssert(bot.searchParams.cpuctUtilityStdevScale == 0);
-    testAssert(bot.searchParams.wideRootNoise == 0);
-    testAssert(bot.searchParams.fpuParentWeight == 0);
-    testAssert(!bot.searchParams.useNoisePruning);
-    testAssert(!bot.searchParams.useUncertainty);
-    testAssert(!bot.searchParams.antiMirror);
 
     Player curPla = P_BLACK;
     for (int midx = 0; midx < 4; midx++) {
@@ -231,51 +257,26 @@ void EMCTS1Tests::testEMCTS1() {
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
   Search bot1(emcts1Params, nnEval1.get(), &logger, "forty-two", nnEval2.get());
   Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two", nullptr);
-  resetBot(bot1, 9, Rules::getTrompTaylorish());
-  resetBot(bot2, 9, Rules::getTrompTaylorish());
-
-  // The initial board we perform tests on.
-  // It has 8 placed stones that are at the top left corner that look like this:
-  //    BBBB.....
-  //    .WWWW....
-  //    .........
-  // Here, dots are empty spaces. It is black's turn to move.
-  const unique_ptr<CompactSgf> initSgf(CompactSgf::parse(
-      "(;FF[4]KM[7.5]SZ[19];B[aa];W[bb];B[ba];W[cb];B[ca];W[db];B[da];W[eb])"));
-  for (auto& m : initSgf->moves) {
-    bot1.makeMove(m.loc, m.pla);
-    bot2.makeMove(m.loc, m.pla);
-  }
 
   for (auto bot_ptr : {&bot1, &bot2}) {
     Search& bot = *bot_ptr;
+    resetBot(bot, 9, Rules::getTrompTaylorish());
+    setSimpleSearchParams(bot.searchParams);
 
-    // Force bot to weight purely by visits for tests.
-    // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
-    bot.searchParams.valueWeightExponent = 0;
-
-    // We turn off subtree utility bias correction so backup is easier to check.
-    // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
-    bot.searchParams.subtreeValueBiasFactor = 0;
-
-    // Disable rootNoise so playouts are deterministic and can be checked.
-    bot.searchParams.rootNoiseEnabled = false;
-
-    // Disable rootEndingBonusPoints to remove complex hand-engineered scoring
-    // adjustment.
-    bot.searchParams.rootEndingBonusPoints = 0;
-
-    // TODO: Support this into the playout check.
-    // bot.searchParams.rootDesiredPerChildVisitsCoeff = 0;
-
-    bot.searchParams.maxVisits = 222;
-    testAssert(bot.searchParams.cpuctExplorationLog == 0);
-    testAssert(bot.searchParams.cpuctUtilityStdevScale == 0);
-    testAssert(bot.searchParams.wideRootNoise == 0);
-    testAssert(bot.searchParams.fpuParentWeight == 0);
-    testAssert(!bot.searchParams.useNoisePruning);
-    testAssert(!bot.searchParams.useUncertainty);
-    testAssert(!bot.searchParams.antiMirror);
+    // The initial board we perform tests on.
+    // It has 8 placed stones that are at the top left corner that look like
+    // this:
+    //    BBBB.....
+    //    .WWWW....
+    //    .........
+    // Here, dots are empty spaces. It is black's turn to move.
+    const unique_ptr<CompactSgf> initSgf(
+        CompactSgf::parse("(;FF[4]KM[7.5]SZ[19];B[aa];W[bb];B[ba];W[cb];B[ca];"
+                          "W[db];B[da];W[eb])"));
+    for (auto& m : initSgf->moves) {
+      bot1.makeMove(m.loc, m.pla);
+      bot2.makeMove(m.loc, m.pla);
+    }
   }
 
   Player curPla = P_BLACK;
@@ -344,7 +345,7 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
   // where B is the size of the board and P is the number of playouts.
   {
     unordered_map<const SearchNode*, int> visits;
-    auto filterToVisited = [&visits](const vector<const SearchNode*>& nodes) {
+    auto filterToVisited = [&](const vector<const SearchNode*>& nodes) {
       vector<const SearchNode*> ret;
       for (auto node : nodes) {
         if (visits[node] > 0) ret.push_back(node);
@@ -352,20 +353,17 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
       return ret;
     };
 
-    auto nodeToPos = [&bot](const SearchNode* node) {
+    auto nodeToPos = [&](const SearchNode* node) {
       return NNPos::locToPos(node->prevMoveLoc, bot.rootBoard.x_size,
                              bot.nnXLen, bot.nnYLen);
     };
 
-    auto averageVisSubtreeStats = [&bot, &tree, &visits,
-                                   &filterToVisited](const SearchNode* node) {
+    auto averageVisSubtreeStats = [&](const SearchNode* node) {
       return averageStats(bot, filterToVisited(tree.getSubtreeNodes(node)),
                           &visits);
     };
 
-    auto checkPlayout = [&bot, &tree, &visits, &filterToVisited, &nodeToPos,
-                         &averageVisSubtreeStats](const SearchNode* node,
-                                                  auto&& dfs) -> void {
+    auto checkPlayout = [&](const SearchNode* node, auto&& dfs) -> void {
       testAssert(node != nullptr);
       visits[node] += 1;
       if (visits[node] == 1) return;  // First time visiting the node
@@ -393,16 +391,9 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
       // These track which child we will descend into.
       int bestMovePos = -1;
       double maxSelectionValue = -1e50;
-
-      // Try all existing children
-      for (auto child : filterToVisited(tree.children.at(node))) {
-        const int pos = nodeToPos(child);
+      auto considerMove = [&](const int pos, const double childWeight,
+                              const double whiteUtility) {
         const double nnPolicyProb = policyProbs[pos];
-
-        const NodeStats childStats = averageVisSubtreeStats(child);
-        const double childWeight = childStats.weightSum;
-        const double whiteUtility = childStats.utilityAvg;
-
         const double valueComponent =
             node->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
         const double exploreComponent =
@@ -415,65 +406,33 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
           maxSelectionValue = selectionValue;
           bestMovePos = pos;
         }
+      };
+
+      // Try all existing children
+      for (auto child : filterToVisited(tree.children.at(node))) {
+        const NodeStats childStats = averageVisSubtreeStats(child);
+        considerMove(nodeToPos(child), childStats.weightSum,
+                     childStats.utilityAvg);
       }
 
       // Try unvisited children
-      {
-        double fpuValue;
+      const double fpuValue =
+          getFpuValue(bot, node, nodeStats.utilityAvg, policyProbMassVisited);
+      for (int pos = 0; pos < bot.policySize; pos++) {
+        if (movePosVis[pos]) continue;  // Skip moves that are visited
+
+        // Only consider moves that are valid.
         {
-          const bool isRoot = node == bot.rootNode;
-          const double fpuReductionMax =
-              isRoot ? bot.searchParams.rootFpuReductionMax
-                     : bot.searchParams.fpuReductionMax;
-          const double fpuLossProp = isRoot ? bot.searchParams.rootFpuLossProp
-                                            : bot.searchParams.fpuLossProp;
-          const double utilityRadius =
-              bot.searchParams.winLossUtilityFactor +
-              bot.searchParams.staticScoreUtilityFactor +
-              bot.searchParams.dynamicScoreUtilityFactor;
-          const double parentUtility = nodeStats.utilityAvg;
-
-          const double reduction =
-              fpuReductionMax * sqrt(policyProbMassVisited);
-          fpuValue = node->nextPla == P_WHITE ? parentUtility - reduction
-                                              : parentUtility + reduction;
-          double lossValue =
-              node->nextPla == P_WHITE ? -utilityRadius : utilityRadius;
-          fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
-        }
-
-        for (int pos = 0; pos < bot.policySize; pos++) {
-          // Skip moves that are visited
-          if (movePosVis[pos]) continue;
-
-          // Only consider moves that are valid.
-          {
-            const Loc moveLoc =
-                NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
-                                bot.nnXLen, bot.nnYLen);
-            if (moveLoc == Board::NULL_LOC) continue;
-            if (node == bot.rootNode) {
-              if (!bot.isAllowedRootMove(moveLoc)) continue;
-            }
-          }
-
-          const float nnPolicyProb = policyProbs[pos];
-          const double childWeight = 0;
-          const double whiteUtility = fpuValue;
-
-          const double valueComponent =
-              node->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
-          const double exploreComponent =
-              bot.searchParams.cpuctExploration * nnPolicyProb *
-              sqrt(totalChildWeight + TOTALCHILDWEIGHT_PUCT_OFFSET) /
-              (1.0 + childWeight);
-
-          const double selectionValue = valueComponent + exploreComponent;
-          if (selectionValue > maxSelectionValue) {
-            maxSelectionValue = selectionValue;
-            bestMovePos = pos;
+          const Loc loc =
+              NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
+                              bot.nnXLen, bot.nnYLen);
+          if (loc == Board::NULL_LOC) continue;
+          if (node == bot.rootNode) {
+            if (!bot.isAllowedRootMove(loc)) continue;
           }
         }
+
+        considerMove(pos, 0, fpuValue);
       }
 
       dfs(movePosNode[bestMovePos], dfs);

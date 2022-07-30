@@ -49,15 +49,20 @@ void resetBot(Search& bot, int board_size, const Rules& rules);
 
 struct SearchTree {
   std::vector<const SearchNode*> all_nodes;
-  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>> adj;
+  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
+      children;
 
   SearchTree(const Search& bot);
 
   std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*) const;
 };
 
+// Optional param: terminal_node_visits (specify if you want to override
+// terminal node weights)
 NodeStats averageStats(const Search& bot,
-                       const std::vector<const SearchNode*>& nodes);
+                       const std::vector<const SearchNode*>& nodes,
+                       const std::unordered_map<const SearchNode*, int>*
+                           terminal_node_visits = nullptr);
 
 // Constants
 

@@ -417,6 +417,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           // do not increase loop iterator by default
           // since we'd like to sanitize the container in-place
           for(auto it = victimNNEval.begin(); it != victimNNEval.end(); ) {
+            // 'it' is a weak_ptr<NNEvaluator>
             shared_ptr<NNEvaluator> eval = it->lock();
             if (!eval) {
               // all references released, we can safely remove it
@@ -441,7 +442,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           }
         }
 
-        // we must have the evaluator here (either found of loaded)
+        // we must have the evaluator here (either found or loaded)
         // since the model definitely exists
         assert(curVictimNNEval);
 

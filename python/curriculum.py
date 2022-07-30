@@ -16,7 +16,7 @@ from dataclasses import asdict
 from sgfmill import sgf
 
 
-@dataclass
+@dataclass(frozen=True)
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
     victim: str
@@ -25,7 +25,7 @@ class AdvGameInfo:
     diff_score_wo_komi: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class PlayerStat:
     # for victim only one criteria can be enabled, all others should be None
     name: Optional[str] = None

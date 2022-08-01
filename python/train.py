@@ -176,7 +176,11 @@ if swa_sub_epoch_scale is not None:
         placeholder = tf.compat.v1.placeholder(variable.dtype,variable.shape)
         assign_ops.append(tf.compat.v1.assign(variable,placeholder))
         swa_assign_placeholders[variable.name] = placeholder
-        swa_wvalues[variable.name] = np.zeros([elt.value for elt in variable.shape])
+        if tf.__version__[0] == '1':
+          swa_wvalues[variable.name] = np.zeros([elt.value for elt in variable.shape])
+        else:
+          swa_wvalues[variable.name] = np.zeros(variable.shape)
+
     swa_assign_op = tf.group(*assign_ops)
   trainlog("Build SWA graph for SWA update and saving, %d variables" % len(swa_assign_placeholders))
 

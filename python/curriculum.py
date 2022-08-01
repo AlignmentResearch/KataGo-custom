@@ -18,6 +18,7 @@ from sgfmill import sgf
 @dataclass(frozen=True)
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
+
     victim: str
     game_hash: str
     winner: Optional[bool]
@@ -33,6 +34,7 @@ class PlayerStat:
     or stores victim changing criteria.
     For victim only one criteria can be enabled, all others should be None.
     """
+
     name: Optional[str] = None
     win_rate: Optional[float] = None
     score_diff: Optional[float] = None
@@ -41,7 +43,7 @@ class PlayerStat:
 
     def get_stat_members(self) -> Dict[str, float]:
         d = asdict(self)
-        del d['name']
+        del d["name"]
         return d
 
     def can_be_victim_criteria(self) -> bool:
@@ -55,8 +57,9 @@ class PlayerStat:
         adv_vals = adv_stat.get_stat_members()
         for k, v in criteria.items():
             if v is not None:
-                logging.info("{}: {} (adv) <-> {} (threshold)"
-                             .format(k, adv_vals[k], v))
+                logging.info(
+                    "{}: {} (adv) <-> {} (threshold)".format(k, adv_vals[k], v)
+                )
                 if adv_vals[k] > v:
                     return True
         return False
@@ -98,12 +101,12 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     adv_komi = {"w": komi, "b": -komi}[adv_color]
 
     win_score = 0
-    result = 'undefined'
+    result = "undefined"
     game_hash = None
     try:
         game_root = sgf_game.get_root()
-        game_c = game_root.get('C')
-        game_hash = game_c.split(',')[2].split('=')[1]
+        game_c = game_root.get("C")
+        game_hash = game_c.split(",")[2].split("=")[1]
 
         result = game_root.get("RE")
         win_score = result.split("+")[1]
@@ -138,15 +141,18 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 
     # drop 'victim-' prefix from the name
     victim_name = victim_name[7:]
-    return AdvGameInfo(victim_name,
-                       game_hash,
-                       winner,
-                       adv_minus_victim_score,
-                       adv_minus_victim_score_wo_komi)
+    return AdvGameInfo(
+        victim_name,
+        game_hash,
+        winner,
+        adv_minus_victim_score,
+        adv_minus_victim_score_wo_komi,
+    )
 
 
 def get_files_sorted_by_modification_time(
-        folder: str, extension: Optional[str] = None) -> list[str]:
+    folder: str, extension: Optional[str] = None
+) -> list[str]:
     all_sgfs = []
     for path, dirnames, filenames in os.walk(folder, followlinks=True):
         for f in filenames:
@@ -158,13 +164,12 @@ def get_files_sorted_by_modification_time(
     return all_sgfs
 
 
-def recompute_statistics(games: list[AdvGameInfo],
-                         games_for_compute: int,
-                         current_victim_name: str) -> Optional[PlayerStat]:
+def recompute_statistics(
+    games: list[AdvGameInfo], games_for_compute: int, current_victim_name: str
+) -> Optional[PlayerStat]:
     # don't have enough data
     if len(games) < games_for_compute:
-        logging.info("Incomplete statistics, got only {} games"
-                     .format(len(games)))
+        logging.info("Incomplete statistics, got only {} games".format(len(games)))
         return None
 
     sum_wins = 0
@@ -174,8 +179,11 @@ def recompute_statistics(games: list[AdvGameInfo],
     logging.info("Computing {} games".format(len(games)))
     games_cur_victim = [g for g in games if g.victim == current_victim_name]
     if len(games_cur_victim) < len(games):
-        logging.info("Incomplete statistics for current victim, got only {} games".
-                     format(len(games_cur_victim)))
+        logging.info(
+            "Incomplete statistics for current victim, got only {} games".format(
+                len(games_cur_victim)
+            )
+        )
         return None
 
     for game in games:
@@ -187,8 +195,9 @@ def recompute_statistics(games: list[AdvGameInfo],
         sum_score += game.diff_score
         sum_score_wo_komi += game.diff_score_wo_komi
 
-    logging.info("Got {} wins and {} ties from {} games".
-                 format(sum_wins, sum_ties, len(games)))
+    logging.info(
+        "Got {} wins and {} ties from {} games".format(sum_wins, sum_ties, len(games))
+    )
     win_rate = float(sum_wins) / len(games)
     mean_diff_score = float(sum_score) / len(games)
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
@@ -206,12 +215,15 @@ class Curriculum:
     Curriculum is used for updating victims for victimplay based on
     the criteria specified in the provided config.
     """
-    def __init__(self,
-                 victims_input_dir: str,
-                 victims_output_dir: str,
-                 config: Optional[list] = None,
-                 config_json: Optional[str] = None,
-                 config_json_file: Optional[str] = None):
+
+    def __init__(
+        self,
+        victims_input_dir: str,
+        victims_output_dir: str,
+        config: Optional[list] = None,
+        config_json: Optional[str] = None,
+        config_json_file: Optional[str] = None,
+    ):
         """Initial curriculum setup.
 
         Construct and initialize curriculum.
@@ -255,11 +267,13 @@ class Curriculum:
                 win_rate=line["win_rate"],
                 score_diff=line["diff_score"],
                 score_wo_komi_diff=line["diff_score_wo_komi"],
-                policy_loss=line["policy_loss"])
+                policy_loss=line["policy_loss"],
+            )
             if not cond.can_be_victim_criteria():
                 raise ValueError(
                     "Incorrect victim change criteria for victim '{}': "
-                    "exactly one value should be non-None".format(line[0]))
+                    "exactly one value should be non-None".format(line[0])
+                )
             self.victims.append(cond)
 
         logging.info("Loaded curriculum with the following params:")
@@ -272,11 +286,15 @@ class Curriculum:
                 fname = os.path.basename(victim_files[0])
                 self.victim_idx = [v.name for v in self.victims].index(fname)
             except ValueError:
-                logging.warning("Victim '{}' is not found in '{}'"
-                                .format(victim_files[0], self.victims_output_dir))
+                logging.warning(
+                    "Victim '{}' is not found in '{}'".format(
+                        victim_files[0], self.victims_output_dir
+                    )
+                )
 
-        logging.info("Copying the latest victim '{}'..."
-                     .format(self.__cur_victim().name))
+        logging.info(
+            "Copying the latest victim '{}'...".format(self.__cur_victim().name)
+        )
         self.__try_victim_copy()
         logging.info("Curriculum initial setup is complete")
 
@@ -286,27 +304,37 @@ class Curriculum:
     def __try_victim_copy(self, force_if_exists=False):
         num_efforts = 0
         victim_name = self.__cur_victim().name
-        if not force_if_exists and \
-                os.path.exists(os.path.join(self.victims_output_dir, victim_name)):
+        if not force_if_exists and os.path.exists(
+            os.path.join(self.victims_output_dir, victim_name)
+        ):
             return
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
-                shutil.copy(os.path.join(self.victims_input_dir, victim_name),
-                            self.victims_output_dir)
+                shutil.copy(
+                    os.path.join(self.victims_input_dir, victim_name),
+                    self.victims_output_dir,
+                )
                 return
             except OSError:
-                logging.warning("Cannot copy victim '{}', maybe "
-                                "filesystem problem? Waiting {} sec..."
-                                .format(self.__cur_victim().name,
-                                        self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
+                logging.warning(
+                    "Cannot copy victim '{}', maybe "
+                    "filesystem problem? Waiting {} sec...".format(
+                        self.__cur_victim().name,
+                        self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT,
+                    )
+                )
                 num_efforts += 1
                 time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
 
-        raise RuntimeError("Problem copying victim '{}', curriculum stopped"
-                           .format(self.__cur_victim().name))
+        raise RuntimeError(
+            "Problem copying victim '{}', curriculum stopped".format(
+                self.__cur_victim().name
+            )
+        )
 
-    def try_move_on(self, adv_stat: Optional[PlayerStat] = None,
-                    policy_loss: Optional[float] = None):
+    def try_move_on(
+        self, adv_stat: Optional[PlayerStat] = None, policy_loss: Optional[float] = None
+    ):
         if self.finished:
             return
 
@@ -328,10 +356,8 @@ class Curriculum:
         logging.info("Moving to the next victim '{}'".format(self.__cur_victim().name))
         self.__try_victim_copy(True)
 
-    def update_sgf_games(self,
-                         selfplay_dir: str,
-                         games_for_compute: int):
-        all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, '.sgfs')
+    def update_sgf_games(self, selfplay_dir: str, games_for_compute: int):
+        all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
 
         files_checked = 0
         cur_games = []
@@ -359,8 +385,9 @@ class Curriculum:
                     cur_games.append(game_stat)
 
         # now have cur_games sorted from newer to older
-        logging.info("Got {} new games from {} files"
-                     .format(len(cur_games), files_checked))
+        logging.info(
+            "Got {} new games from {} files".format(len(cur_games), files_checked)
+        )
 
         # insert new games in the beginning
         self.sgf_games[:0] = cur_games
@@ -376,24 +403,26 @@ class Curriculum:
     @param games_for_compute: Number of games to compute statistics.
     @param checking_periodicity: Checking interval in seconds.
     """
+
     def checking_loop(
-            self,
-            selfplay_dir: str,
-            games_for_compute: int,
-            checking_periodicity: int):
+        self, selfplay_dir: str, games_for_compute: int, checking_periodicity: int
+    ):
         logging.info("Starting curriculum loop")
         while True:
             self.update_sgf_games(selfplay_dir, games_for_compute)
-            adv_stat = recompute_statistics(self.sgf_games,
-                                            games_for_compute,
-                                            self.__cur_victim().name)
+            adv_stat = recompute_statistics(
+                self.sgf_games, games_for_compute, self.__cur_victim().name
+            )
             if adv_stat is not None:
                 self.try_move_on(adv_stat=adv_stat)
                 if self.finished:
                     logging.info("Curriculum is done. Stopping")
                     break
-            logging.info("Curriculum is alive, current victim : {}"
-                         .format(self.__cur_victim().name))
+            logging.info(
+                "Curriculum is alive, current victim : {}".format(
+                    self.__cur_victim().name
+                )
+            )
             time.sleep(checking_periodicity)
 
     """
@@ -403,58 +432,82 @@ class Curriculum:
     @param checking_periodicity: Checking interval in seconds.
     @return: created thread (for using thread.join() in the main script)
     """
+
     def run_thread(
-            self,
-            selfplay_dir: str,
-            games_for_compute: int,
-            checking_periodicity: int) -> Thread:
-        thread = Thread(target=self.checking_loop,
-                        args=(selfplay_dir, games_for_compute, checking_periodicity))
+        self, selfplay_dir: str, games_for_compute: int, checking_periodicity: int
+    ) -> Thread:
+        thread = Thread(
+            target=self.checking_loop,
+            args=(selfplay_dir, games_for_compute, checking_periodicity),
+        )
         thread.start()
         logging.info("Curriculum models update thread started")
         return thread
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     stdout_logger = logging.getLogger()
     stdout_logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(
-        description='Run victim replacement based on win rate.')
-    parser.add_argument('-selfplay-dir', required=True,
-                        help='Directory with selfplay data')
-    parser.add_argument('-input-models-dir', required=True,
-                        help='Input dir with victim model files')
-    parser.add_argument('-output-models-dir', required=True,
-                        help='Output dir for adding new victims')
-    parser.add_argument('-games-for-compute', type=int, required=False, default=1000,
-                        help='Number of last games for statistics computation')
-    parser.add_argument('-checking-periodicity', type=int, required=False, default=60,
-                        help='Statistics computation periodicity in seconds')
-    parser.add_argument('-config-json-string', required=False,
-                        help='Curriculum JSON config with '
-                             'victims sequence (JSON content)')
-    parser.add_argument('-config-json-file', default='configs/curriculum_conf.json',
-                        help='Curriculum JSON config with '
-                             'victims sequence (JSON file path)')
+        description="Run victim replacement based on win rate."
+    )
+    parser.add_argument(
+        "-selfplay-dir", required=True, help="Directory with selfplay data"
+    )
+    parser.add_argument(
+        "-input-models-dir", required=True, help="Input dir with victim model files"
+    )
+    parser.add_argument(
+        "-output-models-dir", required=True, help="Output dir for adding new victims"
+    )
+    parser.add_argument(
+        "-games-for-compute",
+        type=int,
+        required=False,
+        default=1000,
+        help="Number of last games for statistics computation",
+    )
+    parser.add_argument(
+        "-checking-periodicity",
+        type=int,
+        required=False,
+        default=60,
+        help="Statistics computation periodicity in seconds",
+    )
+    parser.add_argument(
+        "-config-json-string",
+        required=False,
+        help="Curriculum JSON config with " "victims sequence (JSON content)",
+    )
+    parser.add_argument(
+        "-config-json-file",
+        default="configs/curriculum_conf.json",
+        help="Curriculum JSON config with " "victims sequence (JSON file path)",
+    )
 
     args = parser.parse_args()
 
     if args.config_json_file is not None:
-        curriculum = Curriculum(args.input_models_dir,
-                                args.output_models_dir,
-                                config_json_file=args.config_json_file)
+        curriculum = Curriculum(
+            args.input_models_dir,
+            args.output_models_dir,
+            config_json_file=args.config_json_file,
+        )
     elif args.config_json_string is not None:
-        curriculum = Curriculum(args.input_models_dir,
-                                args.output_models_dir,
-                                config_json=args.config_json_string)
+        curriculum = Curriculum(
+            args.input_models_dir,
+            args.output_models_dir,
+            config_json=args.config_json_string,
+        )
     else:
-        raise ValueError("Curriculum: either path to JSON config or "
-                         "JSON config string must be provided")
+        raise ValueError(
+            "Curriculum: either path to JSON config or "
+            "JSON config string must be provided"
+        )
 
     curriculum.checking_loop(
-        args.selfplay_dir,
-        args.games_for_compute,
-        args.checking_periodicity)
+        args.selfplay_dir, args.games_for_compute, args.checking_periodicity
+    )
 
     logging.info("Curriculum finished!")

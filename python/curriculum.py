@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+"""Curriculum module for using in victimplay."""
+
 import argparse
 import json
 import os
@@ -27,7 +29,11 @@ class AdvGameInfo:
 
 @dataclass(frozen=True)
 class PlayerStat:
-    # for victim only one criteria can be enabled, all others should be None
+    """Class for storing game statistics from the adversary perspective
+    or changing victim criteria.
+
+    For victim only one criteria can be enabled, all others should be None
+    """
     name: Optional[str] = None
     win_rate: Optional[float] = None
     score_diff: Optional[float] = None
@@ -161,7 +167,8 @@ def recompute_statistics(selfplay_dir: str,
 
     # don't have enough data
     if len(sgf_strings) < games_for_compute:
-        logging.info("Incomplete statistics, got only {} games".format(len(sgf_strings)))
+        logging.info("Incomplete statistics, got only {} games"
+                     .format(len(sgf_strings)))
         return None
 
     sum_wins = 0
@@ -203,12 +210,27 @@ def recompute_statistics(selfplay_dir: str,
 
 
 class Curriculum:
+    """
+        Curriculum object for updating victims for selfplay based on
+        the criteria specified in the provided config.
+    """
     def __init__(self,
                  victims_input_dir: str,
                  victims_output_dir: str,
                  config: Optional[list] = None,
                  config_json: Optional[str] = None,
                  config_json_file: Optional[str] = None):
+        """Initial curriculum setup.
+
+           Construct and initialize curriculum.
+
+           @param victims_input_dir: The folder with all victim model
+           files specified in the config.
+           @param victims_output_dir: The folder where we copy victims for selfplay.
+           @param config: List of victims.
+           @param config_json: Serialized JSON list of victims.
+           @param config_json_file: JSON file with list of victims.
+        """
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
@@ -249,7 +271,8 @@ class Curriculum:
         logging.info("Loaded curriculum with the following params:")
         logging.info("\n".join([str(x) for x in config]))
 
-        logging.info("Copying the first victim '{}'...".format(self.__cur_victim().name))
+        logging.info("Copying the first victim '{}'..."
+                     .format(self.__cur_victim().name))
         self.__try_victim_copy()
         logging.info("Curriculum initial setup is complete")
 
@@ -259,21 +282,27 @@ class Curriculum:
     def __try_victim_copy(self, force_if_exists=False):
         num_efforts = 0
         victim_name = self.__cur_victim().name
-        if os.path.exists(os.path.join(self.victims_output_dir, victim_name)) and not force_if_exists:
+        if not force_if_exists and \
+                os.path.exists(os.path.join(self.victims_output_dir, victim_name)):
             return
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
-                shutil.copy(os.path.join(self.victims_input_dir, victim_name), self.victims_output_dir)
+                shutil.copy(os.path.join(self.victims_input_dir, victim_name),
+                            self.victims_output_dir)
                 return
-            except:
-                logging.warning("Cannot copy victim '{}', maybe filesystem problem? Waiting {} sec...".format(
-                    self.__cur_victim().name, self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
+            except OSError:
+                logging.warning("Cannot copy victim '{}', maybe "
+                                "filesystem problem? Waiting {} sec..."
+                                .format(self.__cur_victim().name,
+                                        self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT))
                 num_efforts += 1
                 time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
 
-        raise RuntimeError("Problem copying victim '{}', curriculum stopped".format(self.__cur_victim().name))
+        raise RuntimeError("Problem copying victim '{}', curriculum stopped"
+                           .format(self.__cur_victim().name))
 
-    def try_move_on(self, adv_stat: Optional[PlayerStat] = None, policy_loss: Optional[float] = None):
+    def try_move_on(self, adv_stat: Optional[PlayerStat] = None,
+                    policy_loss: Optional[float] = None):
         if self.finished:
             return
 
@@ -316,7 +345,8 @@ class Curriculum:
                 if self.finished:
                     logging.info("Curriculum is done. Stopping")
                     break
-            logging.info("Curriculum is alive, current victim : {}".format(self.__cur_victim().name))
+            logging.info("Curriculum is alive, current victim : {}"
+                         .format(self.__cur_victim().name))
             time.sleep(checking_periodicity)
 
     """
@@ -342,27 +372,38 @@ if __name__ == '__main__':
     stdout_logger = logging.getLogger()
     stdout_logger.setLevel(logging.INFO)
 
-    parser = argparse.ArgumentParser(description='Run victim replacement based on win rate.')
-    parser.add_argument('-selfplay-dir', required=True, help='Directory with selfplay data')
-    parser.add_argument('-input-models-dir', required=True, help='Input dir with victim model files')
-    parser.add_argument('-output-models-dir', required=True, help='Output dir for adding new victims')
+    parser = argparse.ArgumentParser(
+        description='Run victim replacement based on win rate.')
+    parser.add_argument('-selfplay-dir', required=True,
+                        help='Directory with selfplay data')
+    parser.add_argument('-input-models-dir', required=True,
+                        help='Input dir with victim model files')
+    parser.add_argument('-output-models-dir', required=True,
+                        help='Output dir for adding new victims')
     parser.add_argument('-games-for-compute', type=int, required=False, default=1000,
                         help='Number of last games for statistics computation')
     parser.add_argument('-checking-periodicity', type=int, required=False, default=60,
                         help='Statistics computation periodicity in seconds')
     parser.add_argument('-config-json-string', required=False,
-                        help='Curriculum JSON config with victims sequence (JSON content)')
+                        help='Curriculum JSON config with '
+                             'victims sequence (JSON content)')
     parser.add_argument('-config-json-file', default='configs/curriculum_conf.json',
-                        help='Curriculum JSON config with victims sequence (JSON file path)')
+                        help='Curriculum JSON config with '
+                             'victims sequence (JSON file path)')
 
     args = parser.parse_args()
 
     if args.config_json_file is not None:
-        curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json_file=args.config_json_file)
+        curriculum = Curriculum(args.input_models_dir,
+                                args.output_models_dir,
+                                config_json_file=args.config_json_file)
     elif args.config_json_string is not None:
-        curriculum = Curriculum(args.input_models_dir, args.output_models_dir, config_json=args.config_json_string)
+        curriculum = Curriculum(args.input_models_dir,
+                                args.output_models_dir,
+                                config_json=args.config_json_string)
     else:
-        raise ValueError("Curriculum: either path to JSON config or JSON config string must be provided")
+        raise ValueError("Curriculum: either path to JSON config or "
+                         "JSON config string must be provided")
 
     curriculum.checking_loop(
         args.selfplay_dir,

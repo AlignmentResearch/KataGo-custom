@@ -246,7 +246,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   // keep weak references to the victims loaded by game threads
   // for being able to find the model by name if at least one thread is using it
   // and allowing to automatically destroy the model when nobody uses it
-  vector<weak_ptr<NNEvaluator> > victimNNEval;
+  vector<weak_ptr<NNEvaluator> > victimNNEvals;
   mutex victimMutex;
 
   // keep model ownership if we have only one victim for all games
@@ -258,7 +258,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       reloadVictims = true;
     } else {
       singleVictim.reset(loadNN("victim", nnVictimPath));
-      victimNNEval.push_back(singleVictim);
+      victimNNEvals.push_back(singleVictim);
     }
   }
 
@@ -378,7 +378,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &gameSeedBase,
     &victimplay,
     &reloadVictims,
-    &victimNNEval,
+    &victimNNEvals,
     &victimMutex,
     &nnVictimPath,
     &loadNN
@@ -416,12 +416,12 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
           // do not increase loop iterator by default
           // since we'd like to sanitize the container in-place
-          for(auto it = victimNNEval.begin(); it != victimNNEval.end(); ) {
+          for(auto it = victimNNEvals.begin(); it != victimNNEvals.end(); ) {
             // 'it' is a weak_ptr<NNEvaluator>
             shared_ptr<NNEvaluator> eval = it->lock();
             if (!eval) {
               // all references released, we can safely remove it
-              it = victimNNEval.erase(it);
+              it = victimNNEvals.erase(it);
               ++modelsReleased;
               continue;
             }
@@ -438,7 +438,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           if(!curVictimNNEval) {
             modelLoaded = true;
             curVictimNNEval.reset(loadNN(modelName, modelFile));
-            victimNNEval.push_back(curVictimNNEval);
+            victimNNEvals.push_back(curVictimNNEval);
           }
         }
 
@@ -457,7 +457,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       } else if (victimplay) {
         // no need for the mutex here since we never modify victimNNEval
         assert(victimNNEval.size() == 1);
-        curVictimNNEval = victimNNEval[0].lock();
+        curVictimNNEval = victimNNEvals[0].lock();
       }
 
       NNEvaluator* nnEval = manager->acquireLatest();
@@ -590,7 +590,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   singleVictim.reset();
   // no actual deallocation, just tidying up the vector
-  victimNNEval.clear();
+  victimNNEvals.clear();
 
   //At this point, nothing else except possibly data write loops are running, within the selfplay manager.
   delete manager;

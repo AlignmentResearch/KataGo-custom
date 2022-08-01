@@ -10,7 +10,7 @@ import shutil
 import time
 from dataclasses import asdict, dataclass
 from threading import Thread
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from sgfmill import sgf
 
@@ -158,43 +158,20 @@ def get_files_sorted_by_modification_time(
     return all_sgfs
 
 
-def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
-    all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, '.sgfs')
-
-    sgf_strings = []
-    files_checked = 0
-    for sgf_file in all_sgfs:
-        with open(sgf_file) as f:
-            logging.info("Processing SGF file '{}'".format(sgf_file))
-            files_checked += 1
-            all_lines = list(f.readlines())
-
-            for line in reversed(all_lines):
-                sgf_strings.append(line.strip())
-                if len(sgf_strings) >= games_for_compute:
-                    return sgf_strings, files_checked
-    return sgf_strings, files_checked
-
-
-def recompute_statistics(selfplay_dir: str,
+def recompute_statistics(games: list[AdvGameInfo],
                          games_for_compute: int,
                          current_victim_name: str) -> Optional[PlayerStat]:
-    sgf_strings, files_checked = read_sgf_files(selfplay_dir, games_for_compute)
-
     # don't have enough data
-    if len(sgf_strings) < games_for_compute:
+    if len(games) < games_for_compute:
         logging.info("Incomplete statistics, got only {} games"
-                     .format(len(sgf_strings)))
+                     .format(len(games)))
         return None
 
     sum_wins = 0
     sum_ties = 0
     sum_score = 0
     sum_score_wo_komi = 0
-    all_game_results = [get_game_info(sgf_str) for sgf_str in sgf_strings]
-    games = list(filter(None, all_game_results))
-    logging.info("Got {} results from {} games".
-                 format(len(all_game_results), len(games)))
+    logging.info("Computing {} games".format(len(games)))
     games_cur_victim = [g for g in games if g.victim == current_victim_name]
     if len(games_cur_victim) < len(games):
         logging.info("Incomplete statistics for current victim, got only {} games".
@@ -214,9 +191,7 @@ def recompute_statistics(selfplay_dir: str,
                  format(sum_wins, sum_ties, len(games)))
     win_rate = float(sum_wins) / len(games)
     mean_diff_score = float(sum_score) / len(games)
-    mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(sgf_strings)
-
-    logging.info("Files checked: %d", files_checked)
+    mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
 
     return PlayerStat(
         win_rate=win_rate,
@@ -252,6 +227,8 @@ class Curriculum:
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
 
         self.stat_files = []
+        self.sgf_games = []
+        self.game_hashes = dict()
 
         if config_json_file is not None:
             logging.info("Curriculum: loading JSON config from '%s'", config_json_file)
@@ -351,6 +328,48 @@ class Curriculum:
         logging.info("Moving to the next victim '{}'".format(self.__cur_victim().name))
         self.__try_victim_copy(True)
 
+    def update_sgf_games(self,
+                         selfplay_dir: str,
+                         games_for_compute: int):
+        all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, '.sgfs')
+
+        files_checked = 0
+        cur_games = []
+        for sgf_file in all_sgfs:
+            if sgf_file not in self.game_hashes:
+                self.game_hashes[sgf_file] = set()
+
+            with open(sgf_file) as f:
+                logging.info("Processing SGF file '{}'".format(sgf_file))
+                files_checked += 1
+                all_lines = list(f.readlines())
+
+                for line in reversed(all_lines):
+                    sgf_string = line.strip()
+                    game_stat = get_game_info(sgf_string)
+                    if game_stat is None:
+                        continue
+
+                    # game hash was found, so consider that the rest of them are older
+                    # so stop scanning this file
+                    if game_stat.game_hash in self.game_hashes[sgf_file]:
+                        break
+
+                    self.game_hashes[sgf_file].add(game_stat.game_hash)
+                    cur_games.append(game_stat)
+
+        # now have cur_games sorted from newer to older
+        logging.info("Got {} new games from {} files"
+                     .format(len(cur_games), files_checked))
+
+        # insert new games in the beginning
+        self.sgf_games[:0] = cur_games
+
+        # leave only games_for_compute games for statistics computation
+        # so delete some old games
+        if len(self.sgf_games) > games_for_compute:
+            del self.sgf_games[games_for_compute:]
+
     """
     Run curriculum checking.
     @param selfplay_dir: Folder with selfplay results.
@@ -364,7 +383,8 @@ class Curriculum:
             checking_periodicity: int):
         logging.info("Starting curriculum loop")
         while True:
-            adv_stat = recompute_statistics(selfplay_dir,
+            self.update_sgf_games(selfplay_dir, games_for_compute)
+            adv_stat = recompute_statistics(self.sgf_games,
                                             games_for_compute,
                                             self.__cur_victim().name)
             if adv_stat is not None:

@@ -289,9 +289,16 @@ class Curriculum:
         logging.info("\n".join([str(x) for x in config]))
 
         logging.info("Finding the latest victim...")
-        self.victims_output_dir
+        victim_files = get_files_sorted_by_modification_time(self.victims_output_dir)
+        if victim_files:
+            try:
+                fname = os.path.basename(victim_files[0])
+                self.victim_idx = [v.name for v in self.victims].index(fname)
+            except ValueError:
+                logging.warning("Victim '{}' is not found in '{}'"
+                                .format(victim_files[0], self.victims_output_dir))
 
-        logging.info("Copying the first victim '{}'..."
+        logging.info("Copying the latest victim '{}'..."
                      .format(self.__cur_victim().name))
         self.__try_victim_copy()
         logging.info("Curriculum initial setup is complete")

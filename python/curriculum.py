@@ -28,9 +28,9 @@ class AdvGameInfo:
 class PlayerStat:
     """Class for storing game statistics.
 
-     Statistics either represents the adversary
-     or stores victim changing criteria.
-     For victim only one criteria can be enabled, all others should be None.
+    Statistics either represents the adversary
+    or stores victim changing criteria.
+    For victim only one criteria can be enabled, all others should be None.
     """
     name: Optional[str] = None
     win_rate: Optional[float] = None
@@ -210,8 +210,8 @@ def recompute_statistics(selfplay_dir: str,
 class Curriculum:
     """Curriculum object.
 
-     Curriculum is used for updating victims for victimplay based on
-     the criteria specified in the provided config.
+    Curriculum is used for updating victims for victimplay based on
+    the criteria specified in the provided config.
     """
     def __init__(self,
                  victims_input_dir: str,

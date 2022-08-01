@@ -10,7 +10,7 @@ import shutil
 import time
 from dataclasses import asdict, dataclass
 from threading import Thread
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from sgfmill import sgf
 
@@ -152,7 +152,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 
 def get_files_sorted_by_modification_time(
     folder: str, extension: Optional[str] = None
-) -> list[str]:
+) -> List[str]:
     all_sgfs = []
     for path, dirnames, filenames in os.walk(folder, followlinks=True):
         for f in filenames:
@@ -165,7 +165,7 @@ def get_files_sorted_by_modification_time(
 
 
 def recompute_statistics(
-    games: list[AdvGameInfo], games_for_compute: int, current_victim_name: str
+    games: List[AdvGameInfo], games_for_compute: int, current_victim_name: str
 ) -> Optional[PlayerStat]:
     # don't have enough data
     if len(games) < games_for_compute:
@@ -220,7 +220,7 @@ class Curriculum:
         self,
         victims_input_dir: str,
         victims_output_dir: str,
-        config: Optional[list] = None,
+        config: Optional[List] = None,
         config_json: Optional[str] = None,
         config_json_file: Optional[str] = None,
     ):

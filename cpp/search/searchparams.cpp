@@ -1,16 +1,56 @@
 #include "../search/searchparams.h"
 
+SearchParams::PassingBehavior SearchParams::strToPassingBehavior(const std::string& behaviorStr) {
+  if(behaviorStr == "standard") {
+    return SearchParams::PassingBehavior::Standard;
+  } else if(behaviorStr == "avoid-pass-alive-territory") {
+    return SearchParams::PassingBehavior::AvoidPassAliveTerritory;
+  } else if(behaviorStr == "last-resort") {
+    return SearchParams::PassingBehavior::LastResort;
+  } else if(behaviorStr == "last-resort-oracle") {
+    return SearchParams::PassingBehavior::LastResortOracle;
+  } else if(behaviorStr == "only-when-ahead") {
+    return SearchParams::PassingBehavior::OnlyWhenAhead;
+  } else if(behaviorStr == "only-when-behind") {
+    return SearchParams::PassingBehavior::OnlyWhenBehind;
+  }
+  ASSERT_UNREACHABLE;
+}
+std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
+  switch(behavior) {
+    case PassingBehavior::Standard:
+      return "standard";
+    case PassingBehavior::AvoidPassAliveTerritory:
+      return "avoid-pass-alive-territory";
+    case PassingBehavior::LastResort:
+      return "last-resort";
+    case PassingBehavior::LastResortOracle:
+      return "last-resort-oracle";
+    case PassingBehavior::OnlyWhenAhead:
+      return "only-when-ahead";
+    case PassingBehavior::OnlyWhenBehind:
+      return "only-when-behind";
+    default:
+      ASSERT_UNREACHABLE;
+  }
+}
+
 SearchParams::SearchAlgorithm SearchParams::strToSearchAlgo(const std::string& algoStr) {
-  if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
-  if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
+  if(algoStr == "MCTS")
+    return SearchAlgorithm::MCTS;
+  if(algoStr == "EMCTS1")
+    return SearchAlgorithm::EMCTS1;
   ASSERT_UNREACHABLE;
 }
 
 std::string SearchParams::searchAlgoToStr(SearchAlgorithm algo) {
   switch(algo) {
-    case SearchAlgorithm::MCTS: return "MCTS";
-    case SearchAlgorithm::EMCTS1: return "EMCTS1";
-    default: ASSERT_UNREACHABLE;
+    case SearchAlgorithm::MCTS:
+      return "MCTS";
+    case SearchAlgorithm::EMCTS1:
+      return "EMCTS1";
+    default:
+      ASSERT_UNREACHABLE;
   }
 }
 
@@ -18,97 +58,96 @@ std::string SearchParams::getSearchAlgoAsStr() const {
   return searchAlgoToStr(searchAlgo);
 }
 
-//Default search params
-//The intent is that the are good default guesses for values of the parameters,
-//with deterministic behavior (no noise, no randomization) and no bounds (unbounded time and visits).
-//They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
-//have changed to preserve the behavior of tests.
+// Default search params
+// The intent is that the are good default guesses for values of the parameters,
+// with deterministic behavior (no noise, no randomization) and no bounds (unbounded time and visits).
+// They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
+// have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :searchAlgo(SearchAlgorithm::MCTS),
-   canPassFirst(true),
-   winLossUtilityFactor(1.0),
-   staticScoreUtilityFactor(0.3),
-   dynamicScoreUtilityFactor(0.0),
-   dynamicScoreCenterZeroWeight(0.0),
-   dynamicScoreCenterScale(1.0),
-   noResultUtilityForWhite(0.0),
-   drawEquivalentWinsForWhite(0.5),
-   cpuctExploration(1.0),
-   cpuctExplorationLog(0.0),
-   cpuctExplorationBase(500),
-   cpuctUtilityStdevPrior(0.25),
-   cpuctUtilityStdevPriorWeight(1.0),
-   cpuctUtilityStdevScale(0.0),
-   fpuReductionMax(0.2),
-   fpuLossProp(0.0),
-   fpuParentWeight(0.0),
-   valueWeightExponent(0.5),
-   useNoisePruning(false),
-   noisePruneUtilityScale(0.15),
-   noisePruningCap(1e50),
-   useUncertainty(false),
-   uncertaintyCoeff(0.2),
-   uncertaintyExponent(1.0),
-   uncertaintyMaxWeight(8.0),
-   rootNoiseEnabled(false),
-   rootDirichletNoiseTotalConcentration(10.83),
-   rootDirichletNoiseWeight(0.25),
-   rootPolicyTemperature(1.0),
-   rootPolicyTemperatureEarly(1.0),
-   rootFpuReductionMax(0.2),
-   rootFpuLossProp(0.0),
-   rootNumSymmetriesToSample(1),
-   rootSymmetryPruning(false),
-   rootDesiredPerChildVisitsCoeff(0.0),
-   chosenMoveTemperature(0.0),
-   chosenMoveTemperatureEarly(0.0),
-   chosenMoveTemperatureHalflife(19),
-   chosenMoveSubtract(0.0),
-   chosenMovePrune(1.0),
-   useLcbForSelection(false),
-   lcbStdevs(4.0),
-   minVisitPropForLCB(0.05),
-   useNonBuggyLcb(false),
-   rootEndingBonusPoints(0.0),
-   rootPruneUselessMoves(false),
-   conservativePass(false),
-   fillDameBeforePass(false),
-   avoidMYTDaggerHackPla(C_EMPTY),
-   wideRootNoise(0.0),
-   playoutDoublingAdvantage(0.0),
-   playoutDoublingAdvantagePla(C_EMPTY),
-   avoidRepeatedPatternUtility(0.0),
-   nnPolicyTemperature(1.0f),
-   antiMirror(false),
-   subtreeValueBiasFactor(0.0),
-   subtreeValueBiasTableNumShards(65536),
-   subtreeValueBiasFreeProp(0.8),
-   subtreeValueBiasWeightExponent(0.5),
-   mutexPoolSize(8192),
-   numVirtualLossesPerThread(3.0),
-   numThreads(1),
-   maxVisits(((int64_t)1) << 50),
-   maxPlayouts(((int64_t)1) << 50),
-   maxTime(1.0e20),
-   maxVisitsPondering(((int64_t)1) << 50),
-   maxPlayoutsPondering(((int64_t)1) << 50),
-   maxTimePondering(1.0e20),
-   lagBuffer(0.0),
-   searchFactorAfterOnePass(1.0),
-   searchFactorAfterTwoPass(1.0),
-   treeReuseCarryOverTimeFactor(0.0),
-   overallocateTimeFactor(1.0),
-   midgameTimeFactor(1.0),
-   midgameTurnPeakTime(130.0),
-   endgameTurnTimeDecay(100.0),
-   obviousMovesTimeFactor(1.0),
-   obviousMovesPolicyEntropyTolerance(0.30),
-   obviousMovesPolicySurpriseTolerance(0.15),
-   futileVisitsThreshold(0.0)
-{}
+  : passingBehavior(PassingBehavior::Standard),
+    searchAlgo(SearchAlgorithm::MCTS),
+    canPassFirst(true),
+    winLossUtilityFactor(1.0),
+    staticScoreUtilityFactor(0.3),
+    dynamicScoreUtilityFactor(0.0),
+    dynamicScoreCenterZeroWeight(0.0),
+    dynamicScoreCenterScale(1.0),
+    noResultUtilityForWhite(0.0),
+    drawEquivalentWinsForWhite(0.5),
+    cpuctExploration(1.0),
+    cpuctExplorationLog(0.0),
+    cpuctExplorationBase(500),
+    cpuctUtilityStdevPrior(0.25),
+    cpuctUtilityStdevPriorWeight(1.0),
+    cpuctUtilityStdevScale(0.0),
+    fpuReductionMax(0.2),
+    fpuLossProp(0.0),
+    fpuParentWeight(0.0),
+    valueWeightExponent(0.5),
+    useNoisePruning(false),
+    noisePruneUtilityScale(0.15),
+    noisePruningCap(1e50),
+    useUncertainty(false),
+    uncertaintyCoeff(0.2),
+    uncertaintyExponent(1.0),
+    uncertaintyMaxWeight(8.0),
+    rootNoiseEnabled(false),
+    rootDirichletNoiseTotalConcentration(10.83),
+    rootDirichletNoiseWeight(0.25),
+    rootPolicyTemperature(1.0),
+    rootPolicyTemperatureEarly(1.0),
+    rootFpuReductionMax(0.2),
+    rootFpuLossProp(0.0),
+    rootNumSymmetriesToSample(1),
+    rootSymmetryPruning(false),
+    rootDesiredPerChildVisitsCoeff(0.0),
+    chosenMoveTemperature(0.0),
+    chosenMoveTemperatureEarly(0.0),
+    chosenMoveTemperatureHalflife(19),
+    chosenMoveSubtract(0.0),
+    chosenMovePrune(1.0),
+    useLcbForSelection(false),
+    lcbStdevs(4.0),
+    minVisitPropForLCB(0.05),
+    useNonBuggyLcb(false),
+    rootEndingBonusPoints(0.0),
+    rootPruneUselessMoves(false),
+    conservativePass(false),
+    fillDameBeforePass(false),
+    avoidMYTDaggerHackPla(C_EMPTY),
+    wideRootNoise(0.0),
+    playoutDoublingAdvantage(0.0),
+    playoutDoublingAdvantagePla(C_EMPTY),
+    avoidRepeatedPatternUtility(0.0),
+    nnPolicyTemperature(1.0f),
+    antiMirror(false),
+    subtreeValueBiasFactor(0.0),
+    subtreeValueBiasTableNumShards(65536),
+    subtreeValueBiasFreeProp(0.8),
+    subtreeValueBiasWeightExponent(0.5),
+    mutexPoolSize(8192),
+    numVirtualLossesPerThread(3.0),
+    numThreads(1),
+    maxVisits(((int64_t)1) << 50),
+    maxPlayouts(((int64_t)1) << 50),
+    maxTime(1.0e20),
+    maxVisitsPondering(((int64_t)1) << 50),
+    maxPlayoutsPondering(((int64_t)1) << 50),
+    maxTimePondering(1.0e20),
+    lagBuffer(0.0),
+    searchFactorAfterOnePass(1.0),
+    searchFactorAfterTwoPass(1.0),
+    treeReuseCarryOverTimeFactor(0.0),
+    overallocateTimeFactor(1.0),
+    midgameTimeFactor(1.0),
+    midgameTurnPeakTime(130.0),
+    endgameTurnTimeDecay(100.0),
+    obviousMovesTimeFactor(1.0),
+    obviousMovesPolicyEntropyTolerance(0.30),
+    obviousMovesPolicySurpriseTolerance(0.15),
+    futileVisitsThreshold(0.0) {}
 
-SearchParams::~SearchParams()
-{}
+SearchParams::~SearchParams() {}
 
 SearchParams SearchParams::forTestsV1() {
   SearchParams params;
@@ -133,7 +172,9 @@ SearchParams SearchParams::forTestsV1() {
 
 void SearchParams::failIfParamsDifferOnUnchangeableParameter(const SearchParams& initial, const SearchParams& dynamic) {
   if(dynamic.numThreads > initial.numThreads) {
-    throw StringError("Cannot increase number of search threads after initialization since this is used to initialize neural net buffer capacity");
+    throw StringError(
+      "Cannot increase number of search threads after initialization since this is used to initialize neural net "
+      "buffer capacity");
   }
   if(dynamic.mutexPoolSize != initial.mutexPoolSize) {
     throw StringError("Cannot change mutex pool size after initialization");

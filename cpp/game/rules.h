@@ -8,7 +8,6 @@
 #include "../external/nlohmann_json/json.hpp"
 
 struct Rules {
-
   static const int KO_SIMPLE = 0;
   static const int KO_POSITIONAL = 1;
   static const int KO_SITUATIONAL = 2;
@@ -32,13 +31,13 @@ struct Rules {
   static const int WHB_N_MINUS_ONE = 2;
   int whiteHandicapBonusRule;
 
-  //Mostly an informational value - doesn't affect the actual implemented rules, but GTP or Analysis may, at a
-  //high level, use this info to adjust passing behavior - whether it's okay to pass without capturing dead stones.
-  //Only relevant for area scoring.
+  // Mostly an informational value - doesn't affect the actual implemented rules, but GTP or Analysis may, at a
+  // high level, use this info to adjust passing behavior - whether it's okay to pass without capturing dead stones.
+  // Only relevant for area scoring.
   bool friendlyPassOk;
 
   float komi;
-  //Min and max acceptable komi in various places involving user input validation
+  // Min and max acceptable komi in various places involving user input validation
   static constexpr float MIN_USER_KOMI = -150.0f;
   static constexpr float MAX_USER_KOMI = 150.0f;
 
@@ -63,8 +62,7 @@ struct Rules {
     int whiteHandicapBonusRule,
     bool friendlyPassOk,
     float komi,
-    Player playerThatCanPassFirst = P_ANY
-  );
+    Player playerThatCanPassFirst = P_ANY);
   ~Rules();
 
   bool operator==(const Rules& other) const;
@@ -115,7 +113,7 @@ struct Rules {
   static const Hash128 ZOBRIST_MULTI_STONE_SUICIDE_HASH;
   static const Hash128 ZOBRIST_BUTTON_HASH;
 
-private:
+ private:
   nlohmann::json toJsonHelper(bool omitKomi, bool omitDefaults) const;
 };
 

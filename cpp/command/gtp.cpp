@@ -970,17 +970,20 @@ struct GTPEngine {
 
     bool isLegal = bot->isLegalStrict(moveLoc, pla);
     if(moveLoc == Board::NULL_LOC || !isLegal) {
-      responseIsError = true;
-      response = "genmove returned null location or illegal move";
-      ostringstream sout;
-      sout << "genmove null location or illegal move!?!"
-           << "\n";
-      sout << bot->getRootBoard() << "\n";
-      sout << "Pla: " << PlayerIO::playerToString(pla) << "\n";
-      sout << "MoveLoc: " << Location::toString(moveLoc, bot->getRootBoard()) << "\n";
-      logger.write(sout.str());
-      genmoveTimeSum += timer.getSeconds();
-      return;
+      std::cerr << "Recovering from internal error by passing" << std::endl;
+      moveLoc = Board::PASS_LOC;
+
+      // responseIsError = true;
+      // response = "genmove returned null location or illegal move";
+      // ostringstream sout;
+      // sout << "genmove null location or illegal move!?!"
+      //      << "\n";
+      // sout << bot->getRootBoard() << "\n";
+      // sout << "Pla: " << PlayerIO::playerToString(pla) << "\n";
+      // sout << "MoveLoc: " << Location::toString(moveLoc, bot->getRootBoard()) << "\n";
+      // logger.write(sout.str());
+      // genmoveTimeSum += timer.getSeconds();
+      // return;
     }
 
     ReportedSearchValues values;

@@ -410,6 +410,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         modelName = "victim-" + modelName;
         bool modelLoaded = false;
         int modelsReleased = 0;
+        std::vector<int> evalsInUse;
         // scope for the mutex
         {
           lock_guard<mutex> lock(victimMutex);
@@ -425,6 +426,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
               ++modelsReleased;
               continue;
             }
+
+            evalsInUse.push_back(eval.use_count() - 1);
 
             if (eval->getModelName() == modelName) {
               // found it already loaded, transfer ownership
@@ -446,13 +449,20 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         // since the model definitely exists
         assert(curVictimNNEval);
 
+        std::string log_str;
         if(modelLoaded) {
-          logger.write("Game loop thread " + Global::intToString(threadIdx) +
-                       " loaded victim: " + modelName);
+          log_str += "\n  loaded victim: " + modelName;
         }
         if(modelsReleased > 0) {
-          logger.write("Game loop thread " + Global::intToString(threadIdx) +
-                       ": sanitized " + to_string(modelsReleased) + " victims");
+          log_str += "\n sanitized " + to_string(modelsReleased) + " victims";
+        }
+        if(evalsInUse.size() > 1) {
+          log_str += "\n victim counters in use:";
+          for(const auto& c: evalsInUse)
+            log_str += " " + to_string(c);
+        }
+        if(!log_str.empty()) {
+          logger.write("Game loop thread " + to_string(threadIdx) + ":" + log_str);
         }
       } else if (victimplay) {
         // no need for the mutex here since we never modify victimNNEval

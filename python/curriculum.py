@@ -19,6 +19,7 @@ from sgfmill import sgf
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
     victim: str
+    game_hash: str
     winner: Optional[bool]
     diff_score: float
     diff_score_wo_komi: float
@@ -98,8 +99,13 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 
     win_score = 0
     result = 'undefined'
+    game_hash = None
     try:
-        result = sgf_game.get_root().get("RE")
+        game_root = sgf_game.get_root()
+        game_c = game_root.get('C')
+        game_hash = game_c.split(',')[2].split('=')[1]
+
+        result = game_root.get("RE")
         win_score = result.split("+")[1]
         win_score = float(win_score)
     except KeyError:
@@ -110,6 +116,10 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         return None
     except ValueError:
         logging.warning("Game score is not numeric: '%s'", win_score)
+        return None
+
+    if game_hash is None:
+        logging.warning("Game hash is None!")
         return None
 
     if win_color is None:
@@ -129,25 +139,33 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     # drop 'victim-' prefix from the name
     victim_name = victim_name[7:]
     return AdvGameInfo(victim_name,
+                       game_hash,
                        winner,
                        adv_minus_victim_score,
                        adv_minus_victim_score_wo_komi)
 
 
-def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
+def get_files_sorted_by_modification_time(
+        folder: str, extension: Optional[str] = None) -> list[str]:
     all_sgfs = []
-    for path, dirnames, filenames in os.walk(selfplay_dir, followlinks=True):
+    for path, dirnames, filenames in os.walk(folder, followlinks=True):
         for f in filenames:
-            if os.path.splitext(f)[1] == '.sgfs':
+            if extension is None or os.path.splitext(f)[1] == extension:
                 file_path = os.path.join(path, f)
                 all_sgfs.append([file_path, os.path.getmtime(file_path)])
     all_sgfs.sort(key=lambda x: x[1], reverse=True)
+    all_sgfs = [x[0] for x in all_sgfs]
+    return all_sgfs
+
+
+def read_sgf_files(selfplay_dir: str, games_for_compute: int) -> Tuple[list, int]:
+    all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, '.sgfs')
 
     sgf_strings = []
     files_checked = 0
     for sgf_file in all_sgfs:
-        with open(sgf_file[0]) as f:
-            logging.info("Processing SGF file '{}'".format(sgf_file[0]))
+        with open(sgf_file) as f:
+            logging.info("Processing SGF file '{}'".format(sgf_file))
             files_checked += 1
             all_lines = list(f.readlines())
 
@@ -269,6 +287,9 @@ class Curriculum:
 
         logging.info("Loaded curriculum with the following params:")
         logging.info("\n".join([str(x) for x in config]))
+
+        logging.info("Finding the latest victim...")
+        self.victims_output_dir
 
         logging.info("Copying the first victim '{}'..."
                      .format(self.__cur_victim().name))

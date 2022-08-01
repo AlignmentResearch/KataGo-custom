@@ -4,16 +4,13 @@
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import time
+from dataclasses import asdict, dataclass
 from threading import Thread
-from typing import Optional, Dict, Tuple
-
-import logging
-
-from dataclasses import dataclass
-from dataclasses import asdict
+from typing import Dict, Optional, Tuple
 
 from sgfmill import sgf
 
@@ -29,10 +26,11 @@ class AdvGameInfo:
 
 @dataclass(frozen=True)
 class PlayerStat:
-    """Class for storing game statistics from the adversary perspective
-    or changing victim criteria.
+    """Class for storing game statistics.
 
-    For victim only one criteria can be enabled, all others should be None
+     Statistics either represents the adversary
+     or stores victim changing criteria.
+     For victim only one criteria can be enabled, all others should be None.
     """
     name: Optional[str] = None
     win_rate: Optional[float] = None
@@ -210,9 +208,10 @@ def recompute_statistics(selfplay_dir: str,
 
 
 class Curriculum:
-    """
-        Curriculum object for updating victims for selfplay based on
-        the criteria specified in the provided config.
+    """Curriculum object.
+
+     Curriculum is used for updating victims for victimplay based on
+     the criteria specified in the provided config.
     """
     def __init__(self,
                  victims_input_dir: str,
@@ -222,14 +221,14 @@ class Curriculum:
                  config_json_file: Optional[str] = None):
         """Initial curriculum setup.
 
-           Construct and initialize curriculum.
+        Construct and initialize curriculum.
 
-           @param victims_input_dir: The folder with all victim model
-           files specified in the config.
-           @param victims_output_dir: The folder where we copy victims for selfplay.
-           @param config: List of victims.
-           @param config_json: Serialized JSON list of victims.
-           @param config_json_file: JSON file with list of victims.
+        @param victims_input_dir: The folder with all victim model
+        files specified in the config.
+        @param victims_output_dir: The folder where we copy victims for selfplay.
+        @param config: List of victims.
+        @param config_json: Serialized JSON list of victims.
+        @param config_json_file: JSON file with list of victims.
         """
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10

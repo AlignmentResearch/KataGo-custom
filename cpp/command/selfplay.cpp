@@ -456,7 +456,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         }
       } else if (victimplay) {
         // no need for the mutex here since we never modify victimNNEval
-        assert(victimNNEval.size() == 1);
+        assert(victimNNEvals.size() == 1);
         curVictimNNEval = victimNNEvals[0].lock();
       }
 

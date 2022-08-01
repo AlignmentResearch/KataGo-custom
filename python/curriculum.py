@@ -359,15 +359,14 @@ class Curriculum:
     def update_sgf_games(self, selfplay_dir: str, games_for_compute: int):
         all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
 
-        files_checked = 0
+        useful_files = set()
         cur_games = []
         for sgf_file in all_sgfs:
             if sgf_file not in self.game_hashes:
                 self.game_hashes[sgf_file] = set()
 
             with open(sgf_file) as f:
-                logging.info("Processing SGF file '{}'".format(sgf_file))
-                files_checked += 1
+                # logging.info("Processing SGF file '{}'".format(sgf_file))
                 all_lines = list(f.readlines())
 
                 for line in reversed(all_lines):
@@ -383,11 +382,14 @@ class Curriculum:
 
                     self.game_hashes[sgf_file].add(game_stat.game_hash)
                     cur_games.append(game_stat)
+                    useful_files.add(sgf_file)
 
         # now have cur_games sorted from newer to older
         logging.info(
-            "Got {} new games from {} files".format(len(cur_games), files_checked)
+            "Got {} new games from {} files".format(len(cur_games), len(useful_files))
         )
+        for f in useful_files:
+            logging.info("Useful SGF file: '{}'".format(str(f)))
 
         # insert new games in the beginning
         self.sgf_games[:0] = cur_games

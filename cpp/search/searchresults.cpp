@@ -602,7 +602,6 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
       Color territories[Board::MAX_ARR_SIZE];
       rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
 
-      bool otherOptions = false;
       for(int i = 0; i < childrenCapacity; i++) {
         const SearchNode* child = children[i].getIfAllocated();
         if(child == NULL)
@@ -611,13 +610,13 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
         if(moveLoc == Board::PASS_LOC)
           continue;
 
-        // Found a legal move that isn't in our own pass-alive territory
+        // Found a legal move that isn't in our own pass-alive territory.
+        // This means we should not pass, i.e. passing should be suppressed.
         if(!playersMatch(territories[moveLoc], rootPla)) {
-          otherOptions = true;
-          break;
+          return true;
         }
       }
-      return !otherOptions;
+      return false;
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
     // or that is adjacent to a pla owned spot, and is not greatly worse than pass.

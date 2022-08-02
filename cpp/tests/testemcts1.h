@@ -7,21 +7,21 @@
 #include "../search/search.h"
 
 namespace EMCTS1Tests {
-void runAllEMCTS1Tests();
+void runAllEMCTS1Tests(const int maxVisits, const int numMovesToSimulate);
 
 // Checks that the models/const-policy-*-.bin.gz behave as expected
 // (when using standard MCTS search).
 void testConstPolicies();
 
 // Test our modifications didn't break the original EMCTS.
-void testMCTS();
+void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of MCTS search
 void checkMCTSSearch(const Search& bot, const float win_prob,
                      const float loss_prob);
 
 // Test EMCTS1
-void testEMCTS1();
+void testEMCTS1(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of EMCTS1 search
 void checkEMCTS1Search(const Search& bot, const float win_prob1,

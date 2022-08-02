@@ -10,10 +10,11 @@ using namespace std;
 // Uncomment to enable debugging
 // #define DEBUG
 
-void EMCTS1Tests::runAllEMCTS1Tests() {
-  // testConstPolicies();
-  testMCTS();
-  testEMCTS1();
+void EMCTS1Tests::runAllEMCTS1Tests(const int maxVisits,
+                                    const int numMovesToSimulate) {
+  testConstPolicies();
+  testMCTS(maxVisits, numMovesToSimulate);
+  testEMCTS1(maxVisits, numMovesToSimulate);
 }
 
 static constexpr double TOTALCHILDWEIGHT_PUCT_OFFSET = 0.01;
@@ -71,7 +72,6 @@ static void setSimpleSearchParams(SearchParams& params) {
   // reasons?!?
   params.useNonBuggyLcb = true;
 
-  params.maxVisits = 1000;
   testAssert(params.cpuctExplorationLog == 0);
   testAssert(params.cpuctUtilityStdevScale == 0);
   testAssert(params.wideRootNoise == 0);
@@ -200,7 +200,7 @@ void EMCTS1Tests::testConstPolicies() {
   }
 }
 
-void EMCTS1Tests::testMCTS() {
+void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   cout << "Testing MCTS..." << endl;
 
   ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
@@ -237,8 +237,8 @@ void EMCTS1Tests::testMCTS() {
     }
 
     Player curPla = P_BLACK;
-    for (int midx = 0; midx < 20; midx++) {
-      bot.searchParams.maxVisits += 1;  // Make tests more varied
+    for (int midx = 0; midx < numMovesToSimulate; midx++) {
+      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
 
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);
@@ -252,7 +252,8 @@ void EMCTS1Tests::testMCTS() {
   }
 }
 
-void EMCTS1Tests::testEMCTS1() {
+void EMCTS1Tests::testEMCTS1(const int maxVisits,
+                             const int numMovesToSimulate) {
   cout << "Testing EMCTS1..." << endl;
 
   ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
@@ -298,8 +299,8 @@ void EMCTS1Tests::testEMCTS1() {
     }
 
     Player curPla = P_BLACK;
-    for (int midx = 0; midx < 20; midx++) {
-      bot.searchParams.maxVisits += 1;  // Make tests more varied
+    for (int midx = 0; midx < numMovesToSimulate; midx++) {
+      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
 
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);

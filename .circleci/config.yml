@@ -90,7 +90,9 @@ jobs:
 
       - run:
           name: katago runexpensivetests
-          command: ./cpp/katago runexpensivetests
+          command: ./cpp/katago runexpensivetests 100 4
+          # Large scale test to run locally:
+          #   ./cpp/katago runexpensivetests 1000 20
 
       - run:
           name: katago runnnlayertests

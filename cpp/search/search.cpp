@@ -459,10 +459,11 @@ Search::Search(SearchParams params, NNEvaluator* nnEval, Logger* lg, const strin
     oldNNOutputsToCleanUp() {
   switch(searchParams.searchAlgo) {
     case SearchParams::SearchAlgorithm::MCTS:
-      assert(oppNNEval == nullptr);
+      oppNNEval__ = nullptr;
       break;
     case SearchParams::SearchAlgorithm::EMCTS1:
-      assert(oppNNEval != nullptr);
+      assert(oppNNEval__ != nullptr);
+      assert(searchParams.numThreads == 1);  // We do not support multithreading with EMCTS1 (yet).
       break;
     default:
       ASSERT_UNREACHABLE;
@@ -1246,10 +1247,10 @@ void Search::runWholeSearch(
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxPlayouts - numPlayouts);
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxVisits - numPlayouts - numNonPlayoutVisits);
 
-        bool finishedPlayout = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
-        if(finishedPlayout) {
-          numPlayouts = numPlayoutsShared.fetch_add((int64_t)1, std::memory_order_relaxed);
-          numPlayouts += 1;
+        const int numNodesAdded = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
+        if(numNodesAdded > 0) {
+          numPlayouts = numPlayoutsShared.fetch_add((int64_t)numNodesAdded, std::memory_order_relaxed);
+          numPlayouts += numNodesAdded;
         } else {
           // In the case that we didn't finish a playout, give other threads a chance to run before we try again
           // so that it's more likely we become unstuck.
@@ -2977,6 +2978,8 @@ void Search::selectBestChildToDescend(
         break;
       }
     }
+
+    // cout << "Descending (" << &node << "): EMCTS1 " << Location::toString(bestChildMoveLoc, rootBoard) << endl;
     return;
   }
 
@@ -3032,6 +3035,9 @@ void Search::selectBestChildToDescend(
       bestChildMoveLoc = bestNewMoveLoc;
     }
   }
+
+  // cout << "Descending (" << &node << "): " << maxSelectionValue << ' ' << Location::toString(bestChildMoveLoc,
+  // rootBoard) << endl;
 }
 
 double Search::pruneNoiseWeight(
@@ -3288,19 +3294,44 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.statsLock.clear(std::memory_order_release);
 }
 
-bool Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
+int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
   // Store this value, used for futile-visit pruning this thread's root children selections.
   thread.upperBoundVisitsLeft = upperBoundVisitsLeft;
 
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE];
   bool finishedPlayout = playoutDescend(thread, *rootNode, posesWithChildBuf, true);
 
+  int numNodesAdded = 1;
+  if(
+    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1 && thread.lastVisitedNode->nextPla != rootPla &&
+    thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) == 0) {
+    assert(finishedPlayout);
+    // cout << "Descending again!" << endl;
+
+    // Descend one more time starting from last visited node
+    SearchNode* const resumeDescentNode = thread.lastVisitedNode;
+    bool finishedPlayout2 = playoutDescend(thread, *resumeDescentNode, posesWithChildBuf, false);
+    assert(finishedPlayout2);
+    assert(thread.lastVisitedNode->nextPla == rootPla);
+
+    // Perform backup and update stats along path to root.
+    SearchNode* curNode = resumeDescentNode;
+    do {
+      curNode = curNode->parent;
+      updateStatsAfterPlayout(*curNode, thread, curNode == rootNode);
+    } while(curNode != rootNode);
+
+    numNodesAdded += 1;
+  }
+
   // Restore thread state back to the root state
   thread.pla = rootPla;
   thread.board = rootBoard;
   thread.history = rootHistory;
 
-  return finishedPlayout;
+  if(!finishedPlayout)
+    return 0;
+  return numNodesAdded;
 }
 
 void Search::addLeafValue(
@@ -3573,6 +3604,8 @@ bool Search::playoutDescend(
   SearchNode& node,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
   bool isRoot) {
+  thread.lastVisitedNode = &node;
+
   // Hit terminal node, finish
   // In the case where we're forcing the search to make another move at the root, don't terminate, actually run search
   // for a move more. In the case where we're conservativePass and the game just ended due to a root pass, actually let

@@ -62,7 +62,14 @@ int MainCmds::runexpensivetests(const vector<string>& args) {
   Board::initHash();
   ScoreValue::initTables();
 
-  EMCTS1Tests::runAllEMCTS1Tests();
+  if(args.size() != 3) {
+    cerr << "Must supply exactly two arguments: MAX_VISITS NUM_MOVES_TO_SIMULATE" << endl;
+    return 1;
+  }
+  EMCTS1Tests::runAllEMCTS1Tests(
+    Global::stringToInt(args[1]),
+    Global::stringToInt(args[2])
+  );
 
   ScoreValue::freeTables();
   cout << "All expensive tests passed" << endl;

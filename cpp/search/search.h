@@ -247,6 +247,10 @@ struct SearchThread {
   // it here instead of deleting it, so that pointers and accesses to it remain valid.
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
+  // For EMCTS1 support
+  // SearchThread does not own this pointer.
+  SearchNode* lastVisitedNode;
+
   SearchThread(int threadIdx, const Search& search);
   ~SearchThread();
 
@@ -584,7 +588,9 @@ struct Search {
 
   // Expert manual playout-by-playout interface------------------------------------------------
   void beginSearch(bool pondering);
-  bool runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
+
+  // Returns number of new nodes added.
+  int runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
 
   std::vector<SearchNode*> enumerateTreePostOrder();
 
@@ -657,9 +663,11 @@ struct Search {
     std::vector<MoreNodeStats>& statsBuf) const;
 
   // Parent must be locked
+ public:
   void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf)
     const;
 
+ private:
   double getExploreSelectionValue(
     double nnPolicyProb,
     double totalChildWeight,
@@ -716,6 +724,7 @@ struct Search {
 
  private:
   // Parent must be locked
+ public:
   double getReducedPlaySelectionWeight(
     const SearchNode& parent,
     const float* parentPolicyProbs,
@@ -724,6 +733,7 @@ struct Search {
     double parentUtilityStdevFactor,
     double bestChildExploreSelectionValue) const;
 
+ private:
  public:
   double getFpuValueForChildrenAssumeVisited(
     const SearchNode& node,

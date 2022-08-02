@@ -7,6 +7,19 @@
 
 using namespace std;
 
+// Uncomment to enable debugging
+// #define DEBUG
+
+void EMCTS1Tests::runAllEMCTS1Tests(const int maxVisits,
+                                    const int numMovesToSimulate) {
+  testConstPolicies();
+  testMCTS(maxVisits, numMovesToSimulate);
+  testEMCTS1(maxVisits, numMovesToSimulate);
+}
+
+static constexpr double TOTALCHILDWEIGHT_PUCT_OFFSET = 0.01;
+static const int64_t MIN_WEIGHT_FOR_LCB = 3;
+
 static bool approxEqual(float x, float y) {
   float tolerance;
   tolerance = 0.0001f * std::max(std::abs(x), std::max(std::abs(y), 1.0f));
@@ -22,8 +35,7 @@ static bool approxEqual(double x, double y) {
 static bool approxEqual(const NodeStats& s1, const NodeStats& s2) {
   // When total weight is zero, we just check weights match.
   if (s1.weightSum == 0)
-    return s1.weightSum == s2.weightSum && s1.weightSqSum == 0 &&
-           s2.weightSqSum == 0;
+    return s2.weightSum == 0 && s1.weightSqSum == 0 && s2.weightSqSum == 0;
 
   return approxEqual(s1.winLossValueAvg, s2.winLossValueAvg) &&
          approxEqual(s1.noResultValueAvg, s2.noResultValueAvg) &&
@@ -36,14 +48,64 @@ static bool approxEqual(const NodeStats& s1, const NodeStats& s2) {
          approxEqual(s1.weightSqSum, s2.weightSqSum);
 }
 
-void EMCTS1Tests::runAllEMCTS1Tests() {
-  cout << "Running EMCTS1 tests" << endl;
-  testConstPolicies();
-  testMCTS();
-  testEMCTS1();
+// Sets SearchParams in a such a way that makes checking (E)MCTS easy.
+static void setSimpleSearchParams(SearchParams& params) {
+  // Force bot to weight purely by visits for tests.
+  // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
+  params.valueWeightExponent = 0;
+
+  // We turn off subtree utility bias correction so backup is easier to check.
+  // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
+  params.subtreeValueBiasFactor = 0;
+
+  // Disable rootNoise so playouts are deterministic and can be checked.
+  params.rootNoiseEnabled = false;
+
+  // Disable rootEndingBonusPoints to remove complex hand-engineered scoring
+  // adjustment.
+  params.rootEndingBonusPoints = 0;
+
+  // TODO: Support this within the playout check.
+  params.rootDesiredPerChildVisitsCoeff = 0;
+
+  // This is not used in selfplay right now for backwards compatibility
+  // reasons?!?
+  params.useNonBuggyLcb = true;
+
+  testAssert(params.cpuctExplorationLog == 0);
+  testAssert(params.cpuctUtilityStdevScale == 0);
+  testAssert(params.wideRootNoise == 0);
+  testAssert(params.fpuParentWeight == 0);
+  testAssert(!params.useNoisePruning);
+  testAssert(!params.useUncertainty);
+  testAssert(!params.antiMirror);
+}
+
+static double getFpuValue(const Search& bot, const SearchNode* node,
+                          const double utilityAvg,
+                          const double policyProbMassVisited) {
+  const bool isRoot = node == bot.rootNode;
+  const double fpuReductionMax = isRoot ? bot.searchParams.rootFpuReductionMax
+                                        : bot.searchParams.fpuReductionMax;
+  const double fpuLossProp =
+      isRoot ? bot.searchParams.rootFpuLossProp : bot.searchParams.fpuLossProp;
+  const double utilityRadius = bot.searchParams.winLossUtilityFactor +
+                               bot.searchParams.staticScoreUtilityFactor +
+                               bot.searchParams.dynamicScoreUtilityFactor;
+
+  const double reduction = fpuReductionMax * sqrt(policyProbMassVisited);
+
+  double fpuValue = node->nextPla == P_WHITE ? utilityAvg - reduction
+                                             : utilityAvg + reduction;
+  double lossValue = node->nextPla == P_WHITE ? -utilityRadius : utilityRadius;
+  fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
+
+  return fpuValue;
 }
 
 void EMCTS1Tests::testConstPolicies() {
+  cout << "Testing custom const policy nets..." << endl;
+
   ConfigParser cfg(EMCTS1_CONFIG_PATH);
   Logger logger(&cfg, false);
 
@@ -138,7 +200,9 @@ void EMCTS1Tests::testConstPolicies() {
   }
 }
 
-void EMCTS1Tests::testMCTS() {
+void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
+  cout << "Testing MCTS..." << endl;
+
   ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
   Logger logger(&cfg, false);
 
@@ -156,6 +220,7 @@ void EMCTS1Tests::testMCTS() {
   for (auto bot_ptr : {&bot1, &bot2}) {
     Search& bot = *bot_ptr;
     resetBot(bot, 9, Rules::getTrompTaylorish());
+    setSimpleSearchParams(bot.searchParams);
 
     // The initial board we perform tests on.
     // It has 8 placed stones that are at the top left corner that look like
@@ -171,32 +236,10 @@ void EMCTS1Tests::testMCTS() {
       bot.makeMove(m.loc, m.pla);
     }
 
-    // Force bot to weight purely by visits for tests.
-    // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
-    bot.searchParams.valueWeightExponent = 0;
-
-    // We turn off subtree utility bias correction so backup is easier to check.
-    // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
-    bot.searchParams.subtreeValueBiasFactor = 0;
-
-    // Disable rootNoise so playouts are deterministic and can be checked.
-    bot.searchParams.rootNoiseEnabled = false;
-
-    // TODO: Incorporate this into the playout check.
-    // bot.searchParams.rootDesiredPerChildVisitsCoeff = 0;
-
-    bot.searchParams.maxVisits = 222;
-    testAssert(bot.searchParams.cpuctExplorationLog == 0);
-    testAssert(bot.searchParams.cpuctUtilityStdevScale == 0);
-    testAssert(bot.searchParams.wideRootNoise == 0);
-    testAssert(bot.searchParams.fpuParentWeight == 0);
-    // testAssert(bot.searchParams.rootNumSymmetriesToSample == 1);
-    testAssert(!bot.searchParams.useNoisePruning);
-    testAssert(!bot.searchParams.useUncertainty);
-    testAssert(!bot.searchParams.antiMirror);
-
     Player curPla = P_BLACK;
-    for (int midx = 0; midx < 4; midx++) {
+    for (int midx = 0; midx < numMovesToSimulate; midx++) {
+      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
+
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);
 
@@ -209,7 +252,10 @@ void EMCTS1Tests::testMCTS() {
   }
 }
 
-void EMCTS1Tests::testEMCTS1() {
+void EMCTS1Tests::testEMCTS1(const int maxVisits,
+                             const int numMovesToSimulate) {
+  cout << "Testing EMCTS1..." << endl;
+
   ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
   Logger logger(&cfg, false);
 
@@ -224,71 +270,55 @@ void EMCTS1Tests::testEMCTS1() {
       getNNEval(CONST_POLICY_1_PATH, cfg, logger, 42);  // move over pass
   auto nnEval2 =
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
-  Search bot1(emcts1Params, nnEval1.get(), &logger, "forty-two", nnEval2.get());
-  Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two", nullptr);
-  resetBot(bot1, 9, Rules::getTrompTaylorish());
-  resetBot(bot2, 9, Rules::getTrompTaylorish());
+  Search bot11(emcts1Params, nnEval1.get(), &logger, "forty-two",
+               nnEval1.get());
+  Search bot12(emcts1Params, nnEval1.get(), &logger, "forty-two",
+               nnEval2.get());
 
-  // The initial board we perform tests on.
-  // It has 8 placed stones that are at the top left corner that look like this:
-  //    BBBB.....
-  //    .WWWW....
-  //    .........
-  // Here, dots are empty spaces. It is black's turn to move.
-  const unique_ptr<CompactSgf> initSgf(CompactSgf::parse(
-      "(;FF[4]KM[7.5]SZ[19];B[aa];W[bb];B[ba];W[cb];B[ca];W[db];B[da];W[eb])"));
-  for (auto& m : initSgf->moves) {
-    bot1.makeMove(m.loc, m.pla);
-    bot2.makeMove(m.loc, m.pla);
-  }
-
-  for (auto bot_ptr : {&bot1, &bot2}) {
+  for (auto bot_ptr : {&bot11, &bot12}) {
     Search& bot = *bot_ptr;
+    resetBot(bot, 9, Rules::getTrompTaylorish());
+    setSimpleSearchParams(bot.searchParams);
 
-    // Force bot to weight purely by visits for tests.
-    // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
-    bot.searchParams.valueWeightExponent = 0;
+    // Make EMCTS1 deterministic
+    bot.searchParams.chosenMoveTemperature = 0;
+    bot.searchParams.chosenMoveTemperatureEarly = 0;
 
-    // We turn off subtree utility bias correction so backup is easier to check.
-    // https://github.com/lightvector/KataGo/blob/master/docs/KataGoMethods.md#subtree-value-bias-correction
-    bot.searchParams.subtreeValueBiasFactor = 0;
-
-    // Disable rootNoise so playouts are deterministic and can be checked.
-    bot.searchParams.rootNoiseEnabled = false;
-
-    // TODO: Incorporate this into the playout check.
-    // bot.searchParams.rootDesiredPerChildVisitsCoeff = 0;
-
-    bot.searchParams.maxVisits = 222;
-    testAssert(bot.searchParams.cpuctExplorationLog == 0);
-    testAssert(bot.searchParams.cpuctUtilityStdevScale == 0);
-    testAssert(bot.searchParams.wideRootNoise == 0);
-    testAssert(bot.searchParams.fpuParentWeight == 0);
-    testAssert(!bot.searchParams.useNoisePruning);
-    testAssert(!bot.searchParams.useUncertainty);
-    testAssert(!bot.searchParams.antiMirror);
-  }
-
-  Player curPla = P_BLACK;
-  for (int midx = 0; midx < 8; midx++) {
-    Search& bot = curPla == P_BLACK ? bot1 : bot2;
-    bot.clearSearch();
-    const Loc loc = bot.runWholeSearchAndGetMove(curPla);
-
-    if (curPla == P_BLACK) {
-      checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
-                        CP2_LOSS_PROB);
-    } else {
-      checkMCTSSearch(bot, CP2_WIN_PROB, CP2_LOSS_PROB);
+    // The initial board we perform tests on.
+    // It has 8 placed stones that are at the top left corner that look like
+    // this:
+    //    BBBB.....
+    //    .WWWW....
+    //    .........
+    // Here, dots are empty spaces. It is black's turn to move.
+    const unique_ptr<CompactSgf> initSgf(
+        CompactSgf::parse("(;FF[4]KM[7.5]SZ[19];B[aa];W[bb];B[ba];W[cb];B[ca];"
+                          "W[db];B[da];W[eb])"));
+    for (auto& m : initSgf->moves) {
+      bot.makeMove(m.loc, m.pla);
     }
 
-    bot1.makeMove(loc, curPla);
-    bot2.makeMove(loc, curPla);
-    curPla = getOpp(curPla);
+    Player curPla = P_BLACK;
+    for (int midx = 0; midx < numMovesToSimulate; midx++) {
+      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
 
-    // Make sure game hasn't been prematurely ended.
-    testAssert(!bot1.rootHistory.isGameFinished);
-    testAssert(!bot2.rootHistory.isGameFinished);
+      bot.clearSearch();
+      const Loc loc = bot.runWholeSearchAndGetMove(curPla);
+
+      if (&bot == &bot11) {
+        checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP1_WIN_PROB,
+                          CP1_LOSS_PROB);
+      } else if (&bot == &bot12) {
+        checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
+                          CP2_LOSS_PROB);
+      }
+
+      bot.makeMove(loc, curPla);
+      curPla = getOpp(curPla);
+
+      // Make sure game hasn't been prematurely ended.
+      testAssert(!bot.rootHistory.isGameFinished);
+    }
   }
 }
 
@@ -329,164 +359,9 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
     testAssert(approxEqual(s1, s2));
   }
 
-  // Test playout logic
-  // Essentially a test of selectBestChildToDescend()
-  // Our naively implemented test takes O(BP^3) time,
-  // where B is the size of the board and P is the number of playouts.
-  /*{
-    unordered_map<const SearchNode*, bool> vis;
-    auto filterToVisNodes = [&vis](const vector<const SearchNode*>& nodes) {
-      vector<const SearchNode*> ret;
-      for (auto node : nodes) {
-        if (vis[node]) {
-          ret.push_back(node);
-        }
-      }
-      return ret;
-    };
+  checkFinalMoveSelection(bot);
 
-    auto checkPlayout = [&bot, &tree, &vis, &curPla, &filterToVisNodes](
-                            const SearchNode* node, auto&& dfs) -> void {
-      testAssert(node != nullptr);
-      if (!vis[node]) {
-        vis[node] = true;
-        return;
-      }
-
-      const float* policyProbs =
-          node->getNNOutput()->getPolicyProbsMaybeNoised();
-
-      const NodeStats nodeStats =
-          averageStats(bot, filterToVisNodes(tree.getSubtreeNodes(node)));
-      const double totalChildWeight =
-          nodeStats.weightSum - bot.computeNodeWeight(*node);
-      cout << node << " weight: " << nodeStats.weightSum << endl;
-
-      vector<const SearchNode*> movePosNode(bot.policySize, nullptr);
-      vector<bool> movePosVis(bot.policySize, false);
-      double policyProbMassVisited = 0;
-      for (auto child : tree.adj.at(node)) {
-        const int pos =
-            NNPos::locToPos(child->prevMoveLoc, bot.rootBoard.x_size,
-                            bot.nnXLen, bot.rootBoard.y_size);
-        movePosNode[pos] = child;
-
-        if (vis[child]) {
-          movePosVis[pos] = true;
-          policyProbMassVisited += policyProbs[pos];
-        }
-      }
-
-      // These track which child we will descend into.
-      int bestMovePos = -1;
-      double maxSelectionValue = -1e50;
-      vector<pair<double, double>> vals_debug;
-
-      // Try all existing children
-      for (auto child : filterToVisNodes(tree.adj.at(node))) {
-        const int pos =
-            NNPos::locToPos(child->prevMoveLoc, bot.rootBoard.x_size,
-                            bot.nnXLen, bot.rootBoard.y_size);
-        const double nnPolicyProb = policyProbs[pos];
-
-        const NodeStats childStats =
-            averageStats(bot,
-  filterToVisNodes(tree.getSubtreeNodes(child))); const double childWeight =
-  childStats.weightSum; const double whiteUtility = childStats.utilityAvg;
-
-        const double valueComponent =
-            node->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
-        const float exploreComponent =
-            bot.searchParams.cpuctExploration * nnPolicyProb *
-            sqrt(totalChildWeight + 0.01) / (1.0 + childWeight);
-
-        const double selectionValue = valueComponent + exploreComponent;
-        if (selectionValue > maxSelectionValue) {
-          maxSelectionValue = selectionValue;
-          bestMovePos = pos;
-        }
-        vals_debug.push_back({selectionValue, nnPolicyProb});
-      }
-
-      // Try unvisited children
-      {
-        double fpuValue;
-        {
-          const bool isRoot = node == bot.rootNode;
-          const double fpuReductionMax =
-              isRoot ? bot.searchParams.rootFpuReductionMax
-                     : bot.searchParams.fpuReductionMax;
-          const double fpuLossProp = isRoot ?
-  bot.searchParams.rootFpuLossProp : bot.searchParams.fpuLossProp; const
-  double utilityRadius = bot.searchParams.winLossUtilityFactor +
-              bot.searchParams.staticScoreUtilityFactor +
-              bot.searchParams.dynamicScoreUtilityFactor;
-          const double parentUtility = nodeStats.utilityAvg;
-
-          const double reduction =
-              fpuReductionMax * sqrt(policyProbMassVisited);
-          fpuValue = curPla == P_WHITE ? parentUtility - reduction
-                                       : parentUtility + reduction;
-          double lossValue =
-              curPla == P_WHITE ? -utilityRadius : utilityRadius;
-          fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
-        }
-
-        for (int pos = 0; pos < bot.policySize; pos++) {
-          // Skip moves that are visited
-          if (movePosVis[pos]) continue;
-
-          // Only consider moves that are valid.
-          {
-            const Loc moveLoc =
-                NNPos::posToLoc(pos, bot.rootBoard.x_size,
-                                bot.rootBoard.y_size, bot.nnXLen,
-  bot.nnYLen); if (moveLoc == Board::NULL_LOC) continue; if (node ==
-  bot.rootNode) { if (!bot.isAllowedRootMove(moveLoc)) continue;
-            }
-          }
-
-          const float nnPolicyProb = policyProbs[pos];
-          const double childWeight = 0;
-          const double whiteUtility = fpuValue;
-
-          const double valueComponent =
-              node->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
-          const float exploreComponent =
-              bot.searchParams.cpuctExploration * nnPolicyProb *
-              sqrt(totalChildWeight + 0.01) / (1.0 + childWeight);
-
-          const double selectionValue = valueComponent + exploreComponent;
-          if (selectionValue > maxSelectionValue) {
-            maxSelectionValue = selectionValue;
-            bestMovePos = pos;
-          }
-          vals_debug.push_back({selectionValue, nnPolicyProb});
-        }
-      }
-
-      sort(vals_debug.begin(), vals_debug.end());
-      for (auto v : vals_debug) {
-        cout << "(" << v.first << ", " << v.second << ") ";
-      }
-      cout << endl;
-
-      dfs(movePosNode[bestMovePos], dfs);
-    };
-
-    for (int i = 0; i < bot.searchParams.maxVisits; i++) {
-      cout << endl;
-      cout << "Testing playout #" << i << endl;
-      cout << "Total nodes: " << tree.all_nodes.size() << endl;
-      cout << "Policy size: " << bot.policySize << endl;
-      cout << bot.rootBoard.x_size << " " << bot.rootBoard.y_size << endl;
-      cout << bot.nnXLen << " " << bot.nnYLen << endl;
-      checkPlayout(bot.rootNode, checkPlayout);
-    }
-    for (auto node : tree.all_nodes) {
-      testAssert(vis[node]);
-    }
-  }*/
+  checkPlayoutLogic(bot);
 }
 
 void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
@@ -495,6 +370,7 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
                                     const float loss_prob2) {
   testAssert(bot.searchParams.searchAlgo ==
              SearchParams::SearchAlgorithm::EMCTS1);
+
   SearchTree tree(bot);
 
   // Not equality since sometimes we visit terminal nodes multiple times.
@@ -534,6 +410,351 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
     const NodeStats s1 = averageStats(bot, tree.getSubtreeNodes(node));
     const NodeStats s2(node->stats);
     testAssert(approxEqual(s1, s2));
+  }
+
+  checkFinalMoveSelection(bot);
+
+  checkPlayoutLogic(bot);
+}
+
+void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
+  unordered_map<Loc, double> trueLocToPsv;
+  {
+    vector<double> playSelectionValues;
+    vector<Loc> locs;
+    bot.getPlaySelectionValues(locs, playSelectionValues, 0);
+    for (size_t i = 0; i < playSelectionValues.size(); i++) {
+      trueLocToPsv[locs[i]] = playSelectionValues[i];
+    }
+
+    testAssert(playSelectionValues.size() == locs.size());
+    testAssert(trueLocToPsv.size() == locs.size());
+  }
+
+  unordered_map<const SearchNode*, double> childToPsv;
+  {
+    SearchTree tree(bot);
+    testAssert(tree.children.at(tree.root).size() > 0);
+
+    for (const auto child : tree.children.at(tree.root)) {
+      const double child_weight =
+          averageStats(bot, tree.getSubtreeNodes(child)).weightSum;
+      childToPsv[child] = child_weight;
+    }
+
+    double totalChildWeight = 0;
+    double maxChildWeight = 1e-50;
+    const SearchNode* heaviestChild = nullptr;
+    for (const auto child : tree.children.at(tree.root)) {
+      const double weight = childToPsv[child];
+      totalChildWeight += weight;
+      if (weight > maxChildWeight) {
+        maxChildWeight = weight;
+        heaviestChild = child;
+      }
+    }
+
+    // Possibly reduce weight on children that we spend too many visits on in
+    // retrospect.
+    // TODO: Figure out what exactly is going on here and write it down on
+    // overleaf.
+    const float* policyProbs =
+        tree.root->getNNOutput()->getPolicyProbsMaybeNoised();
+    double bestChildExploreSelectionValue;
+    {
+      const int pos =
+          NNPos::locToPos(heaviestChild->prevMoveLoc, bot.rootBoard.x_size,
+                          bot.nnXLen, bot.nnYLen);
+      const double nnPolicyProb = policyProbs[pos];
+
+      const NodeStats stats =
+          averageStats(bot, tree.getSubtreeNodes(heaviestChild));
+      const double whiteUtility = stats.utilityAvg;
+
+      const double valueComponent =
+          tree.root->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
+      const double exploreComponent =
+          bot.searchParams.cpuctExploration * nnPolicyProb *
+          sqrt(totalChildWeight + TOTALCHILDWEIGHT_PUCT_OFFSET) /
+          (1.0 + stats.weightSum);
+
+      bestChildExploreSelectionValue = valueComponent + exploreComponent;
+    }
+    for (auto& [child, weight] : childToPsv) {
+      if (child == heaviestChild) continue;
+      const double reduced = bot.getReducedPlaySelectionWeight(
+          *tree.root, policyProbs, child, totalChildWeight, 1.0,
+          bestChildExploreSelectionValue);
+      weight = ceil(reduced);
+    }
+
+    // Adjust psvs with lcb values
+    // TODO: Figure out what exactly is going on here and write it down on
+    // overleaf.
+    testAssert(bot.searchParams.useLcbForSelection);
+    testAssert(bot.searchParams.useNonBuggyLcb);
+    {
+      unordered_map<const SearchNode*, double> lcbs, radii;
+      double bestLcb = -1e10;
+      const SearchNode* bestLcbChild = nullptr;
+      for (const auto child : tree.children.at(tree.root)) {
+        bot.getSelfUtilityLCBAndRadius(*tree.root, child, lcbs[child],
+                                       radii[child]);
+        double weight = childToPsv[child];
+        if (weight >= MIN_WEIGHT_FOR_LCB &&
+            weight >= bot.searchParams.minVisitPropForLCB * maxChildWeight) {
+          if (lcbs[child] > bestLcb) {
+            bestLcb = lcbs[child];
+            bestLcbChild = child;
+          }
+        }
+      }
+
+      if (bestLcbChild != nullptr) {
+        double best_bound = childToPsv[bestLcbChild];
+        for (auto child : tree.children.at(tree.root)) {
+          if (child == bestLcbChild) continue;
+
+          const double excessValue = bestLcb - lcbs[child];
+          if (excessValue < 0) continue;
+
+          const double radius = radii[child];
+          const double radiusFactor =
+              (radius + excessValue) / (radius + 0.20 * excessValue);
+
+          double lbound = radiusFactor * radiusFactor * childToPsv[child];
+          if (lbound > best_bound) best_bound = lbound;
+        }
+        childToPsv[bestLcbChild] = best_bound;
+      }
+    }
+
+    // Prune
+    testAssert(bot.searchParams.chosenMoveSubtract == 0);
+    double maxPsv = -1e50;
+    for (const auto& [_, psv] : childToPsv) maxPsv = max(maxPsv, psv);
+    for (auto& [_, psv] : childToPsv) {
+      if (psv < min(bot.searchParams.chosenMovePrune, maxPsv / 64)) {
+        psv = 0;
+      }
+    }
+  }
+
+  testAssert(childToPsv.size() == trueLocToPsv.size());
+  for (const auto [child, psv] : childToPsv) {
+    testAssert(approxEqual(trueLocToPsv[child->prevMoveLoc], psv));
+  }
+}
+
+void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
+  if (bot.searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
+    // We need temperature to be zero for EMCTS1 to be determinstic.
+    testAssert(bot.searchParams.chosenMoveTemperature == 0);
+    testAssert(bot.searchParams.chosenMoveTemperatureEarly == 0);
+  }
+
+  SearchTree tree(bot);
+
+  unordered_map<const SearchNode*, int> visits;
+  auto filterToVisited = [&](const vector<const SearchNode*>& nodes) {
+    vector<const SearchNode*> ret;
+    for (auto node : nodes) {
+      if (visits[node] > 0) ret.push_back(node);
+    }
+    return ret;
+  };
+
+  auto nodeToPos = [&](const SearchNode* node) {
+    return NNPos::locToPos(node->prevMoveLoc, bot.rootBoard.x_size, bot.nnXLen,
+                           bot.nnYLen);
+  };
+
+  auto averageVisSubtreeStats = [&](const SearchNode* node) {
+    return averageStats(bot, filterToVisited(tree.getSubtreeNodes(node)),
+                        &visits);
+  };
+
+#ifdef DEBUG
+  auto checkOnePlayout = [&](const bool is_last_playout) -> int {
+#else
+  auto checkOnePlayout = [&]() -> int {
+#endif
+    int numNodesAdded = 1;
+    Board board = bot.rootBoard;
+    BoardHistory history = bot.rootHistory;
+    auto helper = [&](const SearchNode* node, auto&& dfs) -> void {
+      testAssert(node != nullptr);
+      visits[node] += 1;
+
+#ifdef DEBUG
+      if (is_last_playout) {
+        cout << "DFS Currently at node: " << node << endl;
+        cout << "Children:";
+        for (auto child : tree.children.at(node)) {
+          const Loc loc =
+              NNPos::posToLoc(nodeToPos(child), bot.rootBoard.x_size,
+                              bot.rootBoard.y_size, bot.nnXLen, bot.nnYLen);
+          const string locString = Location::toString(loc, bot.rootBoard);
+          cout << " (" << child << ", " << locString << ", " << visits[child]
+               << ")";
+        }
+        cout << endl;
+      }
+#endif
+
+      if (node->getNNOutput() == nullptr) return;  // This is a terminal nodes
+      if (visits[node] == 1) {  // First time visiting the node
+        switch (bot.searchParams.searchAlgo) {
+          case SearchParams::SearchAlgorithm::MCTS:
+            return;
+          case SearchParams::SearchAlgorithm::EMCTS1:
+            if (node->nextPla == bot.rootPla) return;
+            numNodesAdded += 1;
+            for (auto x : tree.getPathToRoot(node)) visits[x] += 1;
+            break;
+          default:
+            ASSERT_UNREACHABLE;
+        }
+      }
+
+      if (node != tree.root) {
+        history.makeBoardMoveAssumeLegal(board, node->prevMoveLoc,
+                                         getOpp(node->nextPla),
+                                         bot.rootKoHashTable);
+      }
+
+      const float* policyProbs =
+          node->getNNOutput()->getPolicyProbsMaybeNoised();
+
+      const NodeStats nodeStats = averageVisSubtreeStats(node);
+      const double totalChildWeight =
+          nodeStats.weightSum - bot.computeNodeWeight(*node);
+
+      vector<const SearchNode*> movePosNode(bot.policySize, nullptr);
+      for (auto child : tree.children.at(node)) {
+        movePosNode[nodeToPos(child)] = child;
+      }
+
+      vector<bool> movePosVis(bot.policySize, false);
+      double policyProbMassVisited = 0;
+      for (auto child : filterToVisited(tree.children.at(node))) {
+        movePosVis[nodeToPos(child)] = true;
+        policyProbMassVisited += policyProbs[nodeToPos(child)];
+      }
+
+      if (bot.searchParams.searchAlgo ==
+              SearchParams::SearchAlgorithm::EMCTS1 &&
+          node->nextPla != bot.rootPla) {
+        int bestMovePos = -1;
+        double maxPolicyProb = -1e50;
+        for (int pos = 0; pos < bot.policySize; pos++) {
+          const Loc loc =
+              NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
+                              bot.nnXLen, bot.nnYLen);
+
+          if (loc == Board::NULL_LOC) continue;
+          if (!history.isLegal(board, loc, node->nextPla)) continue;
+
+          const double curPolicyProb = policyProbs[pos];
+          if (curPolicyProb > maxPolicyProb) {
+            maxPolicyProb = curPolicyProb;
+            bestMovePos = pos;
+          }
+        }
+
+        return dfs(movePosNode[bestMovePos], dfs);
+      }
+
+#ifdef DEBUG
+      vector<tuple<double, double, int>> vals_debug;
+#endif
+
+      // These track which child we will descend into.
+      int bestMovePos = -1;
+      double maxSelectionValue = -1e50;
+      auto considerMove = [&](const int pos, const double childWeight,
+                              const double whiteUtility) {
+        const double nnPolicyProb = policyProbs[pos];
+        const double valueComponent =
+            node->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
+        const double exploreComponent =
+            bot.searchParams.cpuctExploration * nnPolicyProb *
+            sqrt(totalChildWeight + TOTALCHILDWEIGHT_PUCT_OFFSET) /
+            (1.0 + childWeight);
+
+        const double selectionValue = valueComponent + exploreComponent;
+        if (selectionValue > maxSelectionValue) {
+          maxSelectionValue = selectionValue;
+          bestMovePos = pos;
+        }
+
+#ifdef DEBUG
+        vals_debug.push_back({selectionValue, nnPolicyProb, pos});
+#endif
+      };
+
+      // Try all existing children
+      for (auto child : filterToVisited(tree.children.at(node))) {
+        const NodeStats childStats = averageVisSubtreeStats(child);
+        considerMove(nodeToPos(child), childStats.weightSum,
+                     childStats.utilityAvg);
+      }
+
+      // Try unvisited children
+      const double fpuValue =
+          getFpuValue(bot, node, nodeStats.utilityAvg, policyProbMassVisited);
+      for (int pos = 0; pos < bot.policySize; pos++) {
+        if (movePosVis[pos]) continue;  // Skip moves that are visited
+
+        // Only consider moves that are valid.
+        {
+          const Loc loc =
+              NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
+                              bot.nnXLen, bot.nnYLen);
+          if (loc == Board::NULL_LOC) continue;
+          if (node == tree.root) {
+            if (!bot.isAllowedRootMove(loc)) continue;
+          }
+        }
+
+        considerMove(pos, 0, fpuValue);
+      }
+
+#ifdef DEBUG
+      if (is_last_playout) {
+        sort(vals_debug.begin(), vals_debug.end());
+        for (auto v : vals_debug) {
+          const int pos = get<2>(v);
+          const Loc loc =
+              NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
+                              bot.nnXLen, bot.nnYLen);
+          const string locString = Location::toString(loc, bot.rootBoard);
+          cout << "(" << get<0>(v) << ", " << get<1>(v) << ", " << pos << ", "
+               << loc << ", " << locString << ")";
+        }
+        cout << endl;
+      }
+#endif
+
+      dfs(movePosNode[bestMovePos], dfs);
+    };
+
+    helper(tree.root, helper);
+    return numNodesAdded;
+  };
+
+  for (int i = 0; i < bot.searchParams.maxVisits;) {
+#ifdef DEBUG
+    cout << endl << "Checking playout #" << i << endl;
+    i += checkOnePlayout(i + 4 >= bot.searchParams.maxVisits);
+#else
+    i += checkOnePlayout();
+#endif
+  }
+
+  for (auto node : tree.all_nodes) {
+    testAssert(visits[node] > 0);
+    testAssert(visits[node] == NodeStats(node->stats).visits);
   }
 }
 
@@ -581,42 +802,52 @@ void EMCTS1Tests::resetBot(Search& bot, int board_size, const Rules& rules) {
   bot.setPosition(P_BLACK, board, hist);
 }
 
-EMCTS1Tests::SearchTree::SearchTree(const Search& bot) {
+EMCTS1Tests::SearchTree::SearchTree(const Search& bot) : root(bot.rootNode) {
   auto build = [this](const SearchNode* node, auto&& dfs) -> void {
     all_nodes.push_back(node);
-    adj[node] = {};
+    children[node] = {};
 
     int _;  // Not used
     const auto arr = node->getChildren(_);
     const int numChildren = node->iterateAndCountChildren();
     for (size_t i = 0; i < numChildren; i++) {
       const SearchNode* child = arr[i].getIfAllocated();
-      adj[node].push_back(child);
+      children[node].push_back(child);
       dfs(child, dfs);
     }
   };
 
-  build(bot.rootNode, build);
+  build(root, build);
 }
 
 vector<const SearchNode*> EMCTS1Tests::SearchTree::getSubtreeNodes(
-    const SearchNode* root) const {
+    const SearchNode* subtree_root) const {
   vector<const SearchNode*> subtree_nodes;
 
   auto walk = [this, &subtree_nodes](const SearchNode* node,
                                      auto&& dfs) -> void {
     subtree_nodes.push_back(node);
-    for (auto child : adj.at(node)) {
+    for (auto child : children.at(node)) {
       dfs(child, dfs);
     }
   };
 
-  walk(root, walk);
+  walk(subtree_root, walk);
   return subtree_nodes;
 }
 
-NodeStats EMCTS1Tests::averageStats(const Search& bot,
-                                    const vector<const SearchNode*>& nodes) {
+std::vector<const SearchNode*> EMCTS1Tests::SearchTree::getPathToRoot(
+    const SearchNode* node) const {
+  vector<const SearchNode*> path = {node};
+  while (*path.rbegin() != root) {
+    path.push_back((*path.rbegin())->parent);
+  }
+  return path;
+}
+
+NodeStats EMCTS1Tests::averageStats(
+    const Search& bot, const vector<const SearchNode*>& nodes,
+    const unordered_map<const SearchNode*, int>* terminal_node_visits) {
   NodeStats stats;
 
   // During the following loop, stats will track sums and not averages!
@@ -651,7 +882,9 @@ NodeStats EMCTS1Tests::averageStats(const Search& bot,
       // If nnOutput is null, this means the node is a terminal node.
       // In this case we need can only get the stats from node->stats.
       const NodeStats termStats(node->stats);
-      const double w = termStats.weightSum;
+      const double w = (terminal_node_visits == nullptr)
+                           ? termStats.weightSum
+                           : terminal_node_visits->at(node);
 
       stats.winLossValueAvg += w * termStats.winLossValueAvg;
       stats.noResultValueAvg += w * termStats.noResultValueAvg;

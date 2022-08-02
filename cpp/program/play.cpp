@@ -1302,7 +1302,7 @@ FinishedGameData* Play::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed, botSpecB.nnEval);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed, nullptr);
     botW = botB;
   } else {
     botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed + "@B", botSpecW.nnEval);
@@ -2448,7 +2448,7 @@ FinishedGameData* GameRunner::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed, botSpecB.nnEval);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed, nullptr);
     botW = botB;
   } else {
     botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed + "@B", botSpecW.nnEval);

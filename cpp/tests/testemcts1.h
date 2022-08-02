@@ -1,34 +1,41 @@
 #ifndef TESTEMCTS1_H
 #define TESTEMCTS1_H
 
-#include <memory>
-
 #include "../core/config_parser.h"
 #include "../core/logger.h"
 #include "../neuralnet/nneval.h"
 #include "../search/search.h"
 
 namespace EMCTS1Tests {
-void runAllEMCTS1Tests();
+void runAllEMCTS1Tests(const int maxVisits, const int numMovesToSimulate);
 
 // Checks that the models/const-policy-*-.bin.gz behave as expected
 // (when using standard MCTS search).
 void testConstPolicies();
 
 // Test our modifications didn't break the original EMCTS.
-void testMCTS();
+void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of MCTS search
 void checkMCTSSearch(const Search& bot, const float win_prob,
                      const float loss_prob);
 
 // Test EMCTS1
-void testEMCTS1();
+void testEMCTS1(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of EMCTS1 search
 void checkEMCTS1Search(const Search& bot, const float win_prob1,
                        const float loss_prob1, const float win_prob2,
                        const float loss_prob2);
+
+// Checks how we select our move based on results of tree search.
+void checkFinalMoveSelection(const Search& bot);
+
+// Check playout logic (for either MCTS or EMCTS1)
+// Our naively implemented check simulates the entire playout process and takes
+// O(BP^3) time, where B is the size of the board and P is the number of
+// playouts.
+void checkPlayoutLogic(const Search& bot);
 
 // Returns one sample of possible rules.
 Rules parseRules(ConfigParser& cfg, Logger& logger);
@@ -45,19 +52,30 @@ std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
 
 void resetBot(Search& bot, int board_size, const Rules& rules);
 
-// Search tree utilities
-
+// Helper struct for dealing with a search tree.
 struct SearchTree {
+  const SearchNode* const root;
+
+  // DFS visit order.
+  // So a child will always come after its parent in this list.
   std::vector<const SearchNode*> all_nodes;
-  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>> adj;
+
+  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
+      children;
 
   SearchTree(const Search& bot);
 
-  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*) const;
+  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
+
+  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
 };
 
+// Optional param: terminal_node_visits (specify if you want to override
+// terminal node weights)
 NodeStats averageStats(const Search& bot,
-                       const std::vector<const SearchNode*>& nodes);
+                       const std::vector<const SearchNode*>& nodes,
+                       const std::unordered_map<const SearchNode*, int>*
+                           terminal_node_visits = nullptr);
 
 // Constants
 

@@ -448,8 +448,11 @@ class Curriculum:
 
 
 if __name__ == "__main__":
-    stdout_logger = logging.getLogger()
-    stdout_logger.setLevel(logging.INFO)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler(filename='/outputs/curriculum.log')
+    root_logger.addHandler(file_handler)
 
     parser = argparse.ArgumentParser(
         description="Run victim replacement based on win rate."

@@ -1,8 +1,6 @@
 #ifndef TESTEMCTS1_H
 #define TESTEMCTS1_H
 
-#include <memory>
-
 #include "../core/config_parser.h"
 #include "../core/logger.h"
 #include "../neuralnet/nneval.h"
@@ -30,6 +28,12 @@ void checkEMCTS1Search(const Search& bot, const float win_prob1,
                        const float loss_prob1, const float win_prob2,
                        const float loss_prob2);
 
+// Check playout logic (for either MCTS or EMCTS1)
+// Our naively implemented check simulates the entire playout process and takes
+// O(BP^3) time, where B is the size of the board and P is the number of
+// playouts.
+void checkPlayoutLogic(const Search& bot);
+
 // Returns one sample of possible rules.
 Rules parseRules(ConfigParser& cfg, Logger& logger);
 
@@ -45,16 +49,22 @@ std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
 
 void resetBot(Search& bot, int board_size, const Rules& rules);
 
-// Search tree utilities
-
+// Helper struct for dealing with a search tree.
 struct SearchTree {
+  const SearchNode* const tree_root;
+
+  // DFS visit order.
+  // So a child will always come after its parent in this list.
   std::vector<const SearchNode*> all_nodes;
+
   std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
       children;
 
   SearchTree(const Search& bot);
 
-  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*) const;
+  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
+
+  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
 };
 
 // Optional param: terminal_node_visits (specify if you want to override

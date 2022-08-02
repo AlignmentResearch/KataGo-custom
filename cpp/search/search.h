@@ -248,6 +248,10 @@ struct SearchThread {
   //it here instead of deleting it, so that pointers and accesses to it remain valid.
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
+  // For EMCTS1 support
+  // SearchThread does not own this pointer.
+  SearchNode* lastVisitedNode;
+
   SearchThread(int threadIdx, const Search& search);
   ~SearchThread();
 
@@ -542,7 +546,9 @@ public:
 
   //Expert manual playout-by-playout interface------------------------------------------------
   void beginSearch(bool pondering);
-  bool runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
+
+  // Returns number of new nodes added.
+  int runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
 
   std::vector<SearchNode*> enumerateTreePostOrder();
 

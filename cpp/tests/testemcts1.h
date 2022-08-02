@@ -28,6 +28,9 @@ void checkEMCTS1Search(const Search& bot, const float win_prob1,
                        const float loss_prob1, const float win_prob2,
                        const float loss_prob2);
 
+// Checks how we select our move based on results of tree search.
+void checkFinalMoveSelection(const Search& bot);
+
 // Check playout logic (for either MCTS or EMCTS1)
 // Our naively implemented check simulates the entire playout process and takes
 // O(BP^3) time, where B is the size of the board and P is the number of
@@ -51,7 +54,7 @@ void resetBot(Search& bot, int board_size, const Rules& rules);
 
 // Helper struct for dealing with a search tree.
 struct SearchTree {
-  const SearchNode* const tree_root;
+  const SearchNode* const root;
 
   // DFS visit order.
   // So a child will always come after its parent in this list.

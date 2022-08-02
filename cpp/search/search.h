@@ -610,7 +610,7 @@ private:
   ) const;
 
   //Parent must be locked
-  void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const;
+  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const; private:
 
   double getExploreSelectionValue(
     double nnPolicyProb, double totalChildWeight, double childWeight,
@@ -644,10 +644,10 @@ private:
   ) const; private:
 
   //Parent must be locked
-  double getReducedPlaySelectionWeight(
+  public: double getReducedPlaySelectionWeight(
     const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
     double totalChildWeight, double parentUtilityStdevFactor, double bestChildExploreSelectionValue
-  ) const;
+  ) const; private:
 
   public: double getFpuValueForChildrenAssumeVisited(
     const SearchNode& node, Player pla, bool isRoot, double policyProbMassVisited,

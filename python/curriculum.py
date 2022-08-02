@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 import shutil
 import time
 from dataclasses import asdict, dataclass
@@ -452,7 +453,10 @@ if __name__ == "__main__":
     root_logger.setLevel(logging.INFO)
 
     file_handler = logging.FileHandler(filename='/outputs/curriculum.log')
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+
     root_logger.addHandler(file_handler)
+    root_logger.addHandler(stdout_handler)
 
     parser = argparse.ArgumentParser(
         description="Run victim replacement based on win rate."

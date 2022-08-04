@@ -17,6 +17,10 @@ then
     echo "EXPORTMODE 'main': train and export for selfplay. 'extra': train and export extra non-selfplay model. 'trainonly': train without export"
     exit 0
 fi
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. "$SCRIPT_DIR/guess_git_root.sh"
+
 BASEDIR="$1"
 shift
 TRAININGNAME="$1"
@@ -28,25 +32,29 @@ shift
 EXPORTMODE="$1"
 shift
 
-GITROOTDIR="$(git rev-parse --show-toplevel)"
+BASEDIR="$(realpath "$BASEDIR")"
 
 #------------------------------------------------------------------------------
 set -x
 
 mkdir -p "$BASEDIR"/train/"$TRAININGNAME"
+pushd "$GITROOTDIR"
 git show --no-patch --no-color > "$BASEDIR"/train/"$TRAININGNAME"/version.txt
 git diff --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diff.txt
 git diff --staged --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diffstaged.txt
+popd
 
 # For archival and logging purposes - you can look back and see exactly the python code on a particular date
 DATE_FOR_FILENAME=$(date "+%Y%m%d-%H%M%S")
 DATED_ARCHIVE="$BASEDIR"/scripts/train/dated/"$DATE_FOR_FILENAME"
 mkdir -p "$DATED_ARCHIVE"
 cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/train.sh "$DATED_ARCHIVE"
+
+pushd "$GITROOTDIR"
 git show --no-patch --no-color > "$DATED_ARCHIVE"/version.txt
 git diff --no-color > "$DATED_ARCHIVE"/diff.txt
 git diff --staged --no-color > "$DATED_ARCHIVE"/diffstaged.txt
-
+popd
 
 if [ "$EXPORTMODE" == "main" ]
 then

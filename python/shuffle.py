@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys
+import multiprocessing
 import os
 import argparse
 import time
@@ -8,10 +9,10 @@ import shutil
 import psutil
 import json
 
-import multiprocessing
 
 import numpy as np
-from tensorflow import python_io
+import tensorflow as tf
+from tensorflow.compat.v1 import python_io
 
 import tfrecordio
 

@@ -12,6 +12,10 @@ then
     echo "USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper"
     exit 0
 fi
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+. "$SCRIPT_DIR/guess_git_root.sh"
+
 NAMEPREFIX="$1"
 shift
 BASEDIRRAW="$1"
@@ -24,8 +28,6 @@ BATCHSIZE="$1"
 shift
 USEGATING="$1"
 shift
-
-GITROOTDIR="$(git rev-parse --show-toplevel)"
 
 basedir="$(realpath "$BASEDIRRAW")"
 tmpdir="$(realpath "$TMPDIRRAW")"

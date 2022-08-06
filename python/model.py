@@ -550,7 +550,6 @@ class Model:
     #Define variables to keep track of the mean and variance
     moving_mean = tf.compat.v1.get_variable(initializer=tf.zeros([num_channels]),name=(name+"/moving_mean"),trainable=False,collections=collections)
     moving_var = tf.compat.v1.get_variable(initializer=tf.ones([num_channels]),name=(name+"/moving_variance"),trainable=False,collections=collections)
-
     beta = self.weight_variable_init_constant(name+"/beta", [tensor_shape_val_3], 0.0, reg=False)
 
     #This is the mean, computed only over exactly the areas of the mask, weighting each spot equally,

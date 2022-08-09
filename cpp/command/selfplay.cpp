@@ -246,7 +246,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   // keep weak references to the victims loaded by game threads
   // for being able to find the model by name if at least one thread is using it
   // and allowing to automatically destroy the model when nobody uses it
-  vector<weak_ptr<NNEvaluator> > victimNNEvals;
+  vector<weak_ptr<NNEvaluator>> victimNNEvals;
   mutex victimMutex;
 
   // keep model ownership if we have only one victim for all games

@@ -11,9 +11,12 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from threading import Thread
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Mapping, Sequence
 
 from sgfmill import sgf
+
+Config = Mapping[str, Any]
 
 
 @dataclass(frozen=True)
@@ -75,8 +78,11 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     if "victim-" in b_name and "__" not in b_name:
         # it has 'victim' in its name and it is not a colored evaluator
         victim_name = b_name
-    else:
+    elif "victim-" in w_name and "__" not in w_name:
         victim_name = w_name
+    else:
+        logging.warning("No player with 'victim-' prefix: '%s'", sgf_str)
+        return None
 
     victim_color = {b_name: "b", w_name: "w"}[victim_name]
     adv_color = {"b": "w", "w": "b"}[victim_color]
@@ -140,7 +146,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     if win_color is not None:
         winner = win_color == adv_color
 
-    # drop 'victim-' prefix from the name
+    assert victim_name.startswith("victim-")
     victim_name = victim_name[7:]
     return AdvGameInfo(
         victim_name,
@@ -154,7 +160,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 def get_files_sorted_by_modification_time(
     folder: str,
     extension: Optional[str] = None,
-) -> List[str]:
+) -> Sequence[str]:
     all_sgfs = []
     for path, dirnames, filenames in os.walk(folder, followlinks=True):
         for f in filenames:
@@ -224,7 +230,7 @@ class Curriculum:
         self,
         victims_input_dir: str,
         victims_output_dir: str,
-        config: Optional[List] = None,
+        config: Optional[Sequence[Config]] = None,
         config_json: Optional[str] = None,
         config_json_file: Optional[str] = None,
     ):
@@ -233,7 +239,7 @@ class Curriculum:
         Construct and initialize curriculum.
 
         @param victims_input_dir: The folder with all victim model
-        files specified in the config.
+            files specified in the config.
         @param victims_output_dir: The folder where we copy victims for selfplay.
         @param config: List of victims.
         @param config_json: Serialized JSON list of victims.
@@ -276,7 +282,7 @@ class Curriculum:
             if not cond.can_be_victim_criteria():
                 raise ValueError(
                     "Incorrect victim change criteria for victim '{}': "
-                    "exactly one value should be non-None".format(line[0]),
+                    "exactly one value should be non-None".format(line['name']),
                 )
             self.victims.append(cond)
 
@@ -298,20 +304,20 @@ class Curriculum:
                 )
 
         logging.info(
-            "Copying the latest victim '{}'...".format(self.__cur_victim().name),
+            "Copying the latest victim '{}'...".format(self._cur_victim.name),
         )
         self.__try_victim_copy()
         logging.info("Curriculum initial setup is complete")
 
-    def __cur_victim(self) -> PlayerStat:
+    @property
+    def _cur_victim(self) -> PlayerStat:
         return self.victims[self.victim_idx]
 
     def __try_victim_copy(self, force_if_exists=False):
         num_efforts = 0
-        victim_name = self.__cur_victim().name
-        if not force_if_exists and os.path.exists(
-            os.path.join(self.victims_output_dir, victim_name),
-        ):
+        victim_name = self._cur_victim.name
+        victim_path = os.path.join(self.victims_output_dir, victim_name)
+        if not force_if_exists and os.path.exists(victim_path):
             return
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
@@ -324,7 +330,7 @@ class Curriculum:
                 logging.warning(
                     "Cannot copy victim '{}', maybe "
                     "filesystem problem? Waiting {} sec...".format(
-                        self.__cur_victim().name,
+                        self._cur_victim.name,
                         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT,
                     ),
                 )
@@ -333,7 +339,7 @@ class Curriculum:
 
         raise RuntimeError(
             "Problem copying victim '{}', curriculum stopped".format(
-                self.__cur_victim().name,
+                self._cur_victim.name,
             ),
         )
 
@@ -347,7 +353,7 @@ class Curriculum:
 
         logging.info("Checking whether we need to move to the next victim...")
         want_victim_update = False
-        if adv_stat is not None and self.__cur_victim().check_if_gt(adv_stat):
+        if adv_stat is not None and self._cur_victim.check_if_gt(adv_stat):
             want_victim_update = True
         if policy_loss is not None:
             raise NotImplementedError("Policy loss check is not implemented yet")
@@ -360,7 +366,7 @@ class Curriculum:
             self.finished = True
             return
 
-        logging.info("Moving to the next victim '{}'".format(self.__cur_victim().name))
+        logging.info("Moving to the next victim '{}'".format(self._cur_victim.name))
         self.__try_victim_copy(True)
 
     def update_sgf_games(self, selfplay_dir: str, games_for_compute: int):
@@ -373,7 +379,7 @@ class Curriculum:
                 self.game_hashes[sgf_file] = set()
 
             with open(sgf_file) as f:
-                # logging.info("Processing SGF file '{}'".format(sgf_file))
+                logging.debug("Processing SGF file '{}'".format(sgf_file))
                 all_lines = list(f.readlines())
 
                 for line in reversed(all_lines):
@@ -425,7 +431,7 @@ class Curriculum:
             adv_stat = recompute_statistics(
                 self.sgf_games,
                 games_for_compute,
-                self.__cur_victim().name,
+                self._cur_victim.name,
             )
             if adv_stat is not None:
                 self.try_move_on(adv_stat=adv_stat)
@@ -434,32 +440,10 @@ class Curriculum:
                     break
             logging.info(
                 "Curriculum is alive, current victim : {}".format(
-                    self.__cur_victim().name,
+                    self._cur_victim.name,
                 ),
             )
             time.sleep(checking_periodicity)
-
-    """
-    Run curriculum checking and return control to the main script.
-    @param selfplay_dir: Folder with selfplay results.
-    @param games_for_compute: Number of games to compute statistics.
-    @param checking_periodicity: Checking interval in seconds.
-    @return: created thread (for using thread.join() in the main script)
-    """
-
-    def run_thread(
-        self,
-        selfplay_dir: str,
-        games_for_compute: int,
-        checking_periodicity: int,
-    ) -> Thread:
-        thread = Thread(
-            target=self.checking_loop,
-            args=(selfplay_dir, games_for_compute, checking_periodicity),
-        )
-        thread.start()
-        logging.info("Curriculum models update thread started")
-        return thread
 
 
 if __name__ == "__main__":

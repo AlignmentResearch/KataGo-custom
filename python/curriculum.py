@@ -281,7 +281,7 @@ class Curriculum:
             if not cond.can_be_victim_criteria():
                 raise ValueError(
                     "Incorrect victim change criteria for victim '{}': "
-                    "exactly one value should be non-None".format(line['name']),
+                    "exactly one value should be non-None".format(line["name"]),
                 )
             self.victims.append(cond)
 

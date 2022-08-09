@@ -30,8 +30,8 @@ bool FileUtils::isDirectory(const std::string &path)
     gfs::path gfsPath(gfs::u8path(path));
     return gfs::is_directory(gfsPath);
   }
-  catch(const gfs::filesystem_error&) {
-    return false;
+  catch(const gfs::filesystem_error& e) {
+    throw std::runtime_error(e.what());
   }
 }
 

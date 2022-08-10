@@ -518,10 +518,13 @@ if __name__ == "__main__":
             "JSON config string must be provided",
         )
 
-    curriculum.checking_loop(
-        args.selfplay_dir,
-        args.games_for_compute,
-        args.checking_periodicity,
-    )
+    try:
+        curriculum.checking_loop(
+            args.selfplay_dir,
+            args.games_for_compute,
+            args.checking_periodicity,
+        )
+    except Exception as e:
+        logging.exception("Curriculum error: {}".format(e))
 
     logging.info("Curriculum finished!")

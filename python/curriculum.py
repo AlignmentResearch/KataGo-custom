@@ -524,7 +524,10 @@ if __name__ == "__main__":
             args.games_for_compute,
             args.checking_periodicity,
         )
-    except Exception as e:
+    # we really want to silence 'B902: blind except'
+    # because we want a stacktrace and error description in logs
+    except BaseException as e:  # noqa: B902
         logging.exception("Curriculum error: {}".format(e))
+        raise
 
     logging.info("Curriculum finished!")

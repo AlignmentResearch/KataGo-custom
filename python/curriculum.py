@@ -9,9 +9,8 @@ import os
 import shutil
 import sys
 import time
-from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from sgfmill import sgf
 

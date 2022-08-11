@@ -68,7 +68,11 @@ class PlayerStat:
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
-    sgf_game = sgf.Sgf_game.from_string(sgf_str)
+    try:
+        sgf_game = sgf.Sgf_game.from_string(sgf_str)
+    except IndexError:
+        logging.warning("Error parsing game: '%s'", sgf_str)
+        return None
 
     b_name = sgf_game.get_player_name("b")
     w_name = sgf_game.get_player_name("w")

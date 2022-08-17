@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.18.2)
 project(katago)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories(external)
 include_directories(external/tclap-1.2.2/include)
@@ -176,7 +176,6 @@ add_executable(katago
   neuralnet/nninputs.cpp
   neuralnet/modelversion.cpp
   neuralnet/nneval.cpp
-  neuralnet/nneval_colored.cpp
   neuralnet/desc.cpp
   ${NEURALNET_BACKEND_SOURCES}
   book/book.cpp
@@ -203,6 +202,7 @@ add_executable(katago
   tests/testboardbasic.cpp
   tests/testcommon.cpp
   tests/testconfig.cpp
+  tests/testemcts1.cpp
   tests/testnnevalcanary.cpp
   tests/testrules.cpp
   tests/testscore.cpp

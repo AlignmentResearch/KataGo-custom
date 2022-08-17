@@ -248,6 +248,10 @@ struct SearchThread {
   //it here instead of deleting it, so that pointers and accesses to it remain valid.
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
+  // For EMCTS1 support
+  // SearchThread does not own this pointer.
+  SearchNode* lastVisitedNode;
+
   SearchThread(int threadIdx, const Search& search);
   ~SearchThread();
 
@@ -311,7 +315,12 @@ struct Search {
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;
-  NNEvaluator* nnEvaluator; //externally owned
+private: // SHOULD NOT BE ACCESSED EXCEPT THROUGH getNNEvaluator or setNNEval
+  NNEvaluator* nnEval__; //externally owned
+  NNEvaluator* oppNNEval__; //externally owned
+public:
+  NNEvaluator* getNNEvaluator(const SearchNode& node) const;
+  NNEvaluator* getNNEvaluator() const; // returns nnEval__
   int nnXLen;
   int nnYLen;
   int policySize;
@@ -340,7 +349,13 @@ struct Search {
 
   //Note - randSeed controls a few things in the search, but a lot of the randomness actually comes from
   //random symmetries of the neural net evaluations, see nneval.h
-  Search(SearchParams params, NNEvaluator* nnEval, Logger* logger, const std::string& randSeed);
+  Search(
+    SearchParams params,
+    NNEvaluator* nnEval,
+    Logger* logger,
+    const std::string& randSeed,
+    NNEvaluator* oppNNEval = nullptr
+  );
   ~Search();
 
   Search(const Search&) = delete;
@@ -531,7 +546,9 @@ struct Search {
 
   //Expert manual playout-by-playout interface------------------------------------------------
   void beginSearch(bool pondering);
-  bool runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
+
+  // Returns number of new nodes added.
+  int runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
 
   std::vector<SearchNode*> enumerateTreePostOrder();
 
@@ -544,8 +561,8 @@ private:
   static constexpr double FUTILE_VISITS_PRUNE_VALUE = -1e40;
   static constexpr double EVALUATING_SELECTION_VALUE_PENALTY = 1e20;
 
-  double getResultUtility(double winlossValue, double noResultValue) const;
-  double getResultUtilityFromNN(const NNOutput& nnOutput) const;
+  public: double getResultUtility(double winlossValue, double noResultValue) const; private:
+  public: double getResultUtilityFromNN(const NNOutput& nnOutput) const; private:
 
   double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
@@ -560,7 +577,7 @@ private:
   int findTopNPolicy(const SearchNode* node, int n, PolicySortEntry* sortedPolicyBuf) const;
 
   std::shared_ptr<NNOutput>* maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const;
-  bool isAllowedRootMove(Loc moveLoc) const;
+  public: bool isAllowedRootMove(Loc moveLoc) const; private:
 
   void computeRootNNEvaluation(NNResultBuf& nnResultBuf, bool includeOwnerMap);
 
@@ -572,11 +589,11 @@ private:
   );
   double recomputeSearchTimeLimit(const TimeControls& tc, double timeUsed, double searchFactor, int64_t rootVisits);
 
-  double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const;
+  public: double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const; private:
   double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
   double getApproxScoreUtilityDerivative(double scoreMean) const;
   double getUtilityFromNN(const NNOutput& nnOutput) const;
-  double computeNodeWeight(const SearchNode& node) const;
+  public: double computeNodeWeight(const SearchNode& node) const; private:
 
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
 
@@ -593,7 +610,7 @@ private:
   ) const;
 
   //Parent must be locked
-  void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const;
+  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const; private:
 
   double getExploreSelectionValue(
     double nnPolicyProb, double totalChildWeight, double childWeight,
@@ -619,23 +636,23 @@ private:
     double parentUtility, double parentWeightPerVisit, double parentUtilityStdevFactor,
     bool isDuringSearch, bool antiMirror, double maxChildWeight, SearchThread* thread
   ) const;
-  double getNewExploreSelectionValue(
+  public: double getNewExploreSelectionValue(
     const SearchNode& parent, float nnPolicyProb,
     double totalChildWeight, double fpuValue,
     double parentWeightPerVisit, double parentUtilityStdevFactor,
     double maxChildWeight, SearchThread* thread
-  ) const;
+  ) const; private:
 
   //Parent must be locked
-  double getReducedPlaySelectionWeight(
+  public: double getReducedPlaySelectionWeight(
     const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
     double totalChildWeight, double parentUtilityStdevFactor, double bestChildExploreSelectionValue
-  ) const;
+  ) const; private:
 
-  double getFpuValueForChildrenAssumeVisited(
+  public: double getFpuValueForChildrenAssumeVisited(
     const SearchNode& node, Player pla, bool isRoot, double policyProbMassVisited,
     double& parentUtility, double& parentWeightPerVisit, double& parentUtilityStdevFactor
-  ) const;
+  ) const; private:
 
   double pruneNoiseWeight(std::vector<MoreNodeStats>& statsBuf, int numChildren, double totalChildWeight, const double* policyProbsBuf) const;
 

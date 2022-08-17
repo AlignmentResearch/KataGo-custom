@@ -54,20 +54,6 @@ NNServerBuf::~NNServerBuf() {
 
 //-------------------------------------------------------------------------------------
 
-NNEvaluator::NNEvaluator()
-  :isEmptyNNEvaluator(true),
-   modelName(""),
-   modelFileName(""),
-   nnXLen(0),
-   nnYLen(0),
-   requireExactNNLen(false),
-   policySize(0),
-   inputsUseNHWC(false),
-   usingFP16Mode({}),
-   usingNHWCMode({}),
-   randSeed(""),
-   debugSkipNeuralNet(false) {}
-
 NNEvaluator::NNEvaluator(
   const string& mName,
   const string& mFileName,
@@ -192,8 +178,6 @@ NNEvaluator::NNEvaluator(
 }
 
 NNEvaluator::~NNEvaluator() {
-  if (isEmptyNNEvaluator) return;
-
   killServerThreads();
 
   for(int i = 0; i < numResultBufss; i++) {
@@ -325,18 +309,19 @@ void NNEvaluator::clearCache() {
     nnCacheTable->clear();
 }
 
-void NNEvaluator::serveEvals(
+static void serveEvals(
   string randSeedThisThread,
+  NNEvaluator* nnEval, const LoadedModel* loadedModel,
   int gpuIdxForThisThread,
   int serverThreadIdx
 ) {
-  NNServerBuf* buf = new NNServerBuf(*this, loadedModel);
+  NNServerBuf* buf = new NNServerBuf(*nnEval,loadedModel);
   Rand rand(randSeedThisThread);
 
   //Used to have a try catch around this but actually we're in big trouble if this raises an exception
   //and causes possibly the only nnEval thread to die, so actually go ahead and let the exception escape to
   //toplevel for easier debugging
-  serve(*buf, rand, gpuIdxForThisThread, serverThreadIdx);
+  nnEval->serve(*buf,rand,gpuIdxForThisThread,serverThreadIdx);
   delete buf;
 }
 
@@ -357,7 +342,7 @@ void NNEvaluator::spawnServerThreads() {
     string randSeedThisThread = randSeed + ":NNEvalServerThread:" + Global::intToString(numServerThreadsEverSpawned);
     numServerThreadsEverSpawned++;
     std::thread* thread = new std::thread(
-      &NNEvaluator::serveEvals,this,randSeedThisThread,gpuIdxForThisThread,i
+      &serveEvals,randSeedThisThread,this,loadedModel,gpuIdxForThisThread,i
     );
     serverThreads.push_back(thread);
   }

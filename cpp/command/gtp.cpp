@@ -5,7 +5,6 @@
 #include "../core/datetime.h"
 #include "../core/makedir.h"
 #include "../dataio/sgf.h"
-#include "../neuralnet/nneval_colored.h"
 #include "../search/asyncbot.h"
 #include "../program/setup.h"
 #include "../program/playutils.h"
@@ -309,8 +308,7 @@ struct GTPEngine {
   GTPEngine& operator=(const GTPEngine&) = delete;
 
   const string nnModelFile;
-  const string nnWhiteFile;
-  const bool usingVictimplay;
+  const string opModelFile;
   const bool assumeMultipleStartingBlackMovesAreHandicap;
   const int analysisPVLen;
   const bool preventEncore;
@@ -327,6 +325,7 @@ struct GTPEngine {
   bool analysisAntiMirror;
 
   NNEvaluator* nnEval;
+  NNEvaluator* opNNEval; // Optional (required when using EMCTS1)
   AsyncBot* bot;
   Rules currentRules; //Should always be the same as the rules in bot, if bot is not NULL.
 
@@ -354,7 +353,7 @@ struct GTPEngine {
 
   GTPEngine(
     const string& modelFile,
-    const string& whiteFile,
+    const string& opFile,
     SearchParams initialParams, Rules initialRules,
     bool assumeMultiBlackHandicap, bool prevtEncore,
     double dynamicPDACapPerOppLead, double staticPDA, bool staticPDAPrecedence,
@@ -366,8 +365,7 @@ struct GTPEngine {
     std::unique_ptr<PatternBonusTable>&& pbTable
   )
     :nnModelFile(modelFile),
-     nnWhiteFile(whiteFile),
-     usingVictimplay(whiteFile != ""),
+     opModelFile(opFile),
      assumeMultipleStartingBlackMovesAreHandicap(assumeMultiBlackHandicap),
      analysisPVLen(pvLen),
      preventEncore(prevtEncore),
@@ -380,8 +378,9 @@ struct GTPEngine {
      analysisWideRootNoise(analysisWRN),
      genmoveAntiMirror(genmoveAntiMir),
      analysisAntiMirror(analysisAntiMir),
-     nnEval(NULL),
-     bot(NULL),
+     nnEval(nullptr),
+     opNNEval(nullptr),
+     bot(nullptr),
      currentRules(initialRules),
      params(initialParams),
      bTimeControls(),
@@ -400,11 +399,8 @@ struct GTPEngine {
   }
 
   void deleteNNEval() {
-    if (usingVictimplay) {
-      NNEvaluatorColored* nnEvalColored = dynamic_cast<NNEvaluatorColored*>(nnEval);
-      assert(nnEvalColored != NULL);
-      delete nnEvalColored->black_nnEval;
-      delete nnEvalColored->white_nnEval;
+    if (opNNEval != nullptr) {
+      delete opNNEval;
     }
     delete nnEval;
   }
@@ -469,13 +465,9 @@ struct GTPEngine {
       return retNNEval;
     };
 
-    if (usingVictimplay) {
-      nnEval = new NNEvaluatorColored(
-        getNNEvaluator(nnModelFile, nnModelFile),
-        getNNEvaluator(nnWhiteFile, nnWhiteFile)
-      );
-    } else {
-      nnEval = getNNEvaluator(nnModelFile, nnModelFile);
+    nnEval = getNNEvaluator(nnModelFile, nnModelFile);
+    if (opModelFile != "") {
+      opNNEval = getNNEvaluator(opModelFile, opModelFile);
     }
 
     {
@@ -1267,10 +1259,6 @@ struct GTPEngine {
   }
 
   string rawNN(int whichSymmetry) {
-    // TODO: Support rawNN when using victimplay.
-    //       We need to figure out what the desired behavior here is.
-    assert(!usingVictimplay);
-
     if(nnEval == NULL)
       return "";
     ostringstream out;

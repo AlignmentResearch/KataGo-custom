@@ -180,9 +180,7 @@ int MainCmds::match(const vector<string>& args) {
   //Initialize object for randomly pairing bots
   bool forSelfPlay = false;
   bool forGateKeeper = false;
-  MatchPairer* matchPairer = new MatchPairer(
-    cfg,numBots,botNames,nnEvalsByBot,paramss,forSelfPlay,forGateKeeper,excludeBot,useVictimplays
-  );
+  MatchPairer* matchPairer = new MatchPairer(cfg,numBots,botNames,nnEvalsByBot,paramss,forSelfPlay,forGateKeeper,excludeBot);
 
   //Check for unused config keys
   cfg.warnUnusedKeys(cerr,&logger);
@@ -233,8 +231,8 @@ int MainCmds::match(const vector<string>& args) {
 
         logger.write(
           "Launching game between " +
-          botSpecB.botName + (botSpecB.victimplay ? "-victimplay" : "") + " (B) " +
-          botSpecW.botName + (botSpecW.victimplay ? "-victimplay" : "") + " (W)..."
+          botSpecB.botName + "-" + botSpecB.baseParams.getSearchAlgoAsStr() + " (B) " +
+          botSpecW.botName + "-" + botSpecW.baseParams.getSearchAlgoAsStr() + " (W)..."
         );
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,

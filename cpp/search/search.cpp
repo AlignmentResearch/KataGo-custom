@@ -425,7 +425,13 @@ SearchThread::~SearchThread() {
 
 static const double VALUE_WEIGHT_DEGREES_OF_FREEDOM = 3.0;
 
-Search::Search(SearchParams params, NNEvaluator* nnEval, Logger* lg, const string& rSeed)
+Search::Search(
+  SearchParams params,
+  NNEvaluator* nnEval,
+  Logger* lg,
+  const string& rSeed,
+  NNEvaluator* oppNNEval
+)
   :rootPla(P_BLACK),
    rootBoard(),rootHistory(),rootHintLoc(Board::NULL_LOC),
    avoidMoveUntilByLocBlack(),avoidMoveUntilByLocWhite(),
@@ -448,7 +454,8 @@ Search::Search(SearchParams params, NNEvaluator* nnEval, Logger* lg, const strin
    normToTApproxTable(),
    rootNode(NULL),
    mutexPool(NULL),
-   nnEvaluator(nnEval),
+   nnEval__(nnEval),
+   oppNNEval__(oppNNEval),
    nnXLen(),
    nnYLen(),
    policySize(),
@@ -464,6 +471,18 @@ Search::Search(SearchParams params, NNEvaluator* nnEval, Logger* lg, const strin
    oldNNOutputsToCleanUpMutex(),
    oldNNOutputsToCleanUp()
 {
+  switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      oppNNEval__ = nullptr;
+      break;
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      assert(oppNNEval__ != nullptr);
+      assert(searchParams.numThreads == 1); // We do not support multithreading with EMCTS1 (yet).
+      break;
+    default:
+      ASSERT_UNREACHABLE;
+  }
+
   assert(logger != NULL);
   nnXLen = nnEval->getNNXLen();
   nnYLen = nnEval->getNNYLen();
@@ -500,6 +519,19 @@ Search::~Search() {
   delete patternBonusTable;
   killThreads();
 }
+
+NNEvaluator* Search::getNNEvaluator(const SearchNode& node) const {
+  switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      return nnEval__;
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      return node.nextPla == rootNode->nextPla ? nnEval__ : oppNNEval__;
+    default:
+      ASSERT_UNREACHABLE;
+  }
+}
+
+NNEvaluator* Search::getNNEvaluator() const { return nnEval__; }
 
 static void threadTaskLoop(Search* search, int threadIdx) {
   while(true) {
@@ -705,7 +737,7 @@ void Search::setCopyOfExternalPatternBonusTable(const std::unique_ptr<PatternBon
 
 void Search::setNNEval(NNEvaluator* nnEval) {
   clearSearch();
-  nnEvaluator = nnEval;
+  nnEval__ = nnEval;
   nnXLen = nnEval->getNNXLen();
   nnYLen = nnEval->getNNYLen();
   assert(nnXLen > 0 && nnXLen <= NNPos::MAX_BOARD_LEN);
@@ -1210,10 +1242,10 @@ void Search::runWholeSearch(
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxPlayouts - numPlayouts);
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxVisits - numPlayouts - numNonPlayoutVisits);
 
-        bool finishedPlayout = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
-        if(finishedPlayout) {
-          numPlayouts = numPlayoutsShared.fetch_add((int64_t)1, std::memory_order_relaxed);
-          numPlayouts += 1;
+        const int numNodesAdded = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
+        if (numNodesAdded > 0) {
+          numPlayouts = numPlayoutsShared.fetch_add((int64_t)numNodesAdded, std::memory_order_relaxed);
+          numPlayouts += numNodesAdded;
         }
         else {
           //In the case that we didn't finish a playout, give other threads a chance to run before we try again
@@ -1687,10 +1719,12 @@ void Search::recursivelyRecomputeStats(SearchNode& n) {
       double scoreMeanAvg = node->stats.scoreMeanAvg.load(std::memory_order_acquire);
       double scoreMeanSqAvg = node->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
 
-      //It's possible that this node has 0 weight in the case where it's the root node
-      //and has 0 visits because we began a search and then stopped it before any playouts happened.
-      //In that case, there's not much to recompute.
-      if(weightSum <= 0.0) {
+      // It's possible that this node has 0 weight, there are two possibilities:
+      //  1. In the case where it's the root node and has 0 visits, it's because
+      //     we began a search and then stopped it before any playouts happened.
+      //     In that case, there's not much to recompute.
+      //  2. We could be doing EMCTS1.
+      if(weightSum <= 0.0 && searchParams.searchAlgo != SearchParams::SearchAlgorithm::EMCTS1) {
         assert(numVisits == 0);
         assert(isRoot);
       }
@@ -1756,7 +1790,7 @@ void Search::computeRootNNEvaluation(NNResultBuf& nnResultBuf, bool includeOwner
       getOpp(pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage
     );
   }
-  nnEvaluator->evaluate(
+  getNNEvaluator()->evaluate(
     board, hist, pla,
     nnInputParams,
     nnResultBuf, skipCache, includeOwnerMap
@@ -2003,8 +2037,8 @@ void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int
 
 shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const {
   if (
-      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::MCTS
-   || (searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+      searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS
+   || (searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
        && !searchParams.EMCTS1_noiseOppNodes)
   ) {
     // Regular MCTS behavior:
@@ -2012,7 +2046,7 @@ shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, b
     if (isRoot) { /* noise */ }
     else { return NULL; /* no noise */ }
   } else if (
-      searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+      searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
    && searchParams.EMCTS1_noiseOppNodes
   ) {
     // EMCTS1 adjusement (when noiseOppNodesDuringEMCTS1 = true):
@@ -2735,7 +2769,7 @@ double Search::getFpuValueForChildrenAssumeVisited(
 
   assert(visits > 0);
   assert(weightSum >= 0.0);
-  assert(weightSum > 0.0 || searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1);
+  assert(weightSum > 0.0 || searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1);
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;
   double variancePrior = searchParams.cpuctUtilityStdevPrior * searchParams.cpuctUtilityStdevPrior;
@@ -2867,7 +2901,7 @@ void Search::selectBestChildToDescend(
   // If we are searching with EMCTS1 and are on an opponents move,
   // we sample directly from the opponents policy.
   if (
-    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla
   ) {
     // EMCTS1 does not support avoidMoveUntilByLoc.
@@ -2902,6 +2936,7 @@ void Search::selectBestChildToDescend(
         break;
       }
     }
+
     return;
   }
 
@@ -3206,19 +3241,45 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   node.statsLock.clear(std::memory_order_release);
 }
 
-bool Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
+int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
   //Store this value, used for futile-visit pruning this thread's root children selections.
   thread.upperBoundVisitsLeft = upperBoundVisitsLeft;
 
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE];
   bool finishedPlayout = playoutDescend(thread,*rootNode,posesWithChildBuf,true);
 
+  int numNodesAdded = 1;
+  if (
+    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
+    && thread.lastVisitedNode->nextPla != rootPla
+    && thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) == 0
+  ) {
+    assert(finishedPlayout);
+
+    // Descend one more time starting from last visited node
+    SearchNode* const resumeDescentNode = thread.lastVisitedNode;
+    bool finishedPlayout2 = playoutDescend(
+      thread, *resumeDescentNode, posesWithChildBuf, false);
+    assert(finishedPlayout2);
+    assert(thread.lastVisitedNode->nextPla == rootPla);
+
+    // Perform backup and update stats along path to root.
+    SearchNode *curNode = resumeDescentNode;
+    do {
+      curNode = curNode->parent;
+      updateStatsAfterPlayout(*curNode, thread, curNode == rootNode);
+    } while(curNode != rootNode);
+
+    numNodesAdded += 1;
+  }
+
   //Restore thread state back to the root state
   thread.pla = rootPla;
   thread.board = rootBoard;
   thread.history = rootHistory;
 
-  return finishedPlayout;
+  if (!finishedPlayout) return 0;
+  return numNodesAdded;
 }
 
 void Search::addLeafValue(
@@ -3361,7 +3422,7 @@ bool Search::initNodeNNOutput(
       std::swap(symmetryIndexes[i], symmetryIndexes[thread.rand.nextInt(i,SymmetryHelpers::NUM_SYMMETRIES-1)]);
       nnInputParams.symmetry = symmetryIndexes[i];
       bool skipCacheThisIteration = true; //Skip cache since there's no guarantee which symmetry is in the cache
-      nnEvaluator->evaluate(
+      getNNEvaluator(node)->evaluate(
         thread.board, thread.history, thread.pla,
         nnInputParams,
         thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
@@ -3371,7 +3432,7 @@ bool Search::initNodeNNOutput(
     result = new std::shared_ptr<NNOutput>(new NNOutput(ptrs));
   }
   else {
-    nnEvaluator->evaluate(
+    getNNEvaluator(node)->evaluate(
       thread.board, thread.history, thread.pla,
       nnInputParams,
       thread.nnResultBuf, skipCache, includeOwnerMap
@@ -3446,7 +3507,7 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
 double Search::computeNodeWeight(const SearchNode& node) const {
   // If doing EMCTS1, we weight opponent nodes as zero.
   if (
-    searchParams.searchAlgorithm == SearchParams::SearchAlgorithm::EMCTS1
+    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla
   ) {
     return 0.0;
@@ -3457,7 +3518,7 @@ double Search::computeNodeWeight(const SearchNode& node) const {
 
   if(!searchParams.useUncertainty)
     return 1.0;
-  if(!nnEvaluator->supportsShorttermError())
+  if(!getNNEvaluator(node)->supportsShorttermError())
     return 1.0;
 
   double scoreMean = (double)nnOutput->whiteScoreMean;
@@ -3483,6 +3544,8 @@ bool Search::playoutDescend(
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
   bool isRoot
 ) {
+  thread.lastVisitedNode = &node;
+
   //Hit terminal node, finish
   //In the case where we're forcing the search to make another move at the root, don't terminate, actually run search for a move more.
   //In the case where we're conservativePass and the game just ended due to a root pass, actually let it keep going.
@@ -3497,14 +3560,14 @@ bool Search::playoutDescend(
   ) {
     //Avoid running "too fast", by making sure that a leaf evaluation takes roughly the same time as a genuine nn eval
     //This stops a thread from building a silly number of visits to distort MCTS statistics other threads are stuck on the GPU.
-    nnEvaluator->waitForNextNNEvalIfAny();
+    getNNEvaluator(node)->waitForNextNNEvalIfAny();
     if(thread.history.isNoResult) {
       double winLossValue = 0.0;
       double noResultValue = 1.0;
       double scoreMean = 0.0;
       double scoreMeanSq = 0.0;
       double lead = 0.0;
-      double weight = (searchParams.useUncertainty && nnEvaluator->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
+      double weight = (searchParams.useUncertainty && getNNEvaluator(node)->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
       addLeafValue(node, winLossValue, noResultValue, scoreMean, scoreMeanSq, lead, weight, true, false);
       return true;
     }
@@ -3514,7 +3577,7 @@ bool Search::playoutDescend(
       double scoreMean = ScoreValue::whiteScoreDrawAdjust(thread.history.finalWhiteMinusBlackScore,searchParams.drawEquivalentWinsForWhite,thread.history);
       double scoreMeanSq = ScoreValue::whiteScoreMeanSqOfScoreGridded(thread.history.finalWhiteMinusBlackScore,searchParams.drawEquivalentWinsForWhite);
       double lead = scoreMean;
-      double weight = (searchParams.useUncertainty && nnEvaluator->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
+      double weight = (searchParams.useUncertainty && getNNEvaluator(node)->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
       addLeafValue(node, winLossValue, noResultValue, scoreMean, scoreMeanSq, lead, weight, true, false);
       return true;
     }

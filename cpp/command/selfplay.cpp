@@ -7,7 +7,6 @@
 #include "../dataio/trainingwrite.h"
 #include "../dataio/loadmodel.h"
 #include "../neuralnet/modelversion.h"
-#include "../neuralnet/nneval_colored.h"
 #include "../search/asyncbot.h"
 #include "../program/setup.h"
 #include "../program/play.h"
@@ -54,17 +53,11 @@ static FinishedGameData* runOneVictimplayGame(
   victimBotSpec.nnEval = victimNNEval;
   victimBotSpec.baseParams = victimSearchParams;
 
-  NNEvaluator* advNNEvalColored = new NNEvaluatorColored(
-    advColor == C_BLACK ? advNNEval : victimNNEval,
-    advColor == C_BLACK ? victimNNEval : advNNEval
-  );
-
   MatchPairer::BotSpec adversaryBotSpec;
   adversaryBotSpec.botIdx = 1; // adversary is always idx 1
-  adversaryBotSpec.botName = advNNEvalColored->getModelName();
-  adversaryBotSpec.nnEval = advNNEvalColored;
+  adversaryBotSpec.botName = advNNEval->getModelName();
+  adversaryBotSpec.nnEval = advNNEval;
   adversaryBotSpec.baseParams = advSearchParams;
-  adversaryBotSpec.victimplay = true;
 
   MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
   MatchPairer::BotSpec& botSpecW = advColor == C_BLACK ? victimBotSpec : adversaryBotSpec;
@@ -92,9 +85,9 @@ static FinishedGameData* runOneVictimplayGame(
     " victim (" + victimColorStr + ")" +
     " - adv (" + adversaryColorStr + ")" +
     " score: " + Global::floatToString(victimMinusAdvScore) +
-    "; victim_" + SearchParams::searchAlgorithmToStr(victimSearchParams.searchAlgorithm) +
+    "; victim_" + victimSearchParams.getSearchAlgoAsStr() +
             "@" + Global::intToString(victimSearchParams.maxVisits) +
-    " adv_" + SearchParams::searchAlgorithmToStr(advSearchParams.searchAlgorithm) +
+    " adv_" + advSearchParams.getSearchAlgoAsStr() +
         "@" + Global::intToString(advSearchParams.maxVisits)
   );
 

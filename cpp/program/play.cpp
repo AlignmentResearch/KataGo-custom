@@ -6,7 +6,6 @@
 #include "../program/setup.h"
 #include "../search/asyncbot.h"
 #include "../dataio/files.h"
-#include "../neuralnet/nneval_colored.h"
 
 using namespace std;
 
@@ -594,15 +593,13 @@ MatchPairer::MatchPairer(
   const vector<SearchParams>& bParamss,
   bool forSelfPlay,
   bool forGateKeeper,
-  const vector<bool>& exclude,
-  const vector<bool>& uVictimplays
+  const vector<bool>& exclude
 )
   :numBots(nBots),
    botNames(bNames),
    nnEvals(nEvals),
    baseParamss(bParamss),
    excludeBot(exclude),
-   useVictimplays(uVictimplays.size() > 0 ? uVictimplays : vector<bool>(nBots)),
    secondaryBots(),
    blackPriority(),
    nextMatchups(),
@@ -620,7 +617,6 @@ MatchPairer::MatchPairer(
   assert(nnEvals.size() == numBots);
   assert(baseParamss.size() == numBots);
   assert(exclude.size() == numBots);
-  assert(useVictimplays.size() == numBots);
   if(forSelfPlay) {
     assert(numBots == 1);
     numGamesTotal = cfg.getInt64("numGamesTotal",1,((int64_t)1) << 62);
@@ -687,30 +683,15 @@ bool MatchPairer::getMatchup(
     matchup = make_pair(matchup.second,matchup.first);
   }
 
-  auto fillBotSpec = [this, &logger](
-    BotSpec& myBotSpec,
-    const int myIdx,
-    const int opIdx,
-    const Color myColor
-  ) {
-    myBotSpec.botIdx = myIdx;
-    myBotSpec.botName = botNames[myIdx];
-    myBotSpec.baseParams = baseParamss[myIdx];
-    myBotSpec.victimplay = useVictimplays[myIdx];
-    if (!myBotSpec.victimplay) {
-      myBotSpec.nnEval = nnEvals[myIdx];
-    } else {
-      NNEvaluator* myNNEval = nnEvals[myIdx];
-      NNEvaluator* opNNEval = nnEvals[opIdx];
-      myBotSpec.nnEval = new NNEvaluatorColored(
-        myColor == C_BLACK ? myNNEval : opNNEval,
-        myColor == C_BLACK ? opNNEval : myNNEval
-      );
-    }
-  };
+  botSpecB.botIdx = matchup.first;
+  botSpecB.botName = botNames[matchup.first];
+  botSpecB.nnEval = nnEvals[matchup.first];
+  botSpecB.baseParams = baseParamss[matchup.first];
 
-  fillBotSpec(botSpecB, matchup.first, matchup.second, C_BLACK);
-  fillBotSpec(botSpecW, matchup.second, matchup.first, C_WHITE);
+  botSpecW.botIdx = matchup.second;
+  botSpecW.botName = botNames[matchup.second];
+  botSpecW.nnEval = nnEvals[matchup.second];
+  botSpecW.baseParams = baseParamss[matchup.second];
 
   return true;
 }
@@ -889,7 +870,7 @@ static NNRawStats computeNNRawStats(const Search* bot, const Board& board, const
   MiscNNInputParams nnInputParams;
   nnInputParams.drawEquivalentWinsForWhite = bot->searchParams.drawEquivalentWinsForWhite;
   Board b = board;
-  bot->nnEvaluator->evaluate(b,hist,pla,nnInputParams,buf,false,false);
+  bot->getNNEvaluator()->evaluate(b,hist,pla,nnInputParams,buf,false,false);
   NNOutput& nnOutput = *(buf.result);
 
   NNRawStats nnRawStats;
@@ -1256,12 +1237,12 @@ FinishedGameData* Play::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed, nullptr);
     botW = botB;
   }
   else {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed + "@B");
-    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, searchRandSeed + "@W");
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed + "@B", botSpecW.nnEval);
+    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, searchRandSeed + "@W", botSpecB.nnEval);
   }
 
   FinishedGameData* gameData = runGame(
@@ -1343,8 +1324,8 @@ FinishedGameData* Play::runGame(
   }
   //Vary komi more when things are completely random to set a better prior for how komi affects evals
   if(playSettings.fancyKomiVarying &&
-     botB->nnEvaluator->isNeuralNetLess() &&
-     (botW == NULL || botW->nnEvaluator->isNeuralNetLess())) {
+     botB->getNNEvaluator()->isNeuralNetLess() &&
+     (botW == NULL || botW->getNNEvaluator()->isNeuralNetLess())) {
     double randKomi = hist.rules.komi + 1.5 * sqrt(board.x_size * board.y_size) * gameRand.nextGaussianTruncated(2.5);
     extraBlackAndKomi.komiMean = (float)randKomi;
     PlayUtils::setKomiWithNoise(extraBlackAndKomi,hist,gameRand);
@@ -1853,7 +1834,7 @@ FinishedGameData* Play::runGame(
           Search* toMoveBot2 = sp2->pla == P_BLACK ? botB : botW;
           MiscNNInputParams nnInputParams;
           nnInputParams.drawEquivalentWinsForWhite = toMoveBot2->searchParams.drawEquivalentWinsForWhite;
-          toMoveBot2->nnEvaluator->evaluate(
+          toMoveBot2->getNNEvaluator()->evaluate(
             sp2->board,sp2->hist,sp2->pla,nnInputParams,
             nnResultBuf,false,false
           );
@@ -2076,7 +2057,7 @@ void Play::maybeForkGame(
     copyHist.makeBoardMoveAssumeLegal(copy,loc,pla,NULL);
     MiscNNInputParams nnInputParams;
     nnInputParams.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
-    bot->nnEvaluator->evaluate(copy,copyHist,getOpp(pla),nnInputParams,buf,false,false);
+    bot->getNNEvaluator()->evaluate(copy,copyHist,getOpp(pla),nnInputParams,buf,false,false);
     std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
     double whiteScore = nnOutput->whiteScoreMean;
     if(bestMove == Board::NULL_LOC || (pla == P_WHITE && whiteScore > bestScore) || (pla == P_BLACK && whiteScore < bestScore)) {
@@ -2226,7 +2207,7 @@ FinishedGameData* GameRunner::runGame(
   std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization,
   std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove
 ) {
-  const bool forVictimPlay = bSpecB.victimplay || bSpecW.victimplay;
+  const bool forVictimPlay = playSettings.forSelfPlay && (bSpecB.botIdx != bSpecW.botIdx);
 
   // checkForNewNNEval is non-NULL when switchNetsMidGame is true.
   // We do not currently support switchNetsMidGame if we are doing victimPlay.
@@ -2328,12 +2309,12 @@ FinishedGameData* GameRunner::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed, nullptr);
     botW = botB;
   }
   else {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed + "@B");
-    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, seed + "@W");
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed + "@B", botSpecW.nnEval);
+    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, seed + "@W", botSpecB.nnEval);
   }
   if(afterInitialization != nullptr) {
     if(botSpecB.botIdx == botSpecW.botIdx) {

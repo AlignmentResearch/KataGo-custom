@@ -1,17 +1,21 @@
 #include "../search/searchparams.h"
 
-SearchParams::SearchAlgorithm SearchParams::strToSearchAlgorithm(const std::string& algoStr) {
+SearchParams::SearchAlgorithm SearchParams::strToSearchAlgo(const std::string& algoStr) {
   if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
   if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
   ASSERT_UNREACHABLE;
 }
 
-std::string SearchParams::searchAlgorithmToStr(SearchAlgorithm algo) {
+std::string SearchParams::searchAlgoToStr(SearchAlgorithm algo) {
   switch(algo) {
     case SearchAlgorithm::MCTS: return "MCTS";
     case SearchAlgorithm::EMCTS1: return "EMCTS1";
     default: ASSERT_UNREACHABLE;
   }
+}
+
+std::string SearchParams::getSearchAlgoAsStr() const {
+  return searchAlgoToStr(searchAlgo);
 }
 
 //Default search params
@@ -20,7 +24,8 @@ std::string SearchParams::searchAlgorithmToStr(SearchAlgorithm algo) {
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :searchAlgorithm(SearchAlgorithm::MCTS),
+  :searchAlgo(SearchAlgorithm::MCTS),
+   EMCTS1_noiseOppNodes(true),
    canPassFirst(true),
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),

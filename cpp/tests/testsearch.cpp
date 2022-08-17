@@ -55,9 +55,9 @@ static void printBasicStuffAfterSearch(const Board& board, const BoardHistory& h
   Board::printBoard(cout, board, Board::NULL_LOC, &(hist.moveHistory));
   cout << "Root visits: " << search->getRootVisits() << "\n";
   cout << "New playouts: " << search->lastSearchNumPlayouts << "\n";
-  cout << "NN rows: " << search->nnEvaluator->numRowsProcessed() << endl;
-  cout << "NN batches: " << search->nnEvaluator->numBatchesProcessed() << endl;
-  cout << "NN avg batch size: " << search->nnEvaluator->averageProcessedBatchSize() << endl;
+  cout << "NN rows: " << search->getNNEvaluator()->numRowsProcessed() << endl;
+  cout << "NN batches: " << search->getNNEvaluator()->numBatchesProcessed() << endl;
+  cout << "NN avg batch size: " << search->getNNEvaluator()->averageProcessedBatchSize() << endl;
   cout << "PV: ";
   search->printPV(cout, search->rootNode, 25);
   cout << "\n";
@@ -148,8 +148,8 @@ static void runBotOnPosition(AsyncBot* bot, Board board, Player nextPla, BoardHi
 
   const Search* search = bot->getSearch();
   if(!opts.noClearCache) {
-    search->nnEvaluator->clearCache();
-    search->nnEvaluator->clearStats();
+    search->getNNEvaluator()->clearCache();
+    search->getNNEvaluator()->clearStats();
   }
   if(!opts.noClearBot)
     bot->clearSearch();
@@ -959,9 +959,9 @@ static void runV8Tests(NNEvaluator* nnEval, NNEvaluator* nnEval19Exact, Logger& 
       cout << search->rootBoard << endl;
       cout << "Root visits: " << search->getRootVisits() << "\n";
       cout << "Last search playouts: " << search->lastSearchNumPlayouts << "\n";
-      cout << "NN rows: " << search->nnEvaluator->numRowsProcessed() << endl;
-      cout << "NN batches: " << search->nnEvaluator->numBatchesProcessed() << endl;
-      cout << "NN avg batch size: " << search->nnEvaluator->averageProcessedBatchSize() << endl;
+      cout << "NN rows: " << search->getNNEvaluator()->numRowsProcessed() << endl;
+      cout << "NN batches: " << search->getNNEvaluator()->numBatchesProcessed() << endl;
+      cout << "NN avg batch size: " << search->getNNEvaluator()->averageProcessedBatchSize() << endl;
       if(search->searchParams.playoutDoublingAdvantage != 0)
         cout << "PlayoutDoublingAdvantage: " << (
           search->getRootPla() == getOpp(search->getPlayoutDoublingAdvantagePla()) ?
@@ -4476,4 +4476,3 @@ void Tests::runNNBatchingTest(const string& modelFile, bool inputsNHWC, bool use
   delete nnEval;
   cout << "Done" << endl;
 }
-

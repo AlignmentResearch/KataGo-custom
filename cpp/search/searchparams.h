@@ -7,9 +7,10 @@
 struct SearchParams {
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };
-  static SearchAlgorithm strToSearchAlgorithm(const std::string& algoStr);
-  static std::string searchAlgorithmToStr(SearchAlgorithm algo);
-  SearchAlgorithm searchAlgorithm;
+  static SearchAlgorithm strToSearchAlgo(const std::string& algoStr);
+  static std::string searchAlgoToStr(SearchAlgorithm algo);
+  SearchAlgorithm searchAlgo;
+  std::string getSearchAlgoAsStr() const;
 
   // Whether to noise opponent nodes during EMCTS1
   bool EMCTS1_noiseOppNodes;

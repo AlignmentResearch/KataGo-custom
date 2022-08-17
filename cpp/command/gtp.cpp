@@ -325,7 +325,7 @@ struct GTPEngine {
   bool analysisAntiMirror;
 
   NNEvaluator* nnEval;
-  NNEvaluator* opNNEval; // Optional (required when using EMCTS`)
+  NNEvaluator* opNNEval; // Optional (required when using EMCTS1)
   AsyncBot* bot;
   Rules currentRules; //Should always be the same as the rules in bot, if bot is not NULL.
 

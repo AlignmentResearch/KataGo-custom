@@ -205,7 +205,7 @@ void EMCTS1Tests::testConstPolicies() {
 void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   cout << "Testing MCTS..." << endl;
 
-  ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
+  ConfigParser cfg(EMCTS1_CONFIG_PATH);
   Logger logger(&cfg, false);
 
   vector<SearchParams> searchParamss =

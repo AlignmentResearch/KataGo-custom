@@ -2937,7 +2937,6 @@ void Search::selectBestChildToDescend(
       }
     }
 
-    // cout << "Descending (" << &node << "): EMCTS1 " << Location::toString(bestChildMoveLoc, rootBoard) << endl;
     return;
   }
 
@@ -2989,8 +2988,6 @@ void Search::selectBestChildToDescend(
       bestChildMoveLoc = bestNewMoveLoc;
     }
   }
-
-  // cout << "Descending (" << &node << "): " << maxSelectionValue << ' ' << Location::toString(bestChildMoveLoc, rootBoard) << endl;
 }
 
 double Search::pruneNoiseWeight(vector<MoreNodeStats>& statsBuf, int numChildren, double totalChildWeight, const double* policyProbsBuf) const {
@@ -3258,7 +3255,6 @@ int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) 
     && thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) == 0
   ) {
     assert(finishedPlayout);
-    // cout << "Descending again!" << endl;
 
     // Descend one more time starting from last visited node
     SearchNode* const resumeDescentNode = thread.lastVisitedNode;

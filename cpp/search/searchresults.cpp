@@ -236,8 +236,10 @@ bool Search::getPlaySelectionValues(
         double policyProb = policyProbs[movePos];
         if(
           !rootHistory.isLegal(rootBoard, moveLoc, rootPla) || policyProb < 0 ||
-          (obeyAllowedRootMove && !isAllowedRootMove(moveLoc)))
+          (obeyAllowedRootMove && !isAllowedRootMove(moveLoc)) ||
+          (suppressPass && moveLoc == Board::PASS_LOC)) {
           continue;
+        }
         const std::vector<int>& avoidMoveUntilByLoc =
           rootPla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
         if(avoidMoveUntilByLoc.size() > 0) {
@@ -540,6 +542,8 @@ Loc Search::getChosenMoveLoc() {
 bool Search::shouldSuppressPass(const SearchNode* n) const {
   if(n != rootNode)
     return false;
+  if(!rootHistory.existsNonPassingLegalMove(rootBoard, rootPla))
+    return false;
 
   if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
     if(!searchParams.fillDameBeforePass || n == NULL)
@@ -573,7 +577,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
       break;
     }
   }
-  if(passNode == NULL)
+  if(passNode == NULL && searchParams.passingBehavior == SearchParams::PassingBehavior::Standard)
     return false;
 
   double passWeight;
@@ -602,18 +606,21 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
       Color territories[Board::MAX_ARR_SIZE];
       rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
 
-      for(int i = 0; i < childrenCapacity; i++) {
-        const SearchNode* child = children[i].getIfAllocated();
-        if(child == NULL)
-          break;
-        Loc moveLoc = child->prevMoveLoc;
-        if(moveLoc == Board::PASS_LOC)
-          continue;
+      // Iterate through all possible non-passing moves
+      // and check if they are legal modulo passing
+      for(int y = 0; y < rootBoard.y_size; y++) {
+        for(int x = 0; x < rootBoard.x_size; x++) {
+          Loc loc = Location::getLoc(x, y, rootBoard.x_size);
 
-        // Found a legal move that isn't in our own pass-alive territory.
-        // This means we should not pass, i.e. passing should be suppressed.
-        if(!playersMatch(territories[moveLoc], rootPla)) {
-          return true;
+          // Not a legal move, keep looking
+          if(!rootHistory.isLegalModuloPassing(rootBoard, loc, rootPla))
+            continue;
+          
+          // Found a legal move that isn't in our own pass-alive territory.
+          // This means we should not pass, i.e. passing should be suppressed.
+          if(!playersMatch(territories[loc], rootPla)) {
+            return true;
+          }
         }
       }
       return false;

@@ -181,7 +181,7 @@ def recompute_statistics(
 ) -> Optional[PlayerStat]:
     # don't have enough data
     if len(games) < games_for_compute:
-        logging.info("Incomplete statistics, got only {} games".format(len(games)))
+        logging.info(f"Incomplete statistics, got only {len(games)} games")
         return None
 
     sum_wins = 0

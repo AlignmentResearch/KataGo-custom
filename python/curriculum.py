@@ -316,6 +316,7 @@ class Curriculum:
         return self.victims[self.victim_idx]
 
     def __try_victim_copy(self, force_if_exists=False):
+        # Attempt to copy
         num_efforts = 0
         victim_name = self._cur_victim.name
         victim_path = os.path.join(self.victims_output_dir, victim_name)
@@ -323,6 +324,8 @@ class Curriculum:
             return
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
+                # Make sure victims_output_dir exists
+                os.makedirs(self.victims_output_dir, exist_ok=True)
                 shutil.copy(
                     os.path.join(self.victims_input_dir, victim_name),
                     self.victims_output_dir,

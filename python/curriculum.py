@@ -316,6 +316,10 @@ class Curriculum:
         return self.victims[self.victim_idx]
 
     def __try_victim_copy(self, force_if_exists=False):
+        # Make sure victims_output_dir exists
+        os.makedirs(self.victims_output_dir, exist_ok=True)
+
+        # Attempt to copy
         num_efforts = 0
         victim_name = self._cur_victim.name
         victim_path = os.path.join(self.victims_output_dir, victim_name)

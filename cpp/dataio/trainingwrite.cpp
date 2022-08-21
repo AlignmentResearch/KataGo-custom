@@ -857,6 +857,26 @@ void TrainingDataWriter::writeAndClearIfFull() {
   }
 }
 
+bool TrainingDataWriter::isVictimNamePattern(const std::string &name)
+{
+  bool haveVictim = name.find("victim") != std::string::npos;
+  bool haveAdv = (name.find("__") != std::string::npos);
+  return haveVictim && !haveAdv;
+}
+
+Player TrainingDataWriter::getVictimPlayerColor(const FinishedGameData &data)
+{
+  bool bIsVictim = isVictimNamePattern(data.bName);
+  bool wIsVictim = isVictimNamePattern(data.wName);
+  if(bIsVictim && !wIsVictim) {
+    return P_BLACK;
+  } else if(wIsVictim && !bIsVictim) {
+    return P_WHITE;
+  } else {
+    return P_NONE;  // either two victims or two adversaries
+  }
+}
+
 
 
 void TrainingDataWriter::flushIfNonempty() {
@@ -945,11 +965,11 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   BoardHistory hist(data.startHist);
   Player nextPlayer = data.startPla;
 
+  Player victimPlayer = getVictimPlayerColor(data);
   if (forVictimPlay) {
-    // When doing victimplay, exactly one side should be named "victim".
-    assert((data.bName == "victim") ^ (data.wName == "victim"));
+    // When doing victimplay, exactly one side should be a victim.
+    assert(victimPlayer != P_NONE);
   }
-  Player victimPlayer = (data.bName == "victim" ? P_BLACK : P_WHITE);
 
   //Write main game rows
   int startTurnIdx = (int)data.startHist.moveHistory.size();

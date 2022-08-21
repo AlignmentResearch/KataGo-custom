@@ -15,7 +15,7 @@ std::time_t to_time_t(TP tp)
   return system_clock::to_time_t(sctp);
 }
 
-bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string& modelName, string& modelFile, string& modelDir, time_t& modelTime) {
+bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string& modelName, string& modelFile, string& modelDir, time_t& modelTime, bool checkDirsOnly) {
   namespace gfs = ghc::filesystem;
 
   bool hasLatestTime = false;
@@ -23,7 +23,7 @@ bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string&
   gfs::path latestPath;
   for(gfs::directory_iterator iter(modelsDir); iter != gfs::directory_iterator(); ++iter) {
     gfs::path dirPath = iter->path();
-    if(!gfs::is_directory(dirPath))
+    if(checkDirsOnly && !gfs::is_directory(dirPath))
       continue;
 
     time_t thisTime = to_time_t(gfs::last_write_time(dirPath));
@@ -39,8 +39,13 @@ bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string&
   modelDir = "/dev/null";
   if(hasLatestTime) {
     modelName = latestPath.filename().string();
-    modelDir = modelsDir + "/" + modelName;
-    modelFile = modelsDir + "/" + modelName + "/model.bin.gz";
+    if(gfs::is_directory(latestPath)) {
+      modelDir = modelsDir + "/" + modelName;
+      modelFile = modelsDir + "/" + modelName + "/model.bin.gz";
+    } else {
+      modelDir = modelsDir;
+      modelFile = modelsDir + "/" + modelName;
+    }
     if(!gfs::exists(gfs::path(modelFile))) {
       modelFile = modelsDir + "/" + modelName + "/model.txt.gz";
       if(!gfs::exists(gfs::path(modelFile))) {

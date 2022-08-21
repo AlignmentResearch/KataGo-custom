@@ -1376,6 +1376,8 @@ FinishedGameData* Play::runGame(
   auto maybeCheckForNewNNEval = [&botB,&botW,&botSpecB,&botSpecW,&checkForNewNNEval,&gameRand,&gameData](int nextTurnIdx) {
     //Check if we got a new nnEval, with some probability.
     //Randomized and low-probability so as to reduce contention in checking, while still probably happening in a timely manner.
+    //TODO: update this part for victimplay since we need to change
+    //the evaluator only for the adversary!
     if(checkForNewNNEval != nullptr && gameRand.nextBool(0.1)) {
       NNEvaluator* newNNEval = checkForNewNNEval();
       if(newNNEval != NULL) {

@@ -108,7 +108,7 @@ jobs:
       # Most of KataGo files won't pass linting, and we don't want to change
       # all of them as it will make merging upstream changes tricky. So only
       # lint files we add, or have substantially modified.
-      FULL_LINT_FILES: "python/sgfmill/__init__.py"  # placeholder!
+      FULL_LINT_FILES: python/curriculum.py python/sgfmill/__init__.py
       # We type most files, but exclude a few that depend on torch that
       # we don't have installed. (And don't want to, as it's not needed for training.)
       PYTYPE_EXCLUDE_FILES: python/genboard_common.py python/genboard_run.py python/genboard_train.py python/upload_model.py

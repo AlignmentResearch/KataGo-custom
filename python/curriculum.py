@@ -32,9 +32,7 @@ class AdvGameInfo:
 class PlayerStat:
     """Class for storing game statistics.
 
-    Statistics either represents the adversary
-    or stores victim changing criteria.
-    For victim only one criteria can be enabled, all others should be None.
+    Statistics is being represented from the adversary perspective.
     """
 
     name: Optional[str] = None
@@ -48,13 +46,33 @@ class PlayerStat:
         del d["name"]
         return d
 
-    def can_be_victim_criteria(self) -> bool:
+
+@dataclass(frozen=True)
+class VictimCriteria(PlayerStat):
+    """Criteria for the victim change.
+
+    Victim is represented by the model name and max visits.
+    Criteria are represented by the statistics members.
+    For victim only one criterion can be enabled, all others should be None.
+    """
+
+    max_visits: Optional[int] = None
+
+    def get_stat_members(self) -> Dict[str, float]:
+        d = super().get_stat_members()
+        del d["max_visits"]
+        return d
+
+    def valid(self) -> bool:
+        if self.name is None:
+            logging.warning("Victim criteria: victim name is None")
+            return False
         criteria = self.get_stat_members()
         num_enabled = len([v for k, v in criteria.items() if v is not None])
         return num_enabled == 1
 
     # check if adv_stat has a greater value of enabled criteria
-    def check_if_gt(self, adv_stat) -> bool:
+    def check_if_gt(self, adv_stat: PlayerStat) -> bool:
         criteria = self.get_stat_members()
         adv_vals = adv_stat.get_stat_members()
         for k, v in criteria.items():
@@ -274,14 +292,8 @@ class Curriculum:
         self.finished = False
         self.victims = []
         for line in config:
-            cond = PlayerStat(
-                name=line["name"],
-                win_rate=line["win_rate"],
-                score_diff=line["diff_score"],
-                score_wo_komi_diff=line["diff_score_wo_komi"],
-                policy_loss=line["policy_loss"],
-            )
-            if not cond.can_be_victim_criteria():
+            cond = VictimCriteria(**line)
+            if not cond.valid():
                 raise ValueError(
                     "Incorrect victim change criteria for victim '{}': "
                     "exactly one value should be non-None".format(line["name"]),
@@ -312,7 +324,7 @@ class Curriculum:
         logging.info("Curriculum initial setup is complete")
 
     @property
-    def _cur_victim(self) -> PlayerStat:
+    def _cur_victim(self) -> VictimCriteria:
         return self.victims[self.victim_idx]
 
     def __try_victim_copy(self, force_if_exists=False):

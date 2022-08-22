@@ -1,7 +1,8 @@
 [
     {
         "name": "kata1-b6c96-s41312768-d6061202.txt.gz",
-        "max_visits": 200,
+        "max_visits_victim": 200,
+        "max_visits_adv": 200,
         "win_rate": 0.75,
         "score_diff": null,
         "score_wo_komi_diff": null,
@@ -9,17 +10,17 @@
     },
     {
         "name": "kata1-b6c96-s41312768-d6061202.txt.gz",
-        "max_visits": 500,
+        "max_visits_victim": 500,
         "win_rate": 0.75
     },
     {
         "name": "kata1-b10c128-s197428736-d67404019.txt.gz",
-        "max_visits": 300,
+        "max_visits_victim": 300,
         "win_rate": 0.75
     },
     {
         "name": "kata1-b10c128-s197428736-d67404019.txt.gz",
-        "max_visits": 500,
+        "max_visits_victim": 500,
         "win_rate": 0.75
     },
     {

@@ -56,11 +56,13 @@ class VictimCriteria(PlayerStat):
     For victim only one criterion can be enabled, all others should be None.
     """
 
-    max_visits: Optional[int] = None
+    max_visits_victim: Optional[int] = None
+    max_visits_adv: Optional[int] = None
 
     def get_stat_members(self) -> Dict[str, float]:
         d = super().get_stat_members()
-        del d["max_visits"]
+        del d["max_visits_victim"]
+        del d["max_visits_adv"]
         return d
 
     def valid(self) -> bool:
@@ -82,6 +84,29 @@ class VictimCriteria(PlayerStat):
                 )
                 if adv_vals[k] > v:
                     return True
+        return False
+
+    def __eq__(self, other):
+        """Check current victim against the latest parameters.
+
+        Parameters can be either VictimCriteria or a dict.
+        """
+        members = ["name", "max_visits_victim", "max_visits_adv"]
+        d0 = asdict(self)
+        if isinstance(other, VictimCriteria):
+            d1 = asdict(other)
+        else:
+            d1 = other
+
+        try:
+            for m in members:
+                if d0[m] != d1[m]:
+                    return False
+            return True
+        except TypeError:
+            logging.warning("TypeError in VictimCriteria comparison")
+        except KeyError:
+            logging.warning("KeyError in VictimCriteria comparison")
         return False
 
 
@@ -180,15 +205,19 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 def get_files_sorted_by_modification_time(
     folder: str,
     extension: Optional[str] = None,
+    ignore_extensions: Optional[List[str]] = None,
 ) -> Sequence[str]:
-    all_sgfs = []
+    all_files = []
     for path, dirnames, filenames in os.walk(folder, followlinks=True):
         for f in filenames:
+            ext = os.path.splitext(f)[1]
+            if ignore_extensions is not None and ext in ignore_extensions:
+                continue
             if extension is None or os.path.splitext(f)[1] == extension:
                 file_path = os.path.join(path, f)
-                all_sgfs.append([file_path, os.path.getmtime(file_path)])
-    all_sgfs.sort(key=lambda x: x[1], reverse=True)
-    all_sgfs = [x[0] for x in all_sgfs]
+                all_files.append([file_path, os.path.getmtime(file_path)])
+    all_files.sort(key=lambda x: x[1], reverse=True)
+    all_sgfs = [x[0] for x in all_files]
     return all_sgfs
 
 
@@ -267,6 +296,7 @@ class Curriculum:
         """
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
+        self.SELFPLAY_CONFIG_OVERRIDE_NAME = "victim.cfg"
 
         self.stat_files = []
         self.sgf_games = []
@@ -287,6 +317,8 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
+        self.selfplay_config_override_path =\
+            os.path.join(self.victims_output_dir, self.SELFPLAY_CONFIG_OVERRIDE_NAME)
 
         self.victim_idx = 0
         self.finished = False
@@ -304,21 +336,47 @@ class Curriculum:
         logging.info("\n".join([str(x) for x in config]))
 
         logging.info("Finding the latest victim...")
-        victim_files = get_files_sorted_by_modification_time(self.victims_output_dir)
+        victim_files = get_files_sorted_by_modification_time(
+            self.victims_output_dir, ignore_extensions=[".cfg", ".conf"])
         if victim_files:
-            try:
-                fname = os.path.basename(victim_files[0])
-                self.victim_idx = [v.name for v in self.victims].index(fname)
-            except ValueError:
+            last_victim_name = os.path.basename(victim_files[0])
+            victim_params = {
+                "name": last_victim_name,
+                "max_visits_victim": None,
+                "max_visits_adv": None
+            }
+
+            # find current maxVisits settings
+            if os.path.exists(self.selfplay_config_override_path):
+                with open(self.selfplay_config_override_path) as f:
+                    for line in f.readlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        name, val = line.split('=')
+                        if name == "maxVisits0":
+                            victim_params["max_visits_victim"] = int(val)
+                        elif name == "maxVisits1":
+                            victim_params["max_visits_adv"] = int(val)
+
+            # determine current victim-with-max-visits index
+            victim_found = False
+            for cur_idx in range(len(self.victims)):
+                if self.victims[cur_idx] == victim_params:
+                    self.victim_idx = cur_idx
+                    victim_found = True
+                    break
+
+            if not victim_found:
                 logging.warning(
-                    "Victim '{}' is not found in '{}'".format(
-                        victim_files[0],
+                    "Victim '{}' is not found in '{}', starting from scratch".format(
+                        str(victim_params),
                         self.victims_output_dir,
                     ),
                 )
 
         logging.info(
-            "Copying the latest victim '{}'...".format(self._cur_victim.name),
+            "Copying the latest victim '{}'...".format(self._cur_victim),
         )
         self.__try_victim_copy()
         logging.info("Curriculum initial setup is complete")
@@ -326,6 +384,13 @@ class Curriculum:
     @property
     def _cur_victim(self) -> VictimCriteria:
         return self.victims[self.victim_idx]
+
+    def __update_victim_config(self):
+        with open(self.selfplay_config_override_path, "w") as f:
+            if self._cur_victim.max_visits_victim is not None:
+                f.write(f"maxVisits0={self._cur_victim.max_visits_victim}")
+            if self._cur_victim.max_visits_adv is not None:
+                f.write(f"maxVisits1={self._cur_victim.max_visits_adv}")
 
     def __try_victim_copy(self, force_if_exists=False):
         # Attempt to copy
@@ -338,6 +403,7 @@ class Curriculum:
             try:
                 # Make sure victims_output_dir exists
                 os.makedirs(self.victims_output_dir, exist_ok=True)
+                self.__update_victim_config()
                 shutil.copy(
                     os.path.join(self.victims_input_dir, victim_name),
                     self.victims_output_dir,

@@ -343,7 +343,7 @@ class Curriculum:
             victim_params = {
                 "name": last_victim_name,
                 "max_visits_victim": None,
-                "max_visits_adv": None
+                "max_visits_adv": None,
             }
 
             # find current maxVisits settings

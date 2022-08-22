@@ -182,6 +182,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   SearchParams baseParams = paramss[0];
   SearchParams victimSearchParams = paramss[0];
   SearchParams advSearchParams = paramss[paramss.size() - 1];
+  mutex paramsReloadMutex;
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
@@ -368,6 +369,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &baseParams,
     &victimSearchParams,
     &advSearchParams,
+    &paramsReloadMutex,
     &gameSeedBase,
     &victimplay,
     &reloadVictims,
@@ -376,17 +378,21 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &nnVictimPath,
     &loadNN
   ](int threadIdx) {
-    auto shouldStopFunc = []() {
+    auto shouldStopFunc = []() noexcept {
       return shouldStop.load();
     };
 
     string prevModelName;
     Rand thisLoopSeedRand;
+    std::string victimCfgReloadPath = nnVictimPath + "/victim.cfg";
+    std::string logPrefix = "Game loop thread " + to_string(threadIdx) + ": ";
     while(true) {
       if(shouldStop.load())
         break;
 
       shared_ptr<NNEvaluator> curVictimNNEval;
+      SearchParams curVictimSearchParams;
+      SearchParams curAdvSearchParams;
       if(reloadVictims) {
         string modelName;
         string modelFile;
@@ -455,7 +461,42 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
             log_str += " " + to_string(c);
         }
         if(!log_str.empty()) {
-          logger.write("Game loop thread " + to_string(threadIdx) + ":" + log_str);
+          logger.write(logPrefix + log_str);
+        }
+
+        if(FileUtils::exists(victimCfgReloadPath)) {
+          ConfigParser victimCfg;
+          std::string paramsChangeLog;
+          try {
+            victimCfg.initialize(victimCfgReloadPath);
+            {
+              lock_guard<mutex> lock(paramsReloadMutex);
+              if(victimCfg.contains("maxVisits0")) {
+                int64_t mv = victimCfg.getInt64("maxVisits0", (int64_t)1, (int64_t)1 << 50);
+                if(victimSearchParams.maxVisits != mv) {
+                  paramsChangeLog += "\n  victim maxVisits reloaded from " +
+                      std::to_string(victimSearchParams.maxVisits) +
+                      " to " + std::to_string(mv);
+                  victimSearchParams.maxVisits = mv;
+                }
+              }
+              if(victimCfg.contains("maxVisits1")) {
+                int64_t mv = victimCfg.getInt64("maxVisits1", (int64_t)1, (int64_t)1 << 50);
+                if(advSearchParams.maxVisits != mv) {
+                  paramsChangeLog += "\n  adversary maxVisits reloaded from " +
+                      std::to_string(advSearchParams.maxVisits) +
+                      " to " + std::to_string(mv);
+                  advSearchParams.maxVisits = mv;
+                }
+              }
+            }  // end of mutex scope
+          } catch (...) {
+            logger.write(logPrefix + "victim config reloading error");
+          }
+
+          if(!paramsChangeLog.empty()) {
+            logger.write(logPrefix + paramsChangeLog);
+          }
         }
       } else if (victimplay) {
         // no need for the mutex here since we never modify victimNNEval
@@ -463,16 +504,24 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         curVictimNNEval = victimNNEvals[0].lock();
       }
 
+      // get the latest search parameters copy
+      // (probably changed from another thread at this point)
+      {
+        lock_guard<mutex> lock(paramsReloadMutex);
+        curVictimSearchParams = victimSearchParams;
+        curAdvSearchParams = advSearchParams;
+      }
+
       NNEvaluator* nnEval = manager->acquireLatest();
       assert(nnEval != NULL);
 
       if(prevModelName != nnEval->getModelName()) {
         prevModelName = nnEval->getModelName();
-        logger.write("Game loop thread " + Global::intToString(threadIdx) + " starting game on new neural net: " + prevModelName);
+        logger.write(logPrefix + "starting game on new neural net: " + prevModelName);
       }
 
       //Callback that runGame will call periodically to ask us if we have a new neural net
-      std::function<NNEvaluator*()> checkForNewNNEval = [&manager,&nnEval,&prevModelName,&logger,&threadIdx]() -> NNEvaluator* {
+      std::function<NNEvaluator*()> checkForNewNNEval = [&manager,&nnEval,&prevModelName,&logger,&logPrefix]() -> NNEvaluator* {
         NNEvaluator* newNNEval = manager->acquireLatest();
         assert(newNNEval != NULL);
         if(newNNEval == nnEval) {
@@ -483,7 +532,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
         nnEval = newNNEval;
         prevModelName = nnEval->getModelName();
-        logger.write("Game loop thread " + Global::intToString(threadIdx) + " changing midgame to new neural net: " + prevModelName);
+        logger.write(logPrefix + "changing midgame to new neural net: " + prevModelName);
         return nnEval;
       };
 
@@ -497,7 +546,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = runOneVictimplayGame(
           curVictimNNEval.get(), nnEval,
-          victimSearchParams, advSearchParams,
+          curVictimSearchParams, curAdvSearchParams,
           gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
           gameRunner, shouldStopFunc, logger,
           gameIdx, seed
@@ -535,7 +584,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         break;
     }
 
-    logger.write("Game loop thread " + Global::intToString(threadIdx) + " terminating");
+    logger.write(logPrefix + "terminating");
   };
   auto gameLoopProtected = [&logger,&gameLoop](int threadIdx) {
     Logger::logThreadUncaught("game loop", &logger, [&](){ gameLoop(threadIdx); });

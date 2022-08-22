@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import pathlib
 import shutil
 import sys
 import time
@@ -37,10 +38,10 @@ class PlayerStat:
     For victim only one criteria can be enabled, all others should be None.
     """
 
-    name: Optional[str] = None
-    win_rate: Optional[float] = None
-    score_diff: Optional[float] = None
-    score_wo_komi_diff: Optional[float] = None
+    name: str
+    win_rate: float
+    score_diff: float
+    score_wo_komi_diff: float
     policy_loss: Optional[float] = None
 
     def get_stat_members(self) -> Dict[str, float]:
@@ -160,7 +161,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 
 
 def get_files_sorted_by_modification_time(
-    folder: str,
+    folder: pathlib.Path,
     extension: Optional[str] = None,
 ) -> Sequence[str]:
     all_sgfs = []
@@ -215,6 +216,7 @@ def recompute_statistics(
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
 
     return PlayerStat(
+        name=current_victim_name,
         win_rate=win_rate,
         score_diff=mean_diff_score,
         score_wo_komi_diff=mean_diff_score_wo_komi,
@@ -230,11 +232,11 @@ class Curriculum:
 
     def __init__(
         self,
-        victims_input_dir: str,
-        victims_output_dir: str,
+        victims_input_dir: pathlib.Path,
+        victims_output_dir: pathlib.Path,
         config: Optional[Sequence[Config]] = None,
         config_json: Optional[str] = None,
-        config_json_file: Optional[str] = None,
+        config_json_file: Optional[pathlib.Path] = None,
     ):
         """Initial curriculum setup.
 
@@ -255,7 +257,7 @@ class Curriculum:
         self.game_hashes = dict()
 
         if config_json_file is not None:
-            logging.info("Curriculum: loading JSON config from '%s'", config_json_file)
+            logging.info(f"Curriculum: loading JSON config from '{config_json_file}'")
             with open(config_json_file) as f:
                 config = json.load(f)
         elif config_json is not None:
@@ -269,11 +271,11 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
-        self.tmp_victims_output_dir = "tmp_" + victims_output_dir
+        self.victims_output_dir_tmp = victims_output_dir.with_name(victims_output_dir.name + "_tmp")
 
         self.victim_idx = 0
         self.finished = False
-        self.victims = []
+        self.victims: List[PlayerStat] = []
         for line in config:
             cond = PlayerStat(
                 name=line["name"],
@@ -319,25 +321,26 @@ class Curriculum:
     def __try_victim_copy(self, force_if_exists=False):
         # Make sure directories exist
         os.makedirs(self.victims_output_dir, exist_ok=True)
-        os.makedirs(self.tmp_victims_output_dir, exist_ok=True)
+        os.makedirs(self.victims_output_dir_tmp, exist_ok=True)
 
-        # Attempt to copy
-        num_efforts = 0
         victim_name = self._cur_victim.name
-        victim_path = os.path.join(self.victims_output_dir, victim_name)
-        tmp_victim_path = os.path.join(self.tmp_victims_output_dir, victim_name)
+        victim_path = self.victims_output_dir / victim_name
+        victim_path_tmp = self.victims_output_dir_tmp / victim_name
+
         if not force_if_exists and os.path.exists(victim_path):
             return
+
+        # Attempt to copy
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
                 # We copy to a tmp directory then move to make the overall
                 # operation atomic, which is needed to avoid race conditions
                 # with the C++ code.
                 shutil.copy(
-                    os.path.join(self.victims_input_dir, victim_name),
-                    tmp_victim_path,
+                    self.victims_input_dir / victim_name,
+                    victim_path_tmp,
                 )
-                shutil.move(tmp_victim_path, victim_path)
+                shutil.move(str(victim_path_tmp), victim_path)
                 return
             except OSError:
                 logging.warning(
@@ -347,7 +350,6 @@ class Curriculum:
                         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT,
                     ),
                 )
-                num_efforts += 1
                 time.sleep(self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT)
 
         raise RuntimeError(
@@ -358,7 +360,7 @@ class Curriculum:
 
     def try_move_on(
         self,
-        adv_stat: Optional[PlayerStat] = None,
+        adv_stat: PlayerStat,
         policy_loss: Optional[float] = None,
     ):
         if self.finished:
@@ -366,7 +368,7 @@ class Curriculum:
 
         logging.info("Checking whether we need to move to the next victim...")
         want_victim_update = False
-        if adv_stat is not None and self._cur_victim.check_if_gt(adv_stat):
+        if self._cur_victim.check_if_gt(adv_stat):
             want_victim_update = True
         if policy_loss is not None:
             raise NotImplementedError("Policy loss check is not implemented yet")
@@ -382,7 +384,7 @@ class Curriculum:
         logging.info("Moving to the next victim '{}'".format(self._cur_victim.name))
         self.__try_victim_copy(True)
 
-    def update_sgf_games(self, selfplay_dir: str, games_for_compute: int):
+    def update_sgf_games(self, selfplay_dir: pathlib.Path, games_for_compute: int):
         all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
 
         useful_files = set()
@@ -434,7 +436,7 @@ class Curriculum:
 
     def checking_loop(
         self,
-        selfplay_dir: str,
+        selfplay_dir: pathlib.Path,
         games_for_compute: int,
         checking_periodicity: int,
     ):
@@ -474,16 +476,19 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-selfplay-dir",
+        type=pathlib.Path,
         required=True,
         help="Directory with selfplay data",
     )
     parser.add_argument(
         "-input-models-dir",
+        type=pathlib.Path,
         required=True,
         help="Input dir with victim model files",
     )
     parser.add_argument(
         "-output-models-dir",
+        type=pathlib.Path,
         required=True,
         help="Output dir for adding new victims",
     )
@@ -508,6 +513,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-config-json-file",
+        type=pathlib.Path,
         default="configs/curriculum_conf.json",
         help="Curriculum JSON config with " "victims sequence (JSON file path)",
     )
@@ -528,8 +534,7 @@ if __name__ == "__main__":
         )
     else:
         raise ValueError(
-            "Curriculum: either path to JSON config or "
-            "JSON config string must be provided",
+            "Curriculum: either path to JSON config or JSON config string must be provided",
         )
 
     try:

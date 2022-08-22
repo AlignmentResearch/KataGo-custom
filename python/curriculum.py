@@ -271,7 +271,9 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
-        self.victims_output_dir_tmp = victims_output_dir.with_name(victims_output_dir.name + "_tmp")
+        self.victims_output_dir_tmp = victims_output_dir.with_name(
+            victims_output_dir.name + "_tmp"
+        )
 
         self.victim_idx = 0
         self.finished = False
@@ -534,7 +536,8 @@ if __name__ == "__main__":
         )
     else:
         raise ValueError(
-            "Curriculum: either path to JSON config or JSON config string must be provided",
+            "Curriculum: either path to JSON config or"
+            "JSON config string must be provided",
         )
 
     try:

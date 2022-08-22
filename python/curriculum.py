@@ -317,8 +317,9 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
-        self.selfplay_config_override_path =\
-            os.path.join(self.victims_output_dir, self.SELFPLAY_CONFIG_OVERRIDE_NAME)
+        self.selfplay_config_override_path = os.path.join(
+            self.victims_output_dir, self.SELFPLAY_CONFIG_OVERRIDE_NAME,
+        )
 
         self.victim_idx = 0
         self.finished = False
@@ -337,7 +338,8 @@ class Curriculum:
 
         logging.info("Finding the latest victim...")
         victim_files = get_files_sorted_by_modification_time(
-            self.victims_output_dir, ignore_extensions=[".cfg", ".conf"])
+            self.victims_output_dir, ignore_extensions=[".cfg", ".conf"],
+        )
         if victim_files:
             last_victim_name = os.path.basename(victim_files[0])
             victim_params = {
@@ -353,7 +355,7 @@ class Curriculum:
                         line = line.strip()
                         if not line:
                             continue
-                        name, val = line.split('=')
+                        name, val = line.split("=")
                         if name == "maxVisits0":
                             victim_params["max_visits_victim"] = int(val)
                         elif name == "maxVisits1":

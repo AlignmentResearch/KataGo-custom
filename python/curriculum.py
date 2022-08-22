@@ -269,6 +269,7 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
+        self.tmp_victims_output_dir = "tmp_" + victims_output_dir
 
         self.victim_idx = 0
         self.finished = False
@@ -316,21 +317,27 @@ class Curriculum:
         return self.victims[self.victim_idx]
 
     def __try_victim_copy(self, force_if_exists=False):
-        # Make sure victims_output_dir exists
+        # Make sure directories exist
         os.makedirs(self.victims_output_dir, exist_ok=True)
+        os.makedirs(self.tmp_victims_output_dir, exist_ok=True)
 
         # Attempt to copy
         num_efforts = 0
         victim_name = self._cur_victim.name
         victim_path = os.path.join(self.victims_output_dir, victim_name)
+        tmp_victim_path = os.path.join(self.tmp_victims_output_dir, victim_name)
         if not force_if_exists and os.path.exists(victim_path):
             return
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
+                # We copy to a tmp directory then move to make the overall
+                # operation atomic, which is needed to avoid race conditions
+                # with the C++ code.
                 shutil.copy(
                     os.path.join(self.victims_input_dir, victim_name),
-                    self.victims_output_dir,
+                    tmp_victim_path,
                 )
+                shutil.move(tmp_victim_path, victim_path)
                 return
             except OSError:
                 logging.warning(

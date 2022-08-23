@@ -404,7 +404,7 @@ class Curriculum:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}")
-        shutil.move(tmp_path, self.selfplay_config_override_path)
+        shutil.move(str(tmp_path), self.selfplay_config_override_path)
 
     def __try_victim_copy(self, force_if_exists=False):
         victim_name = self._cur_victim.name

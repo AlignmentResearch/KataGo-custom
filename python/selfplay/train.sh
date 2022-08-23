@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash -e
 set -o pipefail
 {
 #Runs tensorflow training in $BASEDIR/train/$TRAININGNAME

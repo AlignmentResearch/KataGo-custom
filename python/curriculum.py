@@ -5,6 +5,7 @@
 import argparse
 import json
 import logging
+import operator
 import os
 import pathlib
 import shutil
@@ -36,56 +37,78 @@ class PlayerStat:
     Statistics is being represented from the adversary perspective.
     """
 
-    name: Optional[str] = None
     win_rate: Optional[float] = None
     score_diff: Optional[float] = None
     score_wo_komi_diff: Optional[float] = None
     policy_loss: Optional[float] = None
+    window_size: Optional[int] = None
 
-    def get_stat_members(self) -> Dict[str, float]:
+    def members(self):
         d = asdict(self)
-        del d["name"]
+        del d["window_size"]
         return d
 
+    def count(self):
+        return len([v for k, v in self.members().items() if v is not None])
 
-@dataclass(frozen=True)
-class VictimCriteria(PlayerStat):
+
+@dataclass
+class VictimCriteria:
     """Criteria for the victim change.
 
-    Victim is represented by the model name and max visits.
-    Criteria are represented by the statistics members.
+    Victim is represented by the model name,
+    moving forward/backward criteria and max visits.
     For victim only one criterion can be enabled, all others should be None.
+    This dataclass cannot be frozen anymore since it modifies
+    forward/backward types after __init__, a workaround for proper
+    constructing the dataclass from JSON.
+    Probably later python will add this functionality out-of-the-box.
     """
 
+    name: str
+    forward: PlayerStat
+    backward: Optional[PlayerStat] = None
     max_visits_victim: Optional[int] = None
     max_visits_adv: Optional[int] = None
 
-    def get_stat_members(self) -> Dict[str, float]:
-        d = super().get_stat_members()
-        del d["max_visits_victim"]
-        del d["max_visits_adv"]
-        return d
+    def __post_init__(self):
+        if isinstance(self.forward, dict):
+            self.forward = PlayerStat(**self.forward)
+        if isinstance(self.backward, dict):
+            self.backward = PlayerStat(**self.backward)
 
-    def valid(self) -> bool:
+    def validate(self):
         if self.name is None:
-            logging.warning("Victim criteria: victim name is None")
-            return False
-        criteria = self.get_stat_members()
-        num_enabled = len([v for k, v in criteria.items() if v is not None])
-        return num_enabled == 1
+            raise ValueError("Empty victim name in the config!")
+        if self.forward is None:
+            raise ValueError("Empty forward criteria in the config!")
+        if self.forward.count() != 1:
+            raise ValueError(
+                f"Exactly one forward criterion must be non-None for '{self.name}'",
+            )
+        if self.backward is not None and self.backward.count() != 1:
+            raise ValueError(
+                f"Exactly one backward criterion must be non-None for '{self.name}'",
+            )
 
-    # check if adv_stat has a greater value of enabled criteria
-    def check_if_gt(self, adv_stat: PlayerStat) -> bool:
-        criteria = self.get_stat_members()
-        adv_vals = adv_stat.get_stat_members()
+    def __check_criterion(self, adv_stat: PlayerStat, log_prefix: str, relation):
+        criteria = self.forward.members()
+        adv_vals = adv_stat.members()
         for k, v in criteria.items():
             if v is not None:
                 logging.info(
-                    "{}: {} (adv) <-> {} (threshold)".format(k, adv_vals[k], v),
+                    f"{log_prefix}: {k}: {adv_vals[k]} (adv) <-> {v} (threshold)",
                 )
-                if adv_vals[k] > v:
+                if relation(adv_vals[k], v):
                     return True
         return False
+
+    # check if adv_stat has a greater value of enabled criteria
+    def want_forward(self, adv_stat: PlayerStat) -> bool:
+        return self.__check_criterion(adv_stat, "Forward", operator.gt)
+
+    def want_backward(self, adv_stat: PlayerStat) -> bool:
+        return self.__check_criterion(adv_stat, "Backward", operator.lt)
 
     def __eq__(self, other):
         """Check current victim against the latest parameters.
@@ -105,9 +128,9 @@ class VictimCriteria(PlayerStat):
                     return False
             return True
         except TypeError:
-            logging.warning("TypeError in VictimCriteria comparison")
+            logging.warning("Incorrect RHS in VictimCriteria ==")
         except KeyError:
-            logging.warning("KeyError in VictimCriteria comparison")
+            logging.warning("Missed RHS key in VictimCriteria ==")
         return False
 
 
@@ -249,6 +272,10 @@ def recompute_statistics(
         )
         return None
 
+    # take only required amount of the newest games
+    if len(games) > games_for_compute:
+        games = games[:games_for_compute]
+
     for game in games:
         # game.winner can be None (for ties), but a tie is still not a win
         if game.winner:
@@ -266,7 +293,6 @@ def recompute_statistics(
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
 
     return PlayerStat(
-        name=current_victim_name,
         win_rate=win_rate,
         score_diff=mean_diff_score,
         score_wo_komi_diff=mean_diff_score_wo_komi,
@@ -335,11 +361,7 @@ class Curriculum:
         self.victims: List[VictimCriteria] = []
         for line in config:
             cond = VictimCriteria(**line)
-            if not cond.valid():
-                raise ValueError(
-                    "Incorrect victim change criteria for victim '{}': "
-                    "exactly one value should be non-None".format(line["name"]),
-                )
+            cond.validate()
             self.victims.append(cond)
 
         logging.info("Loaded curriculum with the following params:")
@@ -447,33 +469,50 @@ class Curriculum:
             ),
         )
 
-    def try_move_on(
-        self,
-        adv_stat: PlayerStat,
-        policy_loss: Optional[float] = None,
-    ):
+    def try_move_on(self, games_for_compute_by_default):
         if self.finished:
             return
 
+        cur_victim = self._cur_victim
+        games_for_compute = games_for_compute_by_default
+        if self._cur_victim.forward.window_size is not None:
+            games_for_compute = cur_victim.forward.window_size
+        adv_stat_forward = recompute_statistics(
+            self.sgf_games,
+            games_for_compute,
+            cur_victim.name,
+        )
+
+        adv_stat_backward = None
+        if cur_victim.backward is not None:
+            games_for_compute = games_for_compute_by_default
+            if cur_victim.backward.window_size is not None:
+                games_for_compute = cur_victim.backward.window_size
+            adv_stat_backward = recompute_statistics(
+                self.sgf_games,
+                games_for_compute,
+                cur_victim.name,
+            )
+
         logging.info("Checking whether we need to move to the next victim...")
-        want_victim_update = False
-        if self._cur_victim.check_if_gt(adv_stat):
-            want_victim_update = True
-        if policy_loss is not None:
-            raise NotImplementedError("Policy loss check is not implemented yet")
-
-        if not want_victim_update:
+        if adv_stat_forward and cur_victim.want_forward(adv_stat_forward):
+            self.victim_idx += 1
+            if self.victim_idx == len(self.victims):
+                self.finished = True
+                return
+        elif adv_stat_backward and cur_victim.want_backward(adv_stat_backward):
+            if self.victim_idx == 0:  # nowhere to go
+                return
+            else:
+                self.victim_idx -= 1
+        else:  # don't want to move anywhere
             return
 
-        self.victim_idx += 1
-        if self.victim_idx == len(self.victims):
-            self.finished = True
-            return
-
-        logging.info("Moving to the next victim '{}'".format(self._cur_victim.name))
+        logging.info(f"Moving to the next victim '{asdict(self._cur_victim)}'")
         self.__try_victim_copy(True)
+        self.sgf_games.clear()  # drop statistics for old games
 
-    def update_sgf_games(self, selfplay_dir: pathlib.Path, games_for_compute: int):
+    def update_sgf_games(self, selfplay_dir: pathlib.Path, max_stat_len: int):
         all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
 
         useful_files = set()
@@ -513,8 +552,8 @@ class Curriculum:
 
         # leave only games_for_compute games for statistics computation
         # so delete some old games
-        if len(self.sgf_games) > games_for_compute:
-            del self.sgf_games[games_for_compute:]
+        if len(self.sgf_games) > max_stat_len:
+            del self.sgf_games[max_stat_len:]
 
     """
     Run curriculum checking.
@@ -531,17 +570,19 @@ class Curriculum:
     ):
         logging.info("Starting curriculum loop")
         while True:
-            self.update_sgf_games(selfplay_dir, games_for_compute)
-            adv_stat = recompute_statistics(
-                self.sgf_games,
-                games_for_compute,
-                self._cur_victim.name,
-            )
-            if adv_stat is not None:
-                self.try_move_on(adv_stat=adv_stat)
-                if self.finished:
-                    logging.info("Curriculum is done. Stopping")
-                    break
+            max_stat_len = games_for_compute
+            ws = self._cur_victim.forward.window_size
+            if ws is not None and ws > max_stat_len:
+                max_stat_len = ws
+            if self._cur_victim.backward is not None:
+                ws = self._cur_victim.backward.window_size
+                if ws is not None and ws > max_stat_len:
+                    max_stat_len = ws
+            self.update_sgf_games(selfplay_dir, max_stat_len)
+            self.try_move_on(games_for_compute)
+            if self.finished:
+                logging.info("Curriculum is done. Stopping")
+                break
             logging.info(
                 "Curriculum is alive, current victim : {}".format(
                     self._cur_victim.name,

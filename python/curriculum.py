@@ -398,11 +398,13 @@ class Curriculum:
         return self.victims[self.victim_idx]
 
     def __update_victim_config(self):
-        with open(self.selfplay_config_override_path, "w") as f:
+        tmp_path = self.victims_output_dir_tmp / self.SELFPLAY_CONFIG_OVERRIDE_NAME
+        with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}")
+        shutil.move(tmp_path, self.selfplay_config_override_path)
 
     def __try_victim_copy(self, force_if_exists=False):
         victim_name = self._cur_victim.name

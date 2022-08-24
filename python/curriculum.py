@@ -12,7 +12,7 @@ import shutil
 import sys
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, List, Mapping, Optional, Sequence
 
 from sgfmill import sgf
 

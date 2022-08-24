@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash
 
 mkdir -p tests/results/gtp
 rm -f tests/results/gtp/*

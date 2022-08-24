@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash
 set -o pipefail
 {
 if [[ $# -lt 7 ]]

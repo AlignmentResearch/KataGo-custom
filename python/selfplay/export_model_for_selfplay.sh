@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash
 set -o pipefail
 {
 #Takes any models in tfsavedmodels_toexport/ and outputs a cuda-runnable model file to modelstobetested/

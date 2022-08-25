@@ -100,10 +100,7 @@ class VictimCriteria(PlayerStat):
             d1 = other
 
         try:
-            for m in members:
-                if d0[m] != d1[m]:
-                    return False
-            return True
+            return all(d0[m] == d1[m] for m in members)
         except TypeError:
             logging.warning("TypeError in VictimCriteria comparison")
         except KeyError:
@@ -206,7 +203,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
 def get_files_sorted_by_modification_time(
     folder: pathlib.Path,
     extension: Optional[str] = None,
-    ignore_extensions: Optional[List[str]] = None,
+    ignore_extensions: Optional[Sequence[str]] = None,
 ) -> Sequence[str]:
     all_files = []
     for path, dirnames, filenames in os.walk(folder, followlinks=True):
@@ -214,15 +211,14 @@ def get_files_sorted_by_modification_time(
             ext = os.path.splitext(f)[1]
             if ignore_extensions is not None and ext in ignore_extensions:
                 continue
-            if extension is None or os.path.splitext(f)[1] == extension:
+            if extension is None or ext == extension:
                 file_path = os.path.join(path, f)
                 all_files.append([file_path, os.path.getmtime(file_path)])
     # sort from newest to oldest
     all_files.sort(key=lambda x: x[1], reverse=True)
 
     # leave file names only
-    all_files = [x[0] for x in all_files]
-    return all_files
+    return [x[0] for x in all_files]
 
 
 def recompute_statistics(
@@ -322,10 +318,8 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
-        self.selfplay_config_override_path = os.path.join(
-            self.victims_output_dir,
-            self.SELFPLAY_CONFIG_OVERRIDE_NAME,
-        )
+        self.selfplay_config_override_path =\
+            victims_output_dir / self.SELFPLAY_CONFIG_OVERRIDE_NAME
         self.victims_output_dir_tmp = victims_output_dir.with_name(
             victims_output_dir.name + "_tmp",
         )
@@ -348,7 +342,7 @@ class Curriculum:
         logging.info("Finding the latest victim...")
         victim_files = get_files_sorted_by_modification_time(
             self.victims_output_dir,
-            ignore_extensions=[".cfg", ".conf"],
+            ignore_extensions=(".cfg", ".conf"),
         )
         if victim_files:
             last_victim_name = os.path.basename(victim_files[0])

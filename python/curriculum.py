@@ -318,8 +318,9 @@ class Curriculum:
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
-        self.selfplay_config_override_path =\
+        self.selfplay_config_override_path = (
             victims_output_dir / self.SELFPLAY_CONFIG_OVERRIDE_NAME
+        )
         self.victims_output_dir_tmp = victims_output_dir.with_name(
             victims_output_dir.name + "_tmp",
         )

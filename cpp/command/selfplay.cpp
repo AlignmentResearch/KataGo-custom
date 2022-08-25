@@ -494,8 +494,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
                     victimCfgReloadPath + "'";
               }
             }  // end of mutex scope
-          } catch (...) {
-            logger.write(logPrefix + "victim config reloading error");
+          } catch (const IOError &e) {
+            logger.write(logPrefix + "victim config reloading error: " + e.what());
           }
 
           if(!paramsChangeLog.empty()) {

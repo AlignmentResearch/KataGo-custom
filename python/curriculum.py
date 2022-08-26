@@ -89,25 +89,26 @@ class VictimCriteria(PlayerStat):
                     return True
         return False
 
-    def __eq__(self, other):
+    def matches_criteria(self, other: Union["VictimCriteria", Mapping[str, Any]]) -> bool:
         """Check current victim against the latest parameters.
+
+        Args:
+            other: A VictimCriteria, or mapping with the keys
+                "name", "max_visits_victim", "max_visits_adv".
+
+        Returns:
+            True if the above fields compare equal; False otherwise.
 
         Parameters can be either VictimCriteria or a dict.
         """
-        members = ["name", "max_visits_victim", "max_visits_adv"]
+        fields = ("name", "max_visits_victim", "max_visits_adv")
         d0 = asdict(self)
         if isinstance(other, VictimCriteria):
             d1 = asdict(other)
         else:
             d1 = other
 
-        try:
-            return all(d0[m] == d1[m] for m in members)
-        except TypeError:
-            logging.warning("TypeError in VictimCriteria comparison")
-        except KeyError:
-            logging.warning("KeyError in VictimCriteria comparison")
-        return False
+        return all(d0[f] == d1[f] for f in fields)
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
@@ -369,7 +370,7 @@ class Curriculum:
             # determine current victim-with-max-visits index
             victim_found = False
             for cur_idx in range(len(self.victims)):
-                if self.victims[cur_idx] == victim_params:
+                if self.victims[cur_idx].matches_criteria(victim_params):
                     self.victim_idx = cur_idx
                     victim_found = True
                     break

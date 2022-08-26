@@ -68,7 +68,7 @@ class VictimCriteria(PlayerStat):
 
     def __post_init__(self):
         if self.name is None:
-            raise ValueError("VictimCcriteria: victim name is None")
+            raise ValueError("VictimCriteria: victim name is None")
         criteria = self.get_stat_members()
         enabled_criteria = [v for k, v in criteria.items() if v is not None]
         num_enabled = len(enabled_criteria)
@@ -90,7 +90,8 @@ class VictimCriteria(PlayerStat):
         return False
 
     def matches_criteria(
-        self, other: Union["VictimCriteria", Mapping[str, Any]]
+        self,
+        other: Union["VictimCriteria", Mapping[str, Any]],
     ) -> bool:
         """Check current victim against the latest parameters.
 
@@ -334,6 +335,7 @@ class Curriculum:
         self.finished = False
         self.victims: List[VictimCriteria] = []
         for line in config:
+            line.pop("_comment", None)  # delete _comment if it exists
             try:
                 cond = VictimCriteria(**line)
             except ValueError as e:

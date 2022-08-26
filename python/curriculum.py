@@ -25,8 +25,8 @@ class AdvGameInfo:
     victim: str
     game_hash: str
     winner: Optional[bool]
-    diff_score: float
-    diff_score_wo_komi: float
+    score_diff: float
+    score_wo_komi_diff: float
 
 
 @dataclass(frozen=True)
@@ -253,8 +253,8 @@ def recompute_statistics(
             sum_wins += 1
         elif game.winner is None:
             sum_ties += 1
-        sum_score += game.diff_score
-        sum_score_wo_komi += game.diff_score_wo_komi
+        sum_score += game.score_diff
+        sum_score_wo_komi += game.score_wo_komi_diff
 
     logging.info(
         "Got {} wins and {} ties from {} games".format(sum_wins, sum_ties, len(games)),

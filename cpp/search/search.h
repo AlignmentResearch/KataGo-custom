@@ -405,7 +405,7 @@ public:
   bool isLegalTolerant(Loc moveLoc, Player movePla) const;
   bool isLegalStrict(Loc moveLoc, Player movePla) const;
 
-  // Run an entire search from start to finish
+  //Run an entire search from start to finish
   Loc runWholeSearchAndGetMove(Player movePla);
   void runWholeSearch(Player movePla);
   void runWholeSearch(std::atomic<bool>& shouldStopNow);
@@ -609,10 +609,8 @@ private:
     std::vector<MoreNodeStats>& statsBuf
   ) const;
 
-  // Parent must be locked
- public:
-  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf)
-    const; private:
+  //Parent must be locked
+  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const; private:
 
   double getExploreSelectionValue(
     double nnPolicyProb, double totalChildWeight, double childWeight,

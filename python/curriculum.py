@@ -11,7 +11,7 @@ import shutil
 import sys
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
 
 from sgfmill import sgf
 
@@ -89,7 +89,9 @@ class VictimCriteria(PlayerStat):
                     return True
         return False
 
-    def matches_criteria(self, other: Union["VictimCriteria", Mapping[str, Any]]) -> bool:
+    def matches_criteria(
+        self, other: Union["VictimCriteria", Mapping[str, Any]]
+    ) -> bool:
         """Check current victim against the latest parameters.
 
         Args:

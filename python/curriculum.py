@@ -66,13 +66,15 @@ class VictimCriteria(PlayerStat):
         del d["max_visits_adv"]
         return d
 
-    def valid(self) -> bool:
+    def __post_init__(self):
         if self.name is None:
-            logging.warning("Victim criteria: victim name is None")
-            return False
+            raise ValueError("VictimCcriteria: victim name is None")
         criteria = self.get_stat_members()
-        num_enabled = len([v for k, v in criteria.items() if v is not None])
-        return num_enabled == 1
+        enabled_criteria = [v for k, v in criteria.items() if v is not None]
+        num_enabled = len(enabled_criteria)
+        if num_enabled != 1:
+            msg = f"Need 1 criteria enabled, got {num_enabled}: {enabled_criteria}"
+            raise ValueError(msg)
 
     # check if adv_stat has a greater value of enabled criteria
     def check_if_gt(self, adv_stat: PlayerStat) -> bool:
@@ -329,12 +331,10 @@ class Curriculum:
         self.finished = False
         self.victims: List[VictimCriteria] = []
         for line in config:
-            cond = VictimCriteria(**line)
-            if not cond.valid():
-                raise ValueError(
-                    "Incorrect victim change criteria for victim '{}': "
-                    "exactly one value should be non-None".format(line["name"]),
-                )
+            try:
+                cond = VictimCriteria(**line)
+            except ValueError as e:
+                raise ValueError(f"Invalid victim config '{line}'") from e
             self.victims.append(cond)
 
         logging.info("Loaded curriculum with the following params:")

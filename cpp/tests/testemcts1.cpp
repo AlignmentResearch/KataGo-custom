@@ -65,7 +65,7 @@ static void setSimpleSearchParams(SearchParams& params) {
   // adjustment.
   params.rootEndingBonusPoints = 0;
 
-  // TODO: Support this within the playout check.
+  // TODO(tony): Support this within the playout check.
   params.rootDesiredPerChildVisitsCoeff = 0;
 
   // This is not used in selfplay right now for backwards compatibility
@@ -150,8 +150,10 @@ void EMCTS1Tests::testConstPolicies() {
   {  // Check argmax-bot1 and argmax-bot2 interaction.
     Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two", nullptr);
     Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two", nullptr);
-    resetBot(bot1, 7, Rules::getTrompTaylorish());
-    resetBot(bot2, 7, Rules::getTrompTaylorish());
+
+    const int BOARD_SIZE = 7;
+    resetBot(bot1, BOARD_SIZE, Rules::getTrompTaylorish());
+    resetBot(bot2, BOARD_SIZE, Rules::getTrompTaylorish());
 
     testAssert(bot1.rootHistory.rules.multiStoneSuicideLegal);
     testAssert(bot1.rootHistory.rules.koRule == Rules::KO_POSITIONAL);
@@ -203,7 +205,7 @@ void EMCTS1Tests::testConstPolicies() {
 void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   cout << "Testing MCTS..." << endl;
 
-  ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
+  ConfigParser cfg(EMCTS1_CONFIG_PATH);
   Logger logger(&cfg, false);
 
   vector<SearchParams> searchParamss =
@@ -219,7 +221,9 @@ void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
 
   for (auto bot_ptr : {&bot1, &bot2}) {
     Search& bot = *bot_ptr;
-    resetBot(bot, 9, Rules::getTrompTaylorish());
+
+    const int BOARD_SIZE = 9;
+    resetBot(bot, BOARD_SIZE, Rules::getTrompTaylorish());
     setSimpleSearchParams(bot.searchParams);
 
     // The initial board we perform tests on.
@@ -256,7 +260,7 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
                              const int numMovesToSimulate) {
   cout << "Testing EMCTS1..." << endl;
 
-  ConfigParser cfg("cpp/tests/data/configs/test-emcts1.cfg");
+  ConfigParser cfg(EMCTS1_CONFIG_PATH);
   Logger logger(&cfg, false);
 
   vector<SearchParams> searchParamss =
@@ -277,7 +281,9 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
 
   for (auto bot_ptr : {&bot11, &bot12}) {
     Search& bot = *bot_ptr;
-    resetBot(bot, 9, Rules::getTrompTaylorish());
+
+    const int BOARD_SIZE = 9;
+    resetBot(bot, BOARD_SIZE, Rules::getTrompTaylorish());
     setSimpleSearchParams(bot.searchParams);
 
     // Make EMCTS1 deterministic
@@ -456,7 +462,7 @@ void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
 
     // Possibly reduce weight on children that we spend too many visits on in
     // retrospect.
-    // TODO: Figure out what exactly is going on here and write it down on
+    // TODO(tony): Figure out what exactly is going on here and write it down on
     // overleaf.
     const float* policyProbs =
         tree.root->getNNOutput()->getPolicyProbsMaybeNoised();
@@ -489,7 +495,7 @@ void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
     }
 
     // Adjust psvs with lcb values
-    // TODO: Figure out what exactly is going on here and write it down on
+    // TODO(tony): Figure out what exactly is going on here and write it down on
     // overleaf.
     testAssert(bot.searchParams.useLcbForSelection);
     testAssert(bot.searchParams.useNonBuggyLcb);

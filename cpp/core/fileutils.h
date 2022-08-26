@@ -5,6 +5,7 @@
 
 namespace FileUtils {
   bool exists(const std::string& path);
+  bool isDirectory(const std::string& path);
 
   // Returns whether good() is true on the fstream after attempting to call open on it.
   bool tryOpen(std::ifstream& in, const char* filename, std::ios_base::openmode mode = std::ios_base::in);

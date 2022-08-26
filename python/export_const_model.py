@@ -8,7 +8,13 @@ a constant policy/value net with the following configurable options:
   5. no-result logit value
 
 Examples usage:
-python export_const_model.py
+
+    python export_const_model.py
+
+This file is based off of the export_model.py script, with minimal changes.
+You can compare the two files with the following command:
+
+  diff -y --suppress-common-lines python/export_model.py python/export_const_model.py
 """
 import sys
 import argparse

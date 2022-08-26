@@ -335,6 +335,7 @@ class Curriculum:
         self.finished = False
         self.victims: List[VictimCriteria] = []
         for line in config:
+            line = dict(line)
             line.pop("_comment", None)  # delete _comment if it exists
             try:
                 cond = VictimCriteria(**line)

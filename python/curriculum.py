@@ -104,13 +104,13 @@ class VictimCriteria(PlayerStat):
 
         Parameters can be either VictimCriteria or a dict.
         """
-        fields = ("name", "max_visits_victim", "max_visits_adv")
         d0 = asdict(self)
         if isinstance(other, VictimCriteria):
             d1 = asdict(other)
         else:
             d1 = other
 
+        fields = ("name", "max_visits_victim", "max_visits_adv")
         return all(d0[f] == d1[f] for f in fields)
 
 

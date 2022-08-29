@@ -372,6 +372,9 @@ class Curriculum:
                 past the current victim until this threshold is reached.
             game_buffer_capacity: The maximum number of games to store in the buffer.
                 This consists of all games, not just those matching the current victim.
+
+        Raises:
+            ValueError: `game_buffer_capacity` is less than `min_games_for_stats`.
         """
         self.stat_files = []
         self.sgf_games = []
@@ -388,6 +391,10 @@ class Curriculum:
         )
         self.min_games_for_stats = min_games_for_stats
         self.game_buffer_capacity = game_buffer_capacity
+        if self.game_buffer_capacity < self.min_games_for_stats:
+            msg = "Game buffer smaller than statistics rolling window: "
+            msg += f"{self.game_buffer_capacity} < {self.min_games_for_stats}"
+            raise ValueError(msg)
 
         # Parse config
         self.victims = parse_config(config)

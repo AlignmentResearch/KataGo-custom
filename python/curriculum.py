@@ -21,6 +21,7 @@ Config = Mapping[str, Any]
 
 
 class Color(enum.Enum):
+    """Color of Go stones (black or white)."""
     BLACK = "B"
     WHITE = "W"
 

@@ -614,10 +614,7 @@ class Curriculum:
                 msg += f"{len(filtered_games)} < {self.min_games_for_stats} "
                 logging.info(msg)
             else:
-                adv_stat = recompute_statistics(
-                    filtered_games,
-                    self.min_games_for_stats,
-                )
+                adv_stat = recompute_statistics(filtered_games)
                 self.try_move_on(adv_stat=adv_stat)
 
             if self.finished:

@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from sgfmill import sgf
 
@@ -270,14 +270,10 @@ def get_files_sorted_by_modification_time(
 
 def recompute_statistics(
     games: List[AdvGameInfo],
-    games_for_compute: int,
+    min_games_for_stats: int,
     current_victim: VictimCriteria,
 ) -> Optional[PlayerStat]:
     """Compute statistics from games played by the current victim."""
-    # don't have enough data
-    if len(games) < games_for_compute:
-        logging.info(f"Incomplete statistics, got only {len(games)} games")
-        return None
     logging.info("Computing {} games".format(len(games)))
 
     games_cur_victim = []
@@ -290,12 +286,10 @@ def recompute_statistics(
         if current_victim.matches_criteria(victim_params, strict=False):
             games_cur_victim.append(game)
 
-    if len(games_cur_victim) < len(games):
-        logging.info(
-            "Incomplete statistics for current victim, got only {} games".format(
-                len(games_cur_victim),
-            ),
-        )
+    if len(games_cur_victim) < min_games_for_stats:
+        msg = "Incomplete statistics for current victim, got only "
+        msg += f"{len(games_cur_victim)} < {min_games_for_stats} "
+        logging.info(msg)
         return None
 
     sum_wins = 0
@@ -326,6 +320,20 @@ def recompute_statistics(
     )
 
 
+def parse_config(config: Sequence[Config]) -> Sequence[VictimCriteria]:
+    """Parse `config` into a sequence of VictimCriteria, ignoring comments."""
+    victims = []
+    for line in config:
+        line = dict(line)
+        line.pop("_comment", None)  # delete _comment if it exists
+        try:
+            cond = VictimCriteria(**line)
+        except ValueError as e:
+            raise ValueError(f"Invalid victim config '{line}'") from e
+        victims.append(cond)
+    return victims
+
+
 class Curriculum:
     """Curriculum object.
 
@@ -333,13 +341,17 @@ class Curriculum:
     the criteria specified in the provided config.
     """
 
+    MAX_VICTIM_COPYING_EFFORTS: ClassVar[int] = 10
+    VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT: ClassVar[int] = 10
+    SELFPLAY_CONFIG_OVERRIDE_NAME: ClassVar[str] = "victim.cfg"
+
     def __init__(
         self,
         victims_input_dir: pathlib.Path,
         victims_output_dir: pathlib.Path,
-        config: Optional[Sequence[Config]] = None,
-        config_json: Optional[str] = None,
-        config_json_file: Optional[pathlib.Path] = None,
+        config: Sequence[Config],
+        min_games_for_stats: int,
+        game_buffer_capacity: int,
     ):
         """Initial curriculum setup.
 
@@ -349,33 +361,17 @@ class Curriculum:
             victims_input_dir: The folder with all victim model
                 files specified in the config.
             victims_output_dir: The folder where we copy victims for selfplay.
-            config: List of victims.
-            config_json: Serialized JSON list of victims.
-            config_json_file: JSON file with list of victims.
-
-        Raises:
-            ValueError: Empty configuration.
+            config: Sequence of victim configurations.
+            min_games_for_stats: The minimum number of games from the current victim
+                needed for statistics to be computed. The curriculum will never move
+                past the current victim until this threshold is reached.
+            game_buffer_capacity: The maximum number of games to store in the buffer.
+                This consists of all games, not just those matching the current victim.
         """
-        self.MAX_VICTIM_COPYING_EFFORTS = 10
-        self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10
-        self.SELFPLAY_CONFIG_OVERRIDE_NAME = "victim.cfg"
-
         self.stat_files = []
         self.sgf_games = []
-        self.game_hashes = dict()
-
-        if config_json_file is not None:
-            logging.info(f"Curriculum: loading JSON config from '{config_json_file}'")
-            with open(config_json_file) as f:
-                config = json.load(f)
-        elif config_json is not None:
-            logging.info("Curriculum: loading JSON config from a string")
-            config = json.loads(config_json)
-        elif config is not None:
-            logging.info("Using python list as a config")
-
-        if not config:
-            raise ValueError("Empty config for the curriculum play!")
+        self.game_hashes = {}
+        self.finished = False
 
         self.victims_input_dir = victims_input_dir
         self.victims_output_dir = victims_output_dir
@@ -385,22 +381,28 @@ class Curriculum:
         self.victims_output_dir_tmp = victims_output_dir.with_name(
             victims_output_dir.name + "_tmp",
         )
+        self.min_games_for_stats = min_games_for_stats
+        self.game_buffer_capacity = game_buffer_capacity
 
-        self.victim_idx = 0
-        self.finished = False
-        self.victims: List[VictimCriteria] = []
-        for line in config:
-            line = dict(line)
-            line.pop("_comment", None)  # delete _comment if it exists
-            try:
-                cond = VictimCriteria(**line)
-            except ValueError as e:
-                raise ValueError(f"Invalid victim config '{line}'") from e
-            self.victims.append(cond)
-
+        # Parse config
+        self.victims = parse_config(config)
         logging.info("Loaded curriculum with the following params:")
         logging.info("\n".join([str(x) for x in config]))
 
+        # Try to restart training from the latest victim if we've previously been run
+        self.victim_idx = 0
+        latest_victim_params = self._load_latest_victim_params()
+        if latest_victim_params is not None:
+            self.victim_idx = self._match_victim_params(latest_victim_params)
+
+        logging.info(
+            "Copying the latest victim '{}'...".format(self._cur_victim),
+        )
+        self._try_victim_copy()
+        logging.info("Curriculum initial setup is complete")
+
+    def _load_latest_victim_params(self) -> Optional[Mapping[str, Any]]:
+        """Loads the parameters of the latest victim from disk."""
         logging.info("Finding the latest victim...")
         victim_files = get_files_sorted_by_modification_time(
             self.victims_output_dir,
@@ -427,27 +429,21 @@ class Curriculum:
                         elif name == "maxVisits1":
                             victim_params["max_visits_adv"] = int(val)
 
-            # determine current victim-with-max-visits index
-            victim_found = False
-            for cur_idx in range(len(self.victims)):
-                if self.victims[cur_idx].matches_criteria(victim_params):
-                    self.victim_idx = cur_idx
-                    victim_found = True
-                    break
+            return victim_params
 
-            if not victim_found:
-                logging.warning(
-                    "Victim '{}' is not found in '{}', starting from scratch".format(
-                        str(victim_params),
-                        self.victims_output_dir,
-                    ),
-                )
+    def _match_victim_params(self, victim_params: Mapping[str, Any]) -> int:
+        # determine current victim-with-max-visits index
+        for cur_idx in range(len(self.victims)):
+            if self.victims[cur_idx].matches_criteria(victim_params):
+                return cur_idx
 
-        logging.info(
-            "Copying the latest victim '{}'...".format(self._cur_victim),
+        logging.warning(
+            "Victim '{}' is not found in '{}', starting from scratch".format(
+                str(victim_params),
+                self.victims_output_dir,
+            ),
         )
-        self._try_victim_copy()
-        logging.info("Curriculum initial setup is complete")
+        return 0
 
     @property
     def _cur_victim(self) -> VictimCriteria:
@@ -529,7 +525,7 @@ class Curriculum:
         logging.info("Moving to the next victim '{}'".format(self._cur_victim.name))
         self._try_victim_copy(True)
 
-    def update_sgf_games(self, selfplay_dir: pathlib.Path, games_for_compute: int):
+    def update_sgf_games(self, selfplay_dir: pathlib.Path):
         all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
 
         useful_files = set()
@@ -569,10 +565,10 @@ class Curriculum:
         # insert new games in the beginning
         self.sgf_games[:0] = cur_games
 
-        # leave only games_for_compute games for statistics computation
+        # leave only game_buffer_capacity games for statistics computation
         # so delete some old games
-        if len(self.sgf_games) > games_for_compute:
-            del self.sgf_games[games_for_compute:]
+        if len(self.sgf_games) > self.game_buffer_capacity:
+            del self.sgf_games[self.game_buffer_capacity :]
 
     """
     Run curriculum checking.
@@ -584,15 +580,14 @@ class Curriculum:
     def checking_loop(
         self,
         selfplay_dir: pathlib.Path,
-        games_for_compute: int,
         checking_periodicity: int,
     ):
         logging.info("Starting curriculum loop")
         while True:
-            self.update_sgf_games(selfplay_dir, games_for_compute)
+            self.update_sgf_games(selfplay_dir)
             adv_stat = recompute_statistics(
                 self.sgf_games,
-                games_for_compute,
+                self.min_games_for_stats,
                 self._cur_victim,
             )
             if adv_stat is not None:
@@ -634,11 +629,18 @@ def parse_args() -> argparse.Namespace:
         help="Output dir for adding new victims",
     )
     parser.add_argument(
-        "-games-for-compute",
+        "-min-games-for-stats",
+        type=int,
+        require=False,
+        default=1000,
+        help="Minimum number of games to use to compute statistics",
+    )
+    parser.add_argument(
+        "-max-games-buffer",
         type=int,
         required=False,
-        default=1000,
-        help="Number of last games for statistics computation",
+        default=10000,
+        help="Maximum number of games to store in FIFO buffer",
     )
     parser.add_argument(
         "-checking-periodicity",
@@ -686,23 +688,21 @@ def setup_logging(log_level: int) -> None:
 
 def make_curriculum(args: argparse.Namespace) -> Curriculum:
     """Construct curriculum from CLI `args`."""
-    if args.config_json_file is not None:
-        return Curriculum(
-            args.input_models_dir,
-            args.output_models_dir,
-            config_json_file=args.config_json_file,
-        )
-    elif args.config_json_string is not None:
-        return Curriculum(
-            args.input_models_dir,
-            args.output_models_dir,
-            config_json=args.config_json_string,
-        )
+    if args.config_json_string is not None:
+        logging.info("Curriculum: loading JSON config from a string")
+        config = json.loads(args.config_json)
     else:
-        raise ValueError(
-            "Curriculum: either path to JSON config or "
-            "JSON config string must be provided",
-        )
+        logging.info(f"Curriculum: loading JSON config from '{args.config_json_file}'")
+        with open(args.config_json_file) as f:
+            config = json.load(f)
+
+    return Curriculum(
+        victims_input_dir=args.input_models_dir,
+        victims_output_dir=args.output_models_dir,
+        config=config,
+        min_games_for_stats=args.min_games_for_stats,
+        game_buffer_capacity=args.max_games_buffer,
+    )
 
 
 def main():
@@ -714,7 +714,6 @@ def main():
     try:
         curriculum.checking_loop(
             args.selfplay_dir,
-            args.games_for_compute,
             args.checking_periodicity,
         )
     # we really want to silence 'B902: blind except'

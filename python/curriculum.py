@@ -3,6 +3,7 @@
 """Curriculum module for using in victimplay."""
 
 import argparse
+import dataclasses
 import datetime
 import enum
 import json
@@ -12,8 +13,7 @@ import pathlib
 import shutil
 import sys
 import time
-from dataclasses import asdict, dataclass
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from sgfmill import sgf
 
@@ -42,7 +42,7 @@ def flip_color(color: Color) -> Color:
         raise TypeError("Color must be black or white, not {color}")
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
 
@@ -55,8 +55,15 @@ class AdvGameInfo:
     score_wo_komi_diff: float
 
 
-@dataclass(frozen=True)
-class PlayerStat:
+class DataClassBase(object):
+    """No-op class needed as a base for dataclasses in multiple composition."""
+
+    def __post_init__(self):
+        pass
+
+
+@dataclasses.dataclass(frozen=True)
+class PlayerStat(DataClassBase):
     """Class for storing game statistics.
 
     Statistics is being represented from the adversary perspective.
@@ -69,28 +76,53 @@ class PlayerStat:
     policy_loss: Optional[float] = None
 
     def get_stat_members(self) -> Dict[str, float]:
-        d = asdict(self)
-        del d["name"]
-        return d
+        """Returns members of PlayerStat except name, excluding fields in subclsses."""
+        d = dataclasses.asdict(self)
+        fields = (f.name for f in dataclasses.fields(PlayerStat))
+        return {k: d[k] for k in fields if k != "name"}
 
 
-@dataclass(frozen=True)
-class VictimCriteria(PlayerStat):
+@dataclasses.dataclass(frozen=True)
+class VictimParams(DataClassBase):
+    """Parameters associated with an attack against a victim."""
+
+    name: str
+    max_visits_victim: Optional[int] = None
+    max_visits_adv: Optional[int] = None
+
+    def matches_criteria(
+        self,
+        other: "VictimParams",
+        strict: bool = True,
+    ) -> bool:
+        """Check two VictimParams objects agree.
+
+        Compares only the fields defined in VictimParams; intentionally
+        ignores fields defined in subclasses.
+
+        Args:
+            other: A VictimParams object.
+            strict: If False, None entries in `self` always compare equal;
+                if True, only compares equal to None.
+
+        Returns:
+            True if the above fields compare equal; False otherwise.
+        """
+        d0 = dataclasses.asdict(self)
+        d1 = dataclasses.asdict(other)
+
+        fields = (f.name for f in dataclasses.fields(VictimParams))
+        return all(d0[f] == d1[f] or (not strict and d0[f] is None) for f in fields)
+
+
+@dataclasses.dataclass(frozen=True)
+class VictimCriteria(PlayerStat, VictimParams):
     """Criteria for the victim change.
 
     Victim is represented by the model name and max visits.
     Criteria are represented by the statistics members.
     For victim only one criterion can be enabled, all others should be None.
     """
-
-    max_visits_victim: Optional[int] = None
-    max_visits_adv: Optional[int] = None
-
-    def get_stat_members(self) -> Dict[str, float]:
-        d = super().get_stat_members()
-        del d["max_visits_victim"]
-        del d["max_visits_adv"]
-        return d
 
     def __post_init__(self):
         if self.name is None:
@@ -114,33 +146,6 @@ class VictimCriteria(PlayerStat):
                 if adv_vals[k] > v:
                     return True
         return False
-
-    def matches_criteria(
-        self,
-        other: Union["VictimCriteria", Mapping[str, Any]],
-        strict: bool = True,
-    ) -> bool:
-        """Check current victim against the latest parameters.
-
-        Args:
-            other: A VictimCriteria, or mapping with the keys
-                "name", "max_visits_victim", "max_visits_adv".
-            strict: If False, None entries in `self` always compare equal;
-                if True, only compares equal to None.
-
-        Returns:
-            True if the above fields compare equal; False otherwise.
-
-        Parameters can be either VictimCriteria or a dict.
-        """
-        d0 = asdict(self)
-        if isinstance(other, VictimCriteria):
-            d1 = asdict(other)
-        else:
-            d1 = other
-
-        fields = ("name", "max_visits_victim", "max_visits_adv")
-        return all(d0[f] == d1[f] or (not strict and d0[f] is None) for f in fields)
 
 
 def is_name_victim(name: str) -> bool:
@@ -278,11 +283,11 @@ def recompute_statistics(
 
     games_cur_victim = []
     for game in games:
-        victim_params = {
-            "name": game.victim_name,
-            "max_visits_victim": game.victim_visits,
-            "max_visits_adv": game.adv_visits,
-        }
+        victim_params = VictimParams(
+            name=game.victim_name,
+            max_visits_victim=game.victim_visits,
+            max_visits_adv=game.adv_visits,
+        )
         if current_victim.matches_criteria(victim_params, strict=False):
             games_cur_victim.append(game)
 
@@ -401,7 +406,7 @@ class Curriculum:
         self._try_victim_copy()
         logging.info("Curriculum initial setup is complete")
 
-    def _load_latest_victim_params(self) -> Optional[Mapping[str, Any]]:
+    def _load_latest_victim_params(self) -> Optional[VictimParams]:
         """Loads the parameters of the latest victim from disk."""
         logging.info("Finding the latest victim...")
         victim_files = get_files_sorted_by_modification_time(
@@ -410,11 +415,8 @@ class Curriculum:
         )
         if victim_files:
             last_victim_name = os.path.basename(victim_files[0])
-            victim_params = {
-                "name": last_victim_name,
-                "max_visits_victim": None,
-                "max_visits_adv": None,
-            }
+            max_visits_victim = None
+            max_visits_adv = None
 
             # find current maxVisits settings
             if os.path.exists(self.selfplay_config_override_path):
@@ -425,13 +427,17 @@ class Curriculum:
                             continue
                         name, val = line.split("=")
                         if name == "maxVisits0":
-                            victim_params["max_visits_victim"] = int(val)
+                            max_visits_victim = int(val)
                         elif name == "maxVisits1":
-                            victim_params["max_visits_adv"] = int(val)
+                            max_visits_adv = int(val)
 
-            return victim_params
+            return VictimParams(
+                name=last_victim_name,
+                max_visits_victim=max_visits_victim,
+                max_visits_adv=max_visits_adv,
+            )
 
-    def _match_victim_params(self, victim_params: Mapping[str, Any]) -> int:
+    def _match_victim_params(self, victim_params: VictimParams) -> int:
         # determine current victim-with-max-visits index
         for cur_idx in range(len(self.victims)):
             if self.victims[cur_idx].matches_criteria(victim_params):

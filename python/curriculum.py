@@ -20,11 +20,17 @@ from sgfmill import sgf
 Config = Mapping[str, Any]
 
 
+@enum.unique
 class Color(enum.Enum):
     """Color of Go stones (black or white)."""
 
     BLACK = "B"
     WHITE = "W"
+
+    @staticmethod
+    def from_string(color: str) -> "Color":
+        color = color.upper()
+        return Color(color)
 
 
 def flip_color(color: Color) -> Color:
@@ -207,7 +213,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         return None
 
     victim_name, victim_visits, victim_color, adv_color = get_victim_adv_colors(game)
-    win_color = game.get_winner()
+    win_color = Color.from_string(game.get_winner())
 
     komi = game.get_komi()
     adv_komi = komi if adv_color == Color.WHITE else -komi

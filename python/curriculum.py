@@ -585,8 +585,8 @@ class Curriculum:
                     logging.info("Curriculum is done. Stopping")
                     break
             logging.info(
-                "Curriculum is alive, current victim : {}".format(
-                    self._cur_victim.name,
+                "Curriculum is alive, current victim : {} @ v{}".format(
+                    self._cur_victim.name, self._cur_victim.max_visits_victim,
                 ),
             )
             time.sleep(checking_periodicity)

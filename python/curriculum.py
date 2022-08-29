@@ -48,6 +48,7 @@ class AdvGameInfo:
 
     victim_name: str
     victim_visits: int
+    adv_visits: int
     game_hash: str
     winner: Optional[bool]
     score_diff: float
@@ -117,12 +118,15 @@ class VictimCriteria(PlayerStat):
     def matches_criteria(
         self,
         other: Union["VictimCriteria", Mapping[str, Any]],
+        strict: bool = True,
     ) -> bool:
         """Check current victim against the latest parameters.
 
         Args:
             other: A VictimCriteria, or mapping with the keys
                 "name", "max_visits_victim", "max_visits_adv".
+            strict: If False, None entries in `self` always compare equal;
+                if True, only compares equal to None.
 
         Returns:
             True if the above fields compare equal; False otherwise.
@@ -136,7 +140,7 @@ class VictimCriteria(PlayerStat):
             d1 = other
 
         fields = ("name", "max_visits_victim", "max_visits_adv")
-        return all(d0[f] == d1[f] for f in fields)
+        return all(d0[f] == d1[f] or (not strict and d0[f] is None) for f in fields)
 
 
 def is_name_victim(name: str) -> bool:
@@ -177,8 +181,8 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     return win_score
 
 
-def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
-    """Returns a tuple of victim name, visit count, and victim and adversary color."""
+def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, Color, Color]:
+    """Returns a tuple of victim name, victim color and adversary color."""
     colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
     name_to_colors: Mapping[str, Color] = {
         game.get_player_name(color.value.lower()): color for color in colors
@@ -193,11 +197,14 @@ def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
     adv_color = flip_color(victim_color)
 
     victim_name = victim_name[7:]
-    visit_key = victim_color.value + "R"  # BR or WR: black/white rank
-    game_root = game.get_root()
-    victim_visits = int(game_root.get(visit_key).lstrip("v"))
+    return victim_name, victim_color, adv_color
 
-    return victim_name, victim_visits, victim_color, adv_color
+
+def get_max_visits(game: sgf.Sgf_game, color: Color) -> int:
+    """Get max visits for player `color` in `game`."""
+    visit_key = color.value + "R"  # BR or WR: black/white rank
+    game_root = game.get_root()
+    return int(game_root.get(visit_key).lstrip("v"))
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
@@ -212,7 +219,9 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     if game_hash is None or win_score is None:
         return None
 
-    victim_name, victim_visits, victim_color, adv_color = get_victim_adv_colors(game)
+    victim_name, victim_color, adv_color = get_victim_adv_colors(game)
+    victim_visits = get_max_visits(game, victim_color)
+    adv_visits = get_max_visits(game, adv_color)
     win_color = Color.from_string(game.get_winner())
 
     komi = game.get_komi()
@@ -230,6 +239,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     return AdvGameInfo(
         victim_name=victim_name,
         victim_visits=victim_visits,
+        adv_visits=adv_visits,
         game_hash=game_hash,
         winner=winner,
         score_diff=adv_minus_victim_score,
@@ -261,8 +271,7 @@ def get_files_sorted_by_modification_time(
 def recompute_statistics(
     games: List[AdvGameInfo],
     games_for_compute: int,
-    current_victim_name: str,
-    current_victim_visits: Optional[int],
+    current_victim: VictimCriteria,
 ) -> Optional[PlayerStat]:
     """Compute statistics from games played by the current victim."""
     # don't have enough data
@@ -273,10 +282,12 @@ def recompute_statistics(
 
     games_cur_victim = []
     for game in games:
-        same_victim = game.victim_name == current_victim_name
-        same_visits = current_victim_visits is None
-        same_visits = same_visits or game.victim_visits == current_victim_visits
-        if same_victim and same_visits:
+        victim_params = {
+            "name": game.victim_name,
+            "max_visits_victim": game.victim_visits,
+            "max_visits_adv": game.adv_visits,
+        }
+        if current_victim.matches_criteria(victim_params, strict=False):
             games_cur_victim.append(game)
 
     if len(games_cur_victim) < len(games):
@@ -308,7 +319,7 @@ def recompute_statistics(
     mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
 
     return PlayerStat(
-        name=current_victim_name,
+        name=game.victim_name,
         win_rate=win_rate,
         score_diff=mean_diff_score,
         score_wo_komi_diff=mean_diff_score_wo_komi,
@@ -582,8 +593,7 @@ class Curriculum:
             adv_stat = recompute_statistics(
                 self.sgf_games,
                 games_for_compute,
-                self._cur_victim.name,
-                self._cur_victim.max_visits_victim,
+                self._cur_victim,
             )
             if adv_stat is not None:
                 self.try_move_on(adv_stat=adv_stat)
@@ -591,9 +601,10 @@ class Curriculum:
                     logging.info("Curriculum is done. Stopping")
                     break
             logging.info(
-                "Curriculum is alive, current victim : {} @ v{}".format(
+                "Curriculum is alive, current victim : {} @ v{} w/ adv @ v{}".format(
                     self._cur_victim.name,
                     self._cur_victim.max_visits_victim,
+                    self._cur_victim.max_visits_adv,
                 ),
             )
             time.sleep(checking_periodicity)

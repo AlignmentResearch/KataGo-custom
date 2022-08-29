@@ -13,17 +13,7 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import (
-    Any,
-    ClassVar,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import Any, ClassVar, Dict, Iterable, Mapping, Optional, Sequence, Tuple
 
 from sgfmill import sgf
 
@@ -300,7 +290,7 @@ def filter_games(
     return filtered_games
 
 
-def recompute_statistics(games: List[AdvGameInfo]) -> Optional[PlayerStat]:
+def recompute_statistics(games: Sequence[AdvGameInfo]) -> Optional[PlayerStat]:
     """Compute statistics from `games`."""
     logging.info("Computing {} games".format(len(games)))
 

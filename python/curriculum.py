@@ -11,18 +11,20 @@ import shutil
 import sys
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 from sgfmill import sgf
 
 Config = Mapping[str, Any]
+Color = Literal["b", "w"]
 
 
 @dataclass(frozen=True)
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
 
-    victim: str
+    victim_name: str
+    victim_visits: int
     game_hash: str
     winner: Optional[bool]
     score_diff: float
@@ -114,95 +116,94 @@ class VictimCriteria(PlayerStat):
         return all(d0[f] == d1[f] for f in fields)
 
 
-def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
-    try:
-        sgf_game = sgf.Sgf_game.from_string(sgf_str)
-    except IndexError:
-        logging.warning("Error parsing game: '%s'", sgf_str)
+def is_name_victim(name: str) -> bool:
+    """Has 'victim-' in `name` and not a colored evaluator."""
+    return "victim-" in name and "__" not in name
+
+
+def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
+    """Returns a tuple of victim name, visit count, and victim and adversary color."""
+    colors = ["b", "w"]
+    name_to_colors = {game.get_player(color): color for color in colors}
+    victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
+    if len(victim_names) != 1:
+        logging.warning("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
         return None
+    victim_name = victim_names[0]
+    assert victim_name.startswith("victim-")
 
-    b_name = sgf_game.get_player_name("b")
-    w_name = sgf_game.get_player_name("w")
-
-    if "victim-" in b_name and "__" not in b_name:
-        # it has 'victim' in its name and it is not a colored evaluator
-        victim_name = b_name
-    elif "victim-" in w_name and "__" not in w_name:
-        victim_name = w_name
-    else:
-        logging.warning("No player with 'victim-' prefix: '%s'", sgf_str)
-        return None
-
-    victim_color = {b_name: "b", w_name: "w"}[victim_name]
+    victim_color = name_to_colors[victim_name]
     adv_color = {"b": "w", "w": "b"}[victim_color]
+    victim_name = victim_name[7:]
+    visit_key = victim_color.upper() + "R"  # BR or WR: black/white rank
+    game_root = game.get_root()
+    victim_visits = int(game_root[visit_key].lstrip("v"))
 
-    # adv_raw_name = {"b": b_name, "w": w_name}[adv_color]
+    return victim_name, victim_visits, victim_color, adv_color
 
-    #  currently the model name will not be just 'victim'
-    #  this code was NOT tested so commented out yet
-    #  adv_name = (
-    #    adv_raw_name.split('__' + victim_name)[0]
-    #    if adv_color == "b"
-    #    else adv_raw_name.split(victim_name + '__')[1]
-    #  )
-    #  adv_steps = (
-    #    0
-    #    if adv_name == "random"
-    #    else int(re.search(r"\-s([0-9]+)\-", adv_name).group(1))
-    #  )
 
-    win_color = sgf_game.get_winner()
-    lose_color = {"b": "w", "w": "b", None: None}[win_color]
-    komi = sgf_game.get_komi()
-    adv_komi = {"w": komi, "b": -komi}[adv_color]
+def get_game_hash(game: sgf.Sgf_game) -> str:
+    """Extracts the hash from the game comment field C."""
+    # game_c = startTurnIdx=N,initTurnNum=N,gameHash=X
+    game_c = game.get_root().get("C")
+    # game_hash_raw: gameHash=X
+    game_hash_raw = game_c.split(",")[2]
+    # Returns the hash X
+    return game_hash_raw.split("=")[1]
 
-    win_score = 0
-    result = "undefined"
-    game_hash = None
+
+def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     try:
-        game_root = sgf_game.get_root()
-        game_c = game_root.get("C")
-        game_hash = game_c.split(",")[2].split("=")[1]
-
-        result = game_root.get("RE")
-        win_score = result.split("+")[1]
-        win_score = float(win_score)
+        result = game.get_root().get("RE")
     except KeyError:
         logging.warning("No result (RE tag) present in SGF game: '%s'", sgf_str)
         return None
+    try:
+        win_score = result.split("+")[1]
     except IndexError:
         logging.warning("No winner in result '%s'", result)
         return None
+    try:
+        win_score = float(win_score)
     except ValueError:
         logging.warning("Game score is not numeric: '%s'", win_score)
         return None
 
-    if game_hash is None:
-        logging.warning("Game hash is None!")
+
+def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
+    try:
+        game = sgf.Sgf_game.from_string(sgf_str)
+    except IndexError:
+        logging.warning("Error parsing game: '%s'", sgf_str)
         return None
 
-    if win_color is None:
+    victim_name, victim_visits, victim_color, adv_color = get_victim_adv_colors(game)
+    win_color = game.get_winner()
+
+    komi = game.get_komi()
+    adv_komi = {"w": komi, "b": -komi}[adv_color]
+
+    game_hash = get_game_hash(game)
+    win_score = get_game_score(game)
+    if win_score is None:
+        return None
+
+    if win_color is None:  # tie (should never happen under default rules)
         adv_minus_victim_score = 0
         adv_minus_victim_score_wo_komi = 0
+        winner = None
     else:
-        adv_minus_victim_score = {
-            win_color: win_score,
-            lose_color: -win_score,
-        }[adv_color]
+        winner = win_color == adv_color
+        adv_minus_victim_score = win_score if winner else -win_score
         adv_minus_victim_score_wo_komi = adv_minus_victim_score - adv_komi
 
-    winner = None
-    if win_color is not None:
-        winner = win_color == adv_color
-
-    assert victim_name.startswith("victim-")
-    victim_name = victim_name[7:]
     return AdvGameInfo(
-        victim_name,
-        game_hash,
-        winner,
-        adv_minus_victim_score,
-        adv_minus_victim_score_wo_komi,
+        victim_name=victim_name,
+        victim_visits=victim_visits,
+        game_hash=game_hash,
+        winner=winner,
+        score_diff=adv_minus_victim_score,
+        score_wo_komi_diff=adv_minus_victim_score_wo_komi,
     )
 
 
@@ -231,18 +232,23 @@ def recompute_statistics(
     games: List[AdvGameInfo],
     games_for_compute: int,
     current_victim_name: str,
+    current_victim_visits: Optional[int],
 ) -> Optional[PlayerStat]:
+    """Compute statistics from games played by the current victim."""
     # don't have enough data
     if len(games) < games_for_compute:
         logging.info(f"Incomplete statistics, got only {len(games)} games")
         return None
-
-    sum_wins = 0
-    sum_ties = 0
-    sum_score = 0
-    sum_score_wo_komi = 0
     logging.info("Computing {} games".format(len(games)))
-    games_cur_victim = [g for g in games if g.victim == current_victim_name]
+
+    games_cur_victim = []
+    for game in games:
+        same_victim = game.victim_name == current_victim_name
+        same_visits = current_victim_visits is None
+        same_visits = same_visits or game.victim_visits == current_victim_visits
+        if same_victim and same_visits:
+            games_cur_victim.append(game)
+
     if len(games_cur_victim) < len(games):
         logging.info(
             "Incomplete statistics for current victim, got only {} games".format(
@@ -251,6 +257,10 @@ def recompute_statistics(
         )
         return None
 
+    sum_wins = 0
+    sum_ties = 0
+    sum_score = 0
+    sum_score_wo_komi = 0
     for game in games:
         # game.winner can be None (for ties), but a tie is still not a win
         if game.winner:
@@ -537,6 +547,7 @@ class Curriculum:
                 self.sgf_games,
                 games_for_compute,
                 self._cur_victim.name,
+                self._cur_victim.max_visits_victim,
             )
             if adv_stat is not None:
                 self.try_move_on(adv_stat=adv_stat)

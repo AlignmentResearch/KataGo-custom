@@ -137,6 +137,20 @@ def is_name_victim(name: str) -> bool:
     return "victim-" in name and "__" not in name
 
 
+def get_game_hash(game: sgf.Sgf_game) -> Optional[str]:
+    """Extracts the hash from the game comment field C."""
+    # game_c = startTurnIdx=N,initTurnNum=N,gameHash=X
+    try:
+        game_c = game.get_root().get("C")
+    except KeyError:
+        logging.warning("No comment field in game %s", game)
+        return None
+    # game_hash_raw: gameHash=X
+    game_hash_raw = game_c.split(",")[2]
+    # Returns the hash X
+    return game_hash_raw.split("=")[1]
+
+
 def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
     """Returns a tuple of victim name, visit count, and victim and adversary color."""
     colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
@@ -158,16 +172,6 @@ def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
     victim_visits = int(game_root[visit_key].lstrip("v"))
 
     return victim_name, victim_visits, victim_color, adv_color
-
-
-def get_game_hash(game: sgf.Sgf_game) -> str:
-    """Extracts the hash from the game comment field C."""
-    # game_c = startTurnIdx=N,initTurnNum=N,gameHash=X
-    game_c = game.get_root().get("C")
-    # game_hash_raw: gameHash=X
-    game_hash_raw = game_c.split(",")[2]
-    # Returns the hash X
-    return game_hash_raw.split("=")[1]
 
 
 def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
@@ -195,16 +199,16 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         logging.warning("Error parsing game: '%s'", sgf_str)
         return None
 
+    game_hash = get_game_hash(game)
+    win_score = get_game_score(game)
+    if game_hash is None or win_score is None:
+        return None
+
     victim_name, victim_visits, victim_color, adv_color = get_victim_adv_colors(game)
     win_color = game.get_winner()
 
     komi = game.get_komi()
     adv_komi = komi if adv_color == Color.WHITE else -komi
-
-    game_hash = get_game_hash(game)
-    win_score = get_game_score(game)
-    if win_score is None:
-        return None
 
     if win_color is None:  # tie (should never happen under default rules)
         adv_minus_victim_score = 0
@@ -516,6 +520,8 @@ class Curriculum:
                 all_lines = list(f.readlines())
 
                 for line in reversed(all_lines):
+                    if not line.endswith("\n"):  # game not fully written
+                        continue
                     sgf_string = line.strip()
                     game_stat = get_game_info(sgf_string)
                     if game_stat is None:

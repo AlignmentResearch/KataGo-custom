@@ -22,6 +22,7 @@ Config = Mapping[str, Any]
 
 class Color(enum.Enum):
     """Color of Go stones (black or white)."""
+
     BLACK = "B"
     WHITE = "W"
 
@@ -327,12 +328,16 @@ class Curriculum:
 
         Construct and initialize curriculum.
 
-        @param victims_input_dir: The folder with all victim model
-            files specified in the config.
-        @param victims_output_dir: The folder where we copy victims for selfplay.
-        @param config: List of victims.
-        @param config_json: Serialized JSON list of victims.
-        @param config_json_file: JSON file with list of victims.
+        Args:
+            victims_input_dir: The folder with all victim model
+                files specified in the config.
+            victims_output_dir: The folder where we copy victims for selfplay.
+            config: List of victims.
+            config_json: Serialized JSON list of victims.
+            config_json_file: JSON file with list of victims.
+
+        Raises:
+            ValueError: Empty configuration.
         """
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10

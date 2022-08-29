@@ -644,7 +644,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-min-games-for-stats",
         type=int,
-        require=False,
+        required=False,
         default=1000,
         help="Minimum number of games to use to compute statistics",
     )

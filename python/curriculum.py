@@ -13,7 +13,17 @@ import pathlib
 import shutil
 import sys
 import time
-from typing import Any, ClassVar, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    ClassVar,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 from sgfmill import sgf
 
@@ -273,15 +283,12 @@ def get_files_sorted_by_modification_time(
     return [x[0] for x in all_files]
 
 
-def recompute_statistics(
-    games: List[AdvGameInfo],
-    min_games_for_stats: int,
+def filter_games(
+    games: Iterable[AdvGameInfo],
     current_victim: VictimCriteria,
-) -> Optional[PlayerStat]:
-    """Compute statistics from games played by the current victim."""
-    logging.info("Computing {} games".format(len(games)))
-
-    games_cur_victim = []
+) -> Sequence[AdvGameInfo]:
+    """Returns the subset of `games` corresponding to the `current_victim`."""
+    filtered_games = []
     for game in games:
         victim_params = VictimParams(
             name=game.victim_name,
@@ -289,13 +296,13 @@ def recompute_statistics(
             max_visits_adv=game.adv_visits,
         )
         if current_victim.matches_criteria(victim_params, strict=False):
-            games_cur_victim.append(game)
+            filtered_games.append(game)
+    return filtered_games
 
-    if len(games_cur_victim) < min_games_for_stats:
-        msg = "Incomplete statistics for current victim, got only "
-        msg += f"{len(games_cur_victim)} < {min_games_for_stats} "
-        logging.info(msg)
-        return None
+
+def recompute_statistics(games: List[AdvGameInfo]) -> Optional[PlayerStat]:
+    """Compute statistics from `games`."""
+    logging.info("Computing {} games".format(len(games)))
 
     sum_wins = 0
     sum_ties = 0
@@ -598,16 +605,25 @@ class Curriculum:
         logging.info("Starting curriculum loop")
         while True:
             self.update_sgf_games(selfplay_dir)
-            adv_stat = recompute_statistics(
+            filtered_games = filter_games(
                 self.sgf_games,
-                self.min_games_for_stats,
                 self._cur_victim,
             )
-            if adv_stat is not None:
+            if len(filtered_games) < self.min_games_for_stats:
+                msg = "Incomplete statistics for current victim, got only "
+                msg += f"{len(filtered_games)} < {self.min_games_for_stats} "
+                logging.info(msg)
+            else:
+                adv_stat = recompute_statistics(
+                    filtered_games,
+                    self.min_games_for_stats,
+                )
                 self.try_move_on(adv_stat=adv_stat)
-                if self.finished:
-                    logging.info("Curriculum is done. Stopping")
-                    break
+
+            if self.finished:
+                logging.info("Curriculum is done. Stopping")
+                break
+
             logging.info(
                 "Curriculum is alive, current victim : {} @ v{} w/ adv @ v{}".format(
                     self._cur_victim.name,

@@ -3,6 +3,7 @@
 """Curriculum module for using in victimplay."""
 
 import argparse
+import datetime
 import json
 import logging
 import os
@@ -156,7 +157,7 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     try:
         result = game.get_root().get("RE")
     except KeyError:
-        logging.warning("No result (RE tag) present in SGF game: '%s'", sgf_str)
+        logging.warning("No result (RE tag) present in SGF game: '%s'", game)
         return None
     try:
         win_score = result.split("+")[1]
@@ -401,14 +402,14 @@ class Curriculum:
         logging.info(
             "Copying the latest victim '{}'...".format(self._cur_victim),
         )
-        self.__try_victim_copy()
+        self._try_victim_copy()
         logging.info("Curriculum initial setup is complete")
 
     @property
     def _cur_victim(self) -> VictimCriteria:
         return self.victims[self.victim_idx]
 
-    def __update_victim_config(self):
+    def _update_victim_config(self):
         tmp_path = self.victims_output_dir_tmp / self.SELFPLAY_CONFIG_OVERRIDE_NAME
         with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
@@ -417,7 +418,7 @@ class Curriculum:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)
 
-    def __try_victim_copy(self, force_if_exists=False):
+    def _try_victim_copy(self, force_if_exists=False):
         victim_name = self._cur_victim.name
         victim_path = self.victims_output_dir / victim_name
         victim_path_tmp = self.victims_output_dir_tmp / victim_name
@@ -431,7 +432,7 @@ class Curriculum:
                 # Make sure directories exist
                 os.makedirs(self.victims_output_dir, exist_ok=True)
                 os.makedirs(self.victims_output_dir_tmp, exist_ok=True)
-                self.__update_victim_config()
+                self._update_victim_config()
 
                 # We copy to a tmp directory then move to make the overall
                 # operation atomic, which is needed to avoid race conditions
@@ -482,7 +483,7 @@ class Curriculum:
             return
 
         logging.info("Moving to the next victim '{}'".format(self._cur_victim.name))
-        self.__try_victim_copy(True)
+        self._try_victim_copy(True)
 
     def update_sgf_games(self, selfplay_dir: pathlib.Path, games_for_compute: int):
         all_sgfs = get_files_sorted_by_modification_time(selfplay_dir, ".sgfs")
@@ -562,16 +563,8 @@ class Curriculum:
             time.sleep(checking_periodicity)
 
 
-if __name__ == "__main__":
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-
-    file_handler = logging.FileHandler(filename="/outputs/curriculum.log")
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(stdout_handler)
-
+def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Run victim replacement based on win rate.",
     )
@@ -618,17 +611,42 @@ if __name__ == "__main__":
         default="configs/curriculum_conf.json",
         help="Curriculum JSON config with " "victims sequence (JSON file path)",
     )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Set log level to DEBUG (default INFO)",
+        action="store_const",
+        dest="log_level",
+        const=logging.DEBUG,
+        default=logging.INFO,
+    )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def setup_logging(log_level: int) -> None:
+    """Setup logging to file /outputs/curriculum-<timestamp>.log and stdout."""
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+
+    timestamp = datetime.datetime.utcnow().isoformat()
+    file_handler = logging.FileHandler(filename=f"/outputs/curriculum-{timestamp}.log")
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stdout_handler)
+
+
+def make_curriculum(args: argparse.Namespace) -> Curriculum:
+    """Construct curriculum from CLI `args`."""
     if args.config_json_file is not None:
-        curriculum = Curriculum(
+        return Curriculum(
             args.input_models_dir,
             args.output_models_dir,
             config_json_file=args.config_json_file,
         )
     elif args.config_json_string is not None:
-        curriculum = Curriculum(
+        return Curriculum(
             args.input_models_dir,
             args.output_models_dir,
             config_json=args.config_json_string,
@@ -638,6 +656,13 @@ if __name__ == "__main__":
             "Curriculum: either path to JSON config or "
             "JSON config string must be provided",
         )
+
+
+def main():
+    """Main console entry point to script."""
+    args = parse_args()
+    setup_logging(args.log_level)
+    curriculum = make_curriculum(args)
 
     try:
         curriculum.checking_loop(
@@ -652,3 +677,7 @@ if __name__ == "__main__":
         raise
 
     logging.info("Curriculum finished!")
+
+
+if __name__ == "__main__":
+    main()

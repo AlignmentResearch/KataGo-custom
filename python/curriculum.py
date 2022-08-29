@@ -4,6 +4,7 @@
 
 import argparse
 import datetime
+import enum
 import json
 import logging
 import os
@@ -12,12 +13,25 @@ import shutil
 import sys
 import time
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from sgfmill import sgf
 
 Config = Mapping[str, Any]
-Color = Literal["b", "w"]
+
+
+class Color(enum.Enum):
+    BLACK = "B"
+    WHITE = "W"
+
+
+def flip_color(color: Color) -> Color:
+    if color == Color.BLACK:
+        return Color.WHITE
+    elif color == Color.WHITE:
+        return Color.BLACK
+    else:
+        raise TypeError("Color must be black or white, not {color}")
 
 
 @dataclass(frozen=True)
@@ -124,19 +138,21 @@ def is_name_victim(name: str) -> bool:
 
 def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
     """Returns a tuple of victim name, visit count, and victim and adversary color."""
-    colors = ["b", "w"]
-    name_to_colors = {game.get_player(color): color for color in colors}
+    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    name_to_colors: Mapping[str, Color] = {
+        game.get_player_name(color): color for color in colors
+    }
     victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
     if len(victim_names) != 1:
-        logging.warning("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
-        return None
+        raise ValueError("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
     victim_name = victim_names[0]
     assert victim_name.startswith("victim-")
 
     victim_color = name_to_colors[victim_name]
-    adv_color = {"b": "w", "w": "b"}[victim_color]
+    adv_color = flip_color(victim_color)
+
     victim_name = victim_name[7:]
-    visit_key = victim_color.upper() + "R"  # BR or WR: black/white rank
+    visit_key = victim_color.value + "R"  # BR or WR: black/white rank
     game_root = game.get_root()
     victim_visits = int(game_root[visit_key].lstrip("v"))
 
@@ -182,7 +198,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     win_color = game.get_winner()
 
     komi = game.get_komi()
-    adv_komi = {"w": komi, "b": -komi}[adv_color]
+    adv_komi = komi if adv_color == Color.WHITE else -komi
 
     game_hash = get_game_hash(game)
     win_score = get_game_score(game)

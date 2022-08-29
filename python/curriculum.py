@@ -151,29 +151,6 @@ def get_game_hash(game: sgf.Sgf_game) -> Optional[str]:
     return game_hash_raw.split("=")[1]
 
 
-def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
-    """Returns a tuple of victim name, visit count, and victim and adversary color."""
-    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
-    name_to_colors: Mapping[str, Color] = {
-        game.get_player_name(color): color for color in colors
-    }
-    victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
-    if len(victim_names) != 1:
-        raise ValueError("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
-    victim_name = victim_names[0]
-    assert victim_name.startswith("victim-")
-
-    victim_color = name_to_colors[victim_name]
-    adv_color = flip_color(victim_color)
-
-    victim_name = victim_name[7:]
-    visit_key = victim_color.value + "R"  # BR or WR: black/white rank
-    game_root = game.get_root()
-    victim_visits = int(game_root[visit_key].lstrip("v"))
-
-    return victim_name, victim_visits, victim_color, adv_color
-
-
 def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     try:
         result = game.get_root().get("RE")
@@ -190,6 +167,30 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     except ValueError:
         logging.warning("Game score is not numeric: '%s'", win_score)
         return None
+    return win_score
+
+
+def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, int, Color, Color]:
+    """Returns a tuple of victim name, visit count, and victim and adversary color."""
+    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    name_to_colors: Mapping[str, Color] = {
+        game.get_player_name(color.value.lower()): color for color in colors
+    }
+    victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
+    if len(victim_names) != 1:
+        raise ValueError("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
+    victim_name = victim_names[0]
+    assert victim_name.startswith("victim-")
+
+    victim_color = name_to_colors[victim_name]
+    adv_color = flip_color(victim_color)
+
+    victim_name = victim_name[7:]
+    visit_key = victim_color.value + "R"  # BR or WR: black/white rank
+    game_root = game.get_root()
+    victim_visits = int(game_root.get(visit_key).lstrip("v"))
+
+    return victim_name, victim_visits, victim_color, adv_color
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:

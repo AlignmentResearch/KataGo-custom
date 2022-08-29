@@ -59,7 +59,8 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :searchAlgo(SearchAlgorithm::MCTS),
+  :passingBehavior(PassingBehavior::Standard),
+   searchAlgo(SearchAlgorithm::MCTS),
    EMCTS1_noiseOppNodes(true),
    canPassFirst(true),
    winLossUtilityFactor(1.0),

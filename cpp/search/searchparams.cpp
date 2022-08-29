@@ -148,7 +148,7 @@ SearchParams::~SearchParams()
 {}
 
 SearchParams SearchParams::forTestsV1() {
-  SearchParams params;
+  SearchParams params = SearchParams();
   params.staticScoreUtilityFactor = 0.1;
   params.dynamicScoreUtilityFactor = 0.3;
   params.dynamicScoreCenterZeroWeight = 0.2;

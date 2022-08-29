@@ -25,7 +25,7 @@ struct AnalyzeRequest {
   BoardHistory hist;
   Player nextPla;
 
-  SearchParams params;
+  SearchParams params = SearchParams();
   Player perspective;
   int analysisPVLen;
   bool includeOwnership;
@@ -124,7 +124,7 @@ int MainCmds::analysis(const vector<string>& args) {
       params.conservativePass = true;
   };
 
-  SearchParams defaultParams;
+  SearchParams defaultParams = SearchParams();
   Player defaultPerspective;
   loadParams(cfg, defaultParams, defaultPerspective, C_EMPTY);
 

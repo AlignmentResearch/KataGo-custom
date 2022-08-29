@@ -85,7 +85,7 @@ void Tests::runTrainingWriteTests() {
 
     NNEvaluator* nnEval = startNNEval("/dev/null",seedBase+"nneval",logger,0,inputsNHWC,useNHWC,false);
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     params.maxVisits = cheapLongSgf ? 2 : 100;
     params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
 
@@ -209,7 +209,7 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     params.maxVisits = 100;
     params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
 
@@ -377,7 +377,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     params.maxVisits = testResign ? 10 : 100;
     params.drawEquivalentWinsForWhite = 0.5;
     if(testLead) {
@@ -534,7 +534,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     string searchRandSeed = seedBase+"search";
     Search* bot = new Search(params, nnEval, &logger, searchRandSeed);
 
@@ -563,7 +563,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     params.maxVisits = 100;
     params.drawEquivalentWinsForWhite = 0.5;
 
@@ -1887,7 +1887,7 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params;
+    SearchParams params = SearchParams();
     params.maxVisits = 30;
     params.drawEquivalentWinsForWhite = 0.5;
 
@@ -1978,7 +1978,7 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
   {
     cout << "==============================================================" << endl;
     cout << "Also testing status logic inference!" << endl;
-    SearchParams params;
+    SearchParams params = SearchParams();
     string searchRandSeed = "test statuses";
     Search* bot = new Search(params, nnEval, &logger, searchRandSeed);
 

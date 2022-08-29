@@ -204,7 +204,7 @@ class MatchPairer {
     int botIdx;
     std::string botName;
     NNEvaluator* nnEval;
-    SearchParams baseParams;
+    SearchParams baseParams = SearchParams();
   };
 
   MatchPairer(const MatchPairer&) = delete;

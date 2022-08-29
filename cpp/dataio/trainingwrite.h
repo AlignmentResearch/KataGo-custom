@@ -52,6 +52,8 @@ STRUCT_NAMED_PAIR(std::string,name,int,turnIdx,ChangedNeuralNet);
 struct FinishedGameData {
   std::string bName;
   std::string wName;
+  std::string bRank;
+  std::string wRank;
   int bIdx;
   int wIdx;
 

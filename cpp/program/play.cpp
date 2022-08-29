@@ -1332,7 +1332,9 @@ FinishedGameData* Play::runGame(
   }
 
   gameData->bName = botSpecB.botName;
+  gameData->bRank = "v" + std::to_string(botSpecB.baseParams.maxVisits);
   gameData->wName = botSpecW.botName;
+  gameData->bRank = "v" + std::to_string(botSpecW.baseParams.maxVisits);
   gameData->bIdx = botSpecB.botIdx;
   gameData->wIdx = botSpecW.botIdx;
 

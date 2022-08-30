@@ -2,13 +2,6 @@
 # See https://pre-commit.com/hooks.html for more hooks
 # Use `pre-commit install` to install the hooks
 files: '^python/.*$'
-# WARNING: If you change this, also change `FULL_LINT_FILES` in
-# `.circleci/config.yml`.
-FULL_LINT_FILES: &full_lint_files |
-    (?x)^(
-      python/curriculum.py|
-      python/sgfmill/__init__.py
-    )$
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
@@ -21,7 +14,13 @@ repos:
     rev: '22.6.0'
     hooks:
     -   id: black
-        files: *full_lint_files
+        # WARNING: If you change this, also change `FULL_LINT_FILES` in
+        # `.circleci/config.yml`.
+        files: &full_lint_files |
+            (?x)^(
+              python/curriculum.py|
+              python/sgfmill/__init__.py
+            )$
 
 -   repo: https://github.com/codespell-project/codespell
     rev: v2.2.1

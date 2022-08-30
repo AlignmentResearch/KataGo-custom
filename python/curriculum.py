@@ -352,7 +352,7 @@ class Curriculum:
         victims_input_dir: pathlib.Path,
         victims_output_dir: pathlib.Path,
         config: Sequence[Config],
-        min_games_for_stats: int,
+        stats_rolling_window: int,
         game_buffer_capacity: int,
     ):
         """Initial curriculum setup.
@@ -364,9 +364,9 @@ class Curriculum:
                 files specified in the config.
             victims_output_dir: The folder where we copy victims for selfplay.
             config: Sequence of victim configurations.
-            min_games_for_stats: The minimum number of games from the current victim
-                needed for statistics to be computed. The curriculum will never move
-                past the current victim until this threshold is reached.
+            stats_rolling_window: The number of most recent games from the current
+                victim used for computing statistics. The curriculum will not move
+                past the victim until at least this many games has been collected.
             game_buffer_capacity: The maximum number of games to store in the buffer.
                 This consists of all games, not just those matching the current victim.
 
@@ -386,11 +386,11 @@ class Curriculum:
         self.victims_output_dir_tmp = victims_output_dir.with_name(
             victims_output_dir.name + "_tmp",
         )
-        self.min_games_for_stats = min_games_for_stats
+        self.stats_rolling_window = stats_rolling_window
         self.game_buffer_capacity = game_buffer_capacity
-        if self.game_buffer_capacity < self.min_games_for_stats:
+        if self.game_buffer_capacity < self.stats_rolling_window:
             msg = "Game buffer smaller than statistics rolling window: "
-            msg += f"{self.game_buffer_capacity} < {self.min_games_for_stats}"
+            msg += f"{self.game_buffer_capacity} < {self.stats_rolling_window}"
             raise ValueError(msg)
 
         # Parse config
@@ -599,12 +599,14 @@ class Curriculum:
                 self.sgf_games,
                 self._cur_victim,
             )
-            if len(filtered_games) < self.min_games_for_stats:
+            if len(filtered_games) < self.stats_rolling_window:
                 msg = "Incomplete statistics for current victim, got only "
-                msg += f"{len(filtered_games)} < {self.min_games_for_stats} "
+                msg += f"{len(filtered_games)} < {self.stats_rolling_window} "
                 logging.info(msg)
             else:
-                adv_stat = recompute_statistics(filtered_games)
+                # new games are added to front of `self.sgf_games`
+                most_recent_games = filtered_games[: self.stats_rolling_window]
+                adv_stat = recompute_statistics(most_recent_games)
                 self.try_move_on(adv_stat=adv_stat)
 
             if self.finished:
@@ -645,11 +647,11 @@ def parse_args() -> argparse.Namespace:
         help="Output dir for adding new victims",
     )
     parser.add_argument(
-        "-min-games-for-stats",
+        "stats-rolling-window",
         type=int,
         required=False,
         default=1000,
-        help="Minimum number of games to use to compute statistics",
+        help="Number of games from current victim to average statistics over",
     )
     parser.add_argument(
         "-max-games-buffer",
@@ -716,7 +718,7 @@ def make_curriculum(args: argparse.Namespace) -> Curriculum:
         victims_input_dir=args.input_models_dir,
         victims_output_dir=args.output_models_dir,
         config=config,
-        min_games_for_stats=args.min_games_for_stats,
+        stats_rolling_window=args.stats_rolling_window,
         game_buffer_capacity=args.max_games_buffer,
     )
 

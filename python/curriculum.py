@@ -647,7 +647,7 @@ def parse_args() -> argparse.Namespace:
         help="Output dir for adding new victims",
     )
     parser.add_argument(
-        "stats-rolling-window",
+        "-stats-rolling-window",
         type=int,
         required=False,
         default=1000,

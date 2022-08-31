@@ -48,6 +48,7 @@ def flip_color(color: Color) -> Color:
 class AdvGameInfo:
     """Class for storing game result from the adversary perspective."""
 
+    board_size: int
     victim_name: str
     victim_visits: int
     adv_visits: int
@@ -244,6 +245,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         adv_minus_victim_score_wo_komi = adv_minus_victim_score - adv_komi
 
     return AdvGameInfo(
+        board_size=game.get_size(),
         victim_name=victim_name,
         victim_visits=victim_visits,
         adv_visits=adv_visits,
@@ -347,6 +349,7 @@ class Curriculum:
 
     MAX_VICTIM_COPYING_EFFORTS: ClassVar[int] = 10
     VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT: ClassVar[int] = 10
+    BOARD_SIZE_FILTER: ClassVar[int] = 19
     SELFPLAY_CONFIG_OVERRIDE_NAME: ClassVar[str] = "victim.cfg"
 
     def __init__(
@@ -556,6 +559,8 @@ class Curriculum:
                     sgf_string = line.strip()
                     game_stat = get_game_info(sgf_string)
                     if game_stat is None:
+                        continue
+                    if game_stat.board_size != Curriculum.BOARD_SIZE_FILTER:
                         continue
 
                     # game hash was found, so consider that the rest of them are older

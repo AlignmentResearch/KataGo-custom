@@ -16,6 +16,7 @@ SearchParams::PassingBehavior SearchParams::strToPassingBehavior(const std::stri
   }
   ASSERT_UNREACHABLE;
 }
+
 std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
   switch(behavior) {
     case PassingBehavior::Standard:

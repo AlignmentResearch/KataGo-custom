@@ -41,7 +41,7 @@ def flip_color(color: Color) -> Color:
     elif color == Color.WHITE:
         return Color.BLACK
     else:
-        raise TypeError("Color must be black or white, not {color}")
+        raise TypeError(f"Color must be black or white, not {color}")
 
 
 @dataclasses.dataclass(frozen=True)

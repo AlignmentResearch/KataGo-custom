@@ -2,6 +2,8 @@
 
 """Curriculum module for using in victimplay."""
 
+from __future__ import annotations
+
 import argparse
 import dataclasses
 import datetime
@@ -92,7 +94,7 @@ class VictimParams(DataClassBase):
 
     def matches_criteria(
         self,
-        other: "VictimParams",
+        other: VictimParams,
         strict: bool = True,
     ) -> bool:
         """Check two VictimParams objects agree.

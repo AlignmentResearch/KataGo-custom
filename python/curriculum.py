@@ -239,6 +239,7 @@ class Curriculum:
         """Initial curriculum setup.
 
         Construct and initialize curriculum.
+
         Args:
             victims_input_dir: The folder with all victim model
                 files specified in the config.
@@ -246,8 +247,6 @@ class Curriculum:
             config: List of victims.
             config_json: Serialized JSON list of victims.
             config_json_file: JSON file with list of victims.
-        Raises:
-            ValueError: If `config*` are all None.
         """
         self.MAX_VICTIM_COPYING_EFFORTS = 10
         self.VICTIM_COPY_FILESYSTEM_ACCESS_TIMEOUT = 10

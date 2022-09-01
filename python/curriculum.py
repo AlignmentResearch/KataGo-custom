@@ -162,7 +162,7 @@ def get_game_hash(game: sgf.Sgf_game) -> Optional[str]:
     try:
         game_c = game.get_root().get("C")
     except KeyError:
-        logging.warning("No comment field in game %s", game)
+        logging.warning("No comment field in game %s", game, exc_info=True)
         return None
     # game_hash_raw: gameHash=X
     game_hash_raw = game_c.split(",")[2]
@@ -174,17 +174,19 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     try:
         result = game.get_root().get("RE")
     except KeyError:
-        logging.warning("No result (RE tag) present in SGF game: '%s'", game)
+        logging.warning(
+            "No result (RE tag) present in SGF game: '%s'", game, exc_info=True
+        )
         return None
     try:
         win_score = result.split("+")[1]
     except IndexError:
-        logging.warning("No winner in result '%s'", result)
+        logging.warning("No winner in result '%s'", result, exc_info=True)
         return None
     try:
         win_score = float(win_score)
     except ValueError:
-        logging.warning("Game score is not numeric: '%s'", win_score)
+        logging.warning("Game score is not numeric: '%s'", win_score, exc_info=True)
         return None
     return win_score
 
@@ -219,7 +221,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     try:
         game = sgf.Sgf_game.from_string(sgf_str)
     except IndexError:
-        logging.warning("Error parsing game: '%s'", sgf_str)
+        logging.warning("Error parsing game: '%s'", sgf_str, exc_info=True)
         return None
 
     game_hash = get_game_hash(game)
@@ -499,7 +501,7 @@ class Curriculum:
                 shutil.move(str(victim_path_tmp), victim_path)
                 return
             except OSError:
-                logging.warning(
+                logging.exception(
                     "Cannot copy victim '{}', maybe "
                     "filesystem problem? Waiting {} sec...".format(
                         self._cur_victim.name,

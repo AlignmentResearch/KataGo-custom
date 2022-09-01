@@ -15,7 +15,10 @@ std::time_t to_time_t(TP tp)
   return system_clock::to_time_t(sctp);
 }
 
-bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string& modelName, string& modelFile, string& modelDir, time_t& modelTime, bool checkDirsOnly) {
+bool LoadModel::findLatestModel(
+    const string& modelsDir, Logger& logger, string& modelName,
+    string& modelFile, string& modelDir, time_t& modelTime,
+    bool checkDirsOnly, const std::vector<std::string>& ignoreExt) {
   namespace gfs = ghc::filesystem;
 
   bool hasLatestTime = false;
@@ -25,6 +28,13 @@ bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string&
     gfs::path dirPath = iter->path();
     if(checkDirsOnly && !gfs::is_directory(dirPath))
       continue;
+
+    // go to the next item if the extension should be ignored
+    if(std::find(ignoreExt.begin(),
+                 ignoreExt.end(),
+                 dirPath.extension().string()) != ignoreExt.end()) {
+      continue;
+    }
 
     time_t thisTime = to_time_t(gfs::last_write_time(dirPath));
     if(!hasLatestTime || thisTime > latestTime) {

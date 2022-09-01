@@ -50,6 +50,8 @@ SidePosition::~SidePosition()
 FinishedGameData::FinishedGameData()
   :bName(),
    wName(),
+   bRank(),
+   wRank(),
    bIdx(0),
    wIdx(0),
 
@@ -108,7 +110,9 @@ FinishedGameData::~FinishedGameData() {
 
 void FinishedGameData::printDebug(ostream& out) const {
   out << "bName " << bName << endl;
+  out << "bRank " << bRank << endl;
   out << "wName " << wName << endl;
+  out << "wRank " << wRank << endl;
   out << "bIdx " << bIdx << endl;
   out << "wIdx " << wIdx << endl;
   out << "startPla " << PlayerIO::colorToChar(startPla) << endl;

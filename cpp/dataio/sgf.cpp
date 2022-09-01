@@ -1498,6 +1498,8 @@ void WriteSgf::writeSgf(
   out << "PW[" << wName << "]";
 
   if(gameData != NULL) {
+    out << "BR[" << gameData->bRank << "]";
+    out << "WR[" << gameData->wRank << "]";
     out << "HA[" << gameData->handicapForSgf << "]";
   }
   else {

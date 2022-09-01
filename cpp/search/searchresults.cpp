@@ -680,19 +680,15 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     }
     // Suppress passing if we're behind.
     case SearchParams::PassingBehavior::OnlyWhenAhead: {
-      // This is always from white's perspective, so flip if needed
-      double win = node.stats.winLossValueAvg.load(std::memory_order_acquire);
-      if(rootPla == P_BLACK)
-        win = -win;
-      return win < 0.0;
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin < 0.0;
     }
     // Suppress passing if we're ahead.
     case SearchParams::PassingBehavior::OnlyWhenBehind: {
-      // This is always from white's perspective, so flip if needed
-      double win = node.stats.winLossValueAvg.load(std::memory_order_acquire);
-      if(rootPla == P_BLACK)
-        win = -win;
-      return win > 0.0;
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin > 0.0;
     }
     default:
       ASSERT_UNREACHABLE;

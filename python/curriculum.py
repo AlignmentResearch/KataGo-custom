@@ -175,7 +175,9 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
         result = game.get_root().get("RE")
     except KeyError:
         logging.warning(
-            "No result (RE tag) present in SGF game: '%s'", game, exc_info=True,
+            "No result (RE tag) present in SGF game: '%s'",
+            game,
+            exc_info=True,
         )
         return None
     try:

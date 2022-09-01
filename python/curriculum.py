@@ -318,9 +318,9 @@ def recompute_statistics(games: Sequence[AdvGameInfo]) -> Optional[PlayerStat]:
     logging.info(
         "Got {} wins and {} ties from {} games".format(sum_wins, sum_ties, len(games)),
     )
-    win_rate = float(sum_wins) / len(games)
-    mean_diff_score = float(sum_score) / len(games)
-    mean_diff_score_wo_komi = float(sum_score_wo_komi) / len(games)
+    win_rate = sum_wins / len(games)
+    mean_diff_score = sum_score / len(games)
+    mean_diff_score_wo_komi = sum_score_wo_komi / len(games)
 
     return PlayerStat(
         name=game.victim_name,

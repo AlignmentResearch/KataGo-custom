@@ -17,6 +17,7 @@ SearchParams::PassingBehavior SearchParams::strToPassingBehavior(const std::stri
   );
   return result->first;
 }
+
 std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
   return behavior_to_string.at(behavior);
 }

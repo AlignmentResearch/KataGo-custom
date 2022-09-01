@@ -674,7 +674,9 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
 
       float margin = historyCopy.finalWhiteMinusBlackScore;
       bool whiteWillWin = margin > 0.0f;
-      return whiteWillWin == (n->nextPla == P_WHITE);
+      bool oppIsWhite = getOpp(n->nextPla) == P_WHITE;
+      bool oppWillWin = whiteWillWin == oppIsWhite;
+      return oppWillWin;
     }
     // Suppress passing if we're behind.
     case SearchParams::PassingBehavior::OnlyWhenAhead: {

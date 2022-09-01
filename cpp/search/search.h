@@ -290,7 +290,7 @@ struct Search {
 
   bool alwaysIncludeOwnerMap;
 
-  SearchParams searchParams = SearchParams();
+  SearchParams searchParams;
   int64_t numSearchesBegun;
   uint32_t searchNodeAge;
   Player plaThatSearchIsFor;

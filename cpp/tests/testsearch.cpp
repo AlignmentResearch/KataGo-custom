@@ -229,7 +229,7 @@ static NNEvaluator* startNNEval(
 static void runBasicPositions(NNEvaluator* nnEval, Logger& logger)
 {
   {
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 200;
     AsyncBot* bot = new AsyncBot(params, nnEval, &logger, getSearchRandSeed());
     Rules rules = Rules::getTrompTaylorish();
@@ -421,7 +421,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
     nnEvalPTemp->clearStats();
     cout << endl << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 200;
     AsyncBot* bot = new AsyncBot(params, nnEval, &logger, "seed");
     TestSearchOptions opts;
@@ -471,7 +471,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
     cout << "GAME 7 ==========================================================================" << endl;
     cout << "(Simple extension of game 6 to test root ending bonus points)" << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 500;
     params.fpuReductionMax = 0.0;
     params.rootFpuReductionMax = 0.0;
@@ -512,7 +512,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
     cout << "GAME 8 ==========================================================================" << endl;
     cout << "(Alternate variation of game 7 to test root ending bonus points in territory scoring)" << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 500;
     params.fpuReductionMax = 0.0;
     params.rootFpuReductionMax = 0.0;
@@ -544,7 +544,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
     cout << "(A game to visualize root noise)" << endl;
     cout << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 1;
     AsyncBot* bot = new AsyncBot(params, nnEval, &logger, getSearchRandSeed());
     Rules rules = Rules::getSimpleTerritory();
@@ -574,7 +574,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
     cout << "(Tricky endgame seki invasion, testing LCB and dynamic utility recompute)" << endl;
     cout << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 280;
     params.staticScoreUtilityFactor = 0.2;
     params.dynamicScoreUtilityFactor = 0.3;
@@ -640,7 +640,7 @@ static void runOwnershipAndMisc(NNEvaluator* nnEval, NNEvaluator* nnEval11, NNEv
 )%%");
     BoardHistory histB(boardB,nextPla,rules,0);
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 200;
     params.dynamicScoreUtilityFactor = 0.25;
 
@@ -695,7 +695,7 @@ o..o..oxo
       hist.makeBoardMoveAssumeLegal(board,Location::ofString("H8",board),nextPla,NULL);
       nextPla = P_BLACK;
 
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 200;
 
       AsyncBot* bot = new AsyncBot(params, nnEval, &logger, seed);
@@ -733,7 +733,7 @@ xx.o.o.o.
 
     {
       cout << "conservativePass=false" << endl;
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 80;
       params.rootFpuReductionMax = 0.0;
       params.rootPolicyTemperature = 1.5;
@@ -747,7 +747,7 @@ xx.o.o.o.
 
     {
       cout << "conservativePass=true" << endl;
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 80;
       params.conservativePass = true;
       params.rootFpuReductionMax = 0.0;
@@ -786,7 +786,7 @@ xx.o.o.o.
 )%%");
     BoardHistory hist(board,nextPla,rules,0);
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 200;
     params.rootPolicyTemperature = 2.5;
     params.rootPolicyTemperatureEarly = 2.5;
@@ -2847,7 +2847,7 @@ void Tests::runNNLessSearchTests() {
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 100;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
     Rules rules = Rules::getTrompTaylorish();
@@ -2930,7 +2930,7 @@ void Tests::runNNLessSearchTests() {
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 50;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
     Rules rules = Rules::getTrompTaylorish();
@@ -3059,7 +3059,7 @@ o..oo.x
     {
       cout << "First with no pruning" << endl;
       NNEvaluator* nnEval = startNNEval(modelFile,logger,"seed1",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 400;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed3");
       TestSearchOptions opts;
@@ -3082,7 +3082,7 @@ o..oo.x
     {
       cout << "Next, with rootPruneUselessMoves" << endl;
       NNEvaluator* nnEval = startNNEval(modelFile,logger,"seed1",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 400;
       params.rootPruneUselessMoves = true;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed3");
@@ -3118,7 +3118,7 @@ o..oo.x
     {
       cout << "Searching on the opponent, the move before" << endl;
       NNEvaluator* nnEval = startNNEval(modelFile,logger,"seed1b",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 400;
       params.rootPruneUselessMoves = true;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed3");
@@ -3190,7 +3190,7 @@ o..o.oo
     {
       cout << "First with no pruning" << endl;
       NNEvaluator* nnEval = startNNEval(modelFile,logger,"seed1",NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,0,true,false,false,true,false);
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 400;
       params.dynamicScoreUtilityFactor = 0.5;
       params.useLcbForSelection = true;
@@ -3227,7 +3227,7 @@ o..o.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = true;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
@@ -3268,7 +3268,7 @@ o..o.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 2000;
     params.rootSymmetryPruning = true;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
@@ -3309,7 +3309,7 @@ o..o.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = true;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
@@ -3351,7 +3351,7 @@ o..o.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = true;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
@@ -3393,7 +3393,7 @@ o..o.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = true;
     params.wideRootNoise = 0.05;
@@ -3470,7 +3470,7 @@ xx......x
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = true;
     params.wideRootNoise = 0.05;
@@ -3547,7 +3547,7 @@ xx......x
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 5000;
     params.rootSymmetryPruning = false;
     params.wideRootNoise = 0.05;
@@ -3624,7 +3624,7 @@ xx......x
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",7,17,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 100;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
     Rules rules = Rules::getTrompTaylorish();
@@ -3672,7 +3672,7 @@ xx......x
     cout << "Visualize dirichlet noise" << endl;
     cout << "===================================================================" << endl;
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.rootNoiseEnabled = true;
     Rand rand("noiseVisualize");
 
@@ -3731,7 +3731,7 @@ xx......x
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",7,7,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 200;
     Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
     Search* search2 = new Search(params, nnEval, &logger, "autoSearchRandSeed");
@@ -3825,7 +3825,7 @@ xxxxooo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",7,7,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 500;
     params.subtreeValueBiasFactor = 0.5;
     params.chosenMoveTemperature = 0;
@@ -3889,7 +3889,7 @@ o.oo.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 10;
     params.subtreeValueBiasFactor = 0.5;
     params.chosenMoveTemperature = 0;
@@ -3943,7 +3943,7 @@ o.oo.oo
     cout << "===================================================================" << endl;
 
     NNEvaluator* nnEval = startNNEval(modelFile,logger,"",9,9,0,true,false,false,true,false);
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 10;
     params.subtreeValueBiasFactor = 0.5;
     params.chosenMoveTemperature = 0;
@@ -4077,7 +4077,7 @@ xxxxxxxxx
     options = options.maxDepth(1);
 
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 1;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4089,7 +4089,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 1;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4101,7 +4101,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 1;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4113,7 +4113,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 1;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4125,7 +4125,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 2;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4137,7 +4137,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 2;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4149,7 +4149,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 2;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4163,7 +4163,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 2;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);
@@ -4177,7 +4177,7 @@ xxxxxxxxx
       delete search;
     }
     {
-      SearchParams params = SearchParams();
+      SearchParams params;
       params.maxVisits = 1000;
       Search* search = new Search(params, nnEval, &logger, "autoSearchRandSeed");
       search->setPosition(nextPla,board,hist);

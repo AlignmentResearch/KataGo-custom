@@ -1,38 +1,24 @@
 #include "../search/searchparams.h"
 
+
+static const std::map<SearchParams::PassingBehavior, const std::string> behavior_to_string = {
+    {SearchParams::PassingBehavior::Standard, "standard"},
+    {SearchParams::PassingBehavior::AvoidPassAliveTerritory, "avoid-pass-alive-territory"},
+    {SearchParams::PassingBehavior::LastResort, "last-resort"},
+    {SearchParams::PassingBehavior::NoSuicide, "no-suicide"},
+    {SearchParams::PassingBehavior::OnlyWhenAhead, "only-when-ahead"},
+    {SearchParams::PassingBehavior::OnlyWhenBehind, "only-when-behind"}
+};
+
 SearchParams::PassingBehavior SearchParams::strToPassingBehavior(const std::string& behaviorStr) {
-  if(behaviorStr == "standard") {
-    return SearchParams::PassingBehavior::Standard;
-  } else if(behaviorStr == "avoid-pass-alive-territory") {
-    return SearchParams::PassingBehavior::AvoidPassAliveTerritory;
-  } else if(behaviorStr == "last-resort") {
-    return SearchParams::PassingBehavior::LastResort;
-  } else if(behaviorStr == "last-resort-oracle") {
-    return SearchParams::PassingBehavior::LastResortOracle;
-  } else if(behaviorStr == "only-when-ahead") {
-    return SearchParams::PassingBehavior::OnlyWhenAhead;
-  } else if(behaviorStr == "only-when-behind") {
-    return SearchParams::PassingBehavior::OnlyWhenBehind;
-  }
-  ASSERT_UNREACHABLE;
+  auto result = std::find_if(
+    behavior_to_string.begin(), behavior_to_string.end(),
+    [&behaviorStr](const auto &pair) { return pair.second == behaviorStr; }
+  );
+  return result->first;
 }
 std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
-  switch(behavior) {
-    case PassingBehavior::Standard:
-      return "standard";
-    case PassingBehavior::AvoidPassAliveTerritory:
-      return "avoid-pass-alive-territory";
-    case PassingBehavior::LastResort:
-      return "last-resort";
-    case PassingBehavior::LastResortOracle:
-      return "last-resort-oracle";
-    case PassingBehavior::OnlyWhenAhead:
-      return "only-when-ahead";
-    case PassingBehavior::OnlyWhenBehind:
-      return "only-when-behind";
-    default:
-      ASSERT_UNREACHABLE;
-  }
+  return behavior_to_string.at(behavior);
 }
 
 SearchParams::SearchAlgorithm SearchParams::strToSearchAlgo(const std::string& algoStr) {
@@ -148,7 +134,7 @@ SearchParams::~SearchParams()
 {}
 
 SearchParams SearchParams::forTestsV1() {
-  SearchParams params = SearchParams();
+  SearchParams params;
   params.staticScoreUtilityFactor = 0.1;
   params.dynamicScoreUtilityFactor = 0.3;
   params.dynamicScoreCenterZeroWeight = 0.2;

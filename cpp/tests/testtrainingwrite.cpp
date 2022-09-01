@@ -85,7 +85,7 @@ void Tests::runTrainingWriteTests() {
 
     NNEvaluator* nnEval = startNNEval("/dev/null",seedBase+"nneval",logger,0,inputsNHWC,useNHWC,false);
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = cheapLongSgf ? 2 : 100;
     params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
 
@@ -209,7 +209,7 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 100;
     params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
 
@@ -377,7 +377,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = testResign ? 10 : 100;
     params.drawEquivalentWinsForWhite = 0.5;
     if(testLead) {
@@ -534,7 +534,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     string searchRandSeed = seedBase+"search";
     Search* bot = new Search(params, nnEval, &logger, searchRandSeed);
 
@@ -563,7 +563,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 100;
     params.drawEquivalentWinsForWhite = 0.5;
 
@@ -905,7 +905,7 @@ xxxxxxxx.
     botSpec.botIdx = 0;
     botSpec.botName = modelFile;
     botSpec.nnEval = nnEval;
-    botSpec.baseParams = SearchParams();
+    botSpec.baseParams;
     botSpec.baseParams.maxVisits = 10;
     ForkData* forkData = new ForkData();
 
@@ -1061,7 +1061,7 @@ void Tests::runSelfplayStatTestsWithNN(const string& modelFile) {
     botSpec.botIdx = 0;
     botSpec.botName = modelFile;
     botSpec.nnEval = nnEval;
-    botSpec.baseParams = SearchParams();
+    botSpec.baseParams;
     botSpec.baseParams.maxVisits = 10;
 
     ConfigParser cfg(cfgParams);
@@ -1887,7 +1887,7 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
     nnEval->clearCache();
     nnEval->clearStats();
 
-    SearchParams params = SearchParams();
+    SearchParams params;
     params.maxVisits = 30;
     params.drawEquivalentWinsForWhite = 0.5;
 
@@ -1978,7 +1978,7 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
   {
     cout << "==============================================================" << endl;
     cout << "Also testing status logic inference!" << endl;
-    SearchParams params = SearchParams();
+    SearchParams params;
     string searchRandSeed = "test statuses";
     Search* bot = new Search(params, nnEval, &logger, searchRandSeed);
 

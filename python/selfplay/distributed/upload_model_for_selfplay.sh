@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 set -o pipefail
 {
 #Takes any models in modelstobetested/ and uploads them, then moves them to modelsuploaded/

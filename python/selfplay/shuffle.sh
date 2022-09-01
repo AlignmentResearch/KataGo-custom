@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 set -o pipefail
 {
 #Shuffles and copies selfplay training from selfplay/ to shuffleddata/current/

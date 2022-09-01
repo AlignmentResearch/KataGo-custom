@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eu
 
 # if was not set externally, try to check with git
 if [ -z ${GITROOTDIR+x} ]; then

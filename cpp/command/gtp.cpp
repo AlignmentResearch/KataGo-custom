@@ -330,7 +330,7 @@ struct GTPEngine {
   Rules currentRules; //Should always be the same as the rules in bot, if bot is not NULL.
 
   //Stores the params we want to be using during genmoves or analysis
-  SearchParams params = SearchParams();
+  SearchParams params;
 
   TimeControls bTimeControls;
   TimeControls wTimeControls;

@@ -132,7 +132,7 @@ using namespace std;
 
 //   delete logStream;
 
-//   SearchParams params = SearchParams();
+//   SearchParams params;
 //   params.maxPlayouts = 180;
 //   params.numThreads = 1;
 //   params.fpuUseParentAverage = false;
@@ -1393,7 +1393,7 @@ int MainCmds::sandbox() {
 // )");
 
 //   BoardHistory hist(board,pla,rules);
-//   SearchParams params = SearchParams();
+//   SearchParams params;
 //   params.maxPlayouts = 1000;
 //   params.numThreads = 6;
 
@@ -1493,7 +1493,7 @@ int MainCmds::sandbox() {
 // )");
 
 //   BoardHistory hist(board,pla,rules);
-//   SearchParams params = SearchParams();
+//   SearchParams params;
 
 //   Search* search = new Search(params, nnEval);
 //   search->setPosition(pla,board,hist);

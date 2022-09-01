@@ -130,7 +130,7 @@ static void runAndUploadSingleGame(
   NNEvaluator* nnEvalBlack = gameTask.nnEvalBlack;
   NNEvaluator* nnEvalWhite = gameTask.nnEvalWhite;
 
-  SearchParams baseParams = SearchParams();
+  SearchParams baseParams;
   PlaySettings playSettings;
   try {
     baseParams = Setup::loadSingleParams(taskCfg,Setup::SETUP_FOR_DISTRIBUTED);

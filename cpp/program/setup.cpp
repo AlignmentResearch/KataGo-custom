@@ -363,7 +363,7 @@ vector<SearchParams> Setup::loadParams(
     numBots = cfg.getInt("numBots",1,MAX_BOT_PARAMS_FROM_CFG);
 
   for(int i = 0; i<numBots; i++) {
-    SearchParams params = SearchParams();
+    SearchParams params;
 
     string idxStr = Global::intToString(i);
 

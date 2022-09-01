@@ -520,13 +520,14 @@ Loc Search::getChosenMoveLoc() {
 
 //Hack to encourage well-behaved dame filling behavior under territory scoring
 bool Search::shouldSuppressPass(const SearchNode* n) const {
-  if(n != rootNode)
+  if(n == NULL || n != rootNode)
     return false;
   if(!rootHistory.existsNonPassingLegalMove(rootBoard, rootPla))
     return false;
   
+  // When using standard passing, we should only suppressPass in territory scoring. Otherwise, short circuit.
   if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
-    if(!searchParams.fillDameBeforePass || n == NULL)
+    if(!searchParams.fillDameBeforePass)
       return false;
     if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
       return false;
@@ -662,11 +663,11 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     }
     // Use "oracle" access to the score in the hypothetical where the opponent responds by passing.
     // If we lose in this hypothetical, then suppress passing.
-    case SearchParams::PassingBehavior::LastResortOracle: {
+    case SearchParams::PassingBehavior::NoSuicide: {
       Board boardCopy(rootBoard);
       BoardHistory historyCopy(rootHistory);
 
-      Player opp = n->nextPla == P_WHITE ? P_BLACK : P_WHITE;
+      Player opp = getOpp(n->nextPla);
       historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, n->nextPla);
       historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, opp);
       historyCopy.endAndScoreGameNow(boardCopy);

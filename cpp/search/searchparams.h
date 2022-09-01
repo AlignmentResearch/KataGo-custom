@@ -15,7 +15,7 @@ struct SearchParams {
     LastResort,
     // Disallow passing when this would cause you to lose on the next turn by Tromp-Taylor scoring if the opponent
     // passes. Instead of trusting what the neural net says we use "oracle" access to the TT score.
-    LastResortOracle,
+    NoSuicide,
     // Passing is only allowed when the net thinks it has a safe win margin
     OnlyWhenAhead,
     // Passing is only allowed when the net is likely losing

@@ -1,5 +1,27 @@
 #include "../search/searchparams.h"
 
+
+static const std::map<SearchParams::PassingBehavior, const std::string> behavior_to_string = {
+    {SearchParams::PassingBehavior::Standard, "standard"},
+    {SearchParams::PassingBehavior::AvoidPassAliveTerritory, "avoid-pass-alive-territory"},
+    {SearchParams::PassingBehavior::LastResort, "last-resort"},
+    {SearchParams::PassingBehavior::NoSuicide, "no-suicide"},
+    {SearchParams::PassingBehavior::OnlyWhenAhead, "only-when-ahead"},
+    {SearchParams::PassingBehavior::OnlyWhenBehind, "only-when-behind"}
+};
+
+SearchParams::PassingBehavior SearchParams::strToPassingBehavior(const std::string& behaviorStr) {
+  auto result = std::find_if(
+    behavior_to_string.begin(), behavior_to_string.end(),
+    [&behaviorStr](const auto &pair) { return pair.second == behaviorStr; }
+  );
+  return result->first;
+}
+
+std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
+  return behavior_to_string.at(behavior);
+}
+
 SearchParams::SearchAlgorithm SearchParams::strToSearchAlgo(const std::string& algoStr) {
   if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
   if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
@@ -24,7 +46,8 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 //They are not necessarily the best parameters though, and have been kept mostly fixed over time even as things
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
-  :searchAlgo(SearchAlgorithm::MCTS),
+  :passingBehavior(PassingBehavior::Standard),
+   searchAlgo(SearchAlgorithm::MCTS),
    EMCTS1_noiseOppNodes(true),
    canPassFirst(true),
    winLossUtilityFactor(1.0),

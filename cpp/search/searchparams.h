@@ -5,6 +5,26 @@
 #include "../game/board.h"
 
 struct SearchParams {
+  enum class PassingBehavior {
+    // Essentially use vanilla MCTS to determine when passing makes sense
+    Standard,
+    // Pass when the only legal alternatives are to play in your own pass-alive territory
+    AvoidPassAliveTerritory,
+    // Pass when the only legal alternatives are in territory your opponent "almost certainly" (95% chance) owns,
+    // or that are "much worse" than passing
+    LastResort,
+    // Disallow passing when this would cause you to lose on the next turn by Tromp-Taylor scoring if the opponent
+    // passes. Instead of trusting what the neural net says we use "oracle" access to the TT score.
+    NoSuicide,
+    // Passing is only allowed when the net thinks it has a safe win margin
+    OnlyWhenAhead,
+    // Passing is only allowed when the net is likely losing
+    OnlyWhenBehind
+  };
+  static PassingBehavior strToPassingBehavior(const std::string& behaviorStr);
+  static std::string passingBehaviorToStr(PassingBehavior behavior);
+  PassingBehavior passingBehavior;
+
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };
   static SearchAlgorithm strToSearchAlgo(const std::string& algoStr);

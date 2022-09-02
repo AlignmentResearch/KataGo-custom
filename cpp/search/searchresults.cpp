@@ -520,10 +520,18 @@ Loc Search::getChosenMoveLoc() {
 
 //Hack to encourage well-behaved dame filling behavior under territory scoring
 bool Search::shouldSuppressPass(const SearchNode* n) const {
-  if(!searchParams.fillDameBeforePass || n == NULL || n != rootNode)
+  if(n == NULL || n != rootNode)
     return false;
-  if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
+  if(!rootHistory.existsNonPassingLegalMove(rootBoard, rootPla))
     return false;
+  
+  // When using standard passing, we should only suppressPass in territory scoring. Otherwise, short circuit.
+  if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
+    if(!searchParams.fillDameBeforePass)
+      return false;
+    if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
+      return false;
+  }
 
   const SearchNode& node = *n;
   const NNOutput* nnOutput = node.getNNOutput();
@@ -550,7 +558,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
       break;
     }
   }
-  if(passNode == NULL)
+  if(passNode == NULL && searchParams.passingBehavior == SearchParams::PassingBehavior::Standard)
     return false;
 
   double passWeight;
@@ -572,57 +580,118 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     passLead = leadAvg;
   }
 
-  const double extreme = 0.95;
+  switch(searchParams.passingBehavior) {
+    // Tony Wang's proposal
+    case SearchParams::PassingBehavior::AvoidPassAliveTerritory: {
+      // Find pass-alive territory
+      Color territories[Board::MAX_ARR_SIZE];
+      rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
 
-  //Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
-  //or that is adjacent to a pla owned spot, and is not greatly worse than pass.
-  for(int i = 0; i<childrenCapacity; i++) {
-    const SearchNode* child = children[i].getIfAllocated();
-    if(child == NULL)
-      break;
-    Loc moveLoc = child->prevMoveLoc;
-    if(moveLoc == Board::PASS_LOC)
-      continue;
-    int pos = NNPos::locToPos(moveLoc,rootBoard.x_size,nnXLen,nnYLen);
-    double plaOwnership = rootPla == P_WHITE ? whiteOwnerMap[pos] : -whiteOwnerMap[pos];
-    bool oppOwned = plaOwnership < -extreme;
-    bool adjToPlaOwned = false;
-    for(int j = 0; j<4; j++) {
-      Loc adj = moveLoc + rootBoard.adj_offsets[j];
-      int adjPos = NNPos::locToPos(adj,rootBoard.x_size,nnXLen,nnYLen);
-      double adjPlaOwnership = rootPla == P_WHITE ? whiteOwnerMap[adjPos] : -whiteOwnerMap[adjPos];
-      if(adjPlaOwnership > extreme) {
-        adjToPlaOwned = true;
-        break;
+      // Iterate through all possible non-passing moves
+      // and check if they are legal modulo passing
+      for(int y = 0; y < rootBoard.y_size; y++) {
+        for(int x = 0; x < rootBoard.x_size; x++) {
+          Loc loc = Location::getLoc(x, y, rootBoard.x_size);
+
+          // Not a legal move, keep looking
+          if(!rootHistory.isLegalModuloPassing(rootBoard, loc, rootPla))
+            continue;
+
+          // Found a legal move that isn't in our own pass-alive territory.
+          // This means we should not pass, i.e. passing should be suppressed.
+          if(!playersMatch(territories[loc], rootPla)) {
+            return true;
+          }
+        }
       }
+      return false;
     }
-    if(oppOwned && !adjToPlaOwned)
-      continue;
+    // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
+    // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
+    case SearchParams::PassingBehavior::LastResort: {
+      const double extreme = 0.95;
 
-    int64_t numVisits = child->stats.visits.load(std::memory_order_acquire);
-    double weightSum = child->stats.weightSum.load(std::memory_order_acquire);
-    double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
-    double leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
-    double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
+      for(int i = 0; i < childrenCapacity; i++) {
+        const SearchNode* child = children[i].getIfAllocated();
+        if(child == NULL)
+          break;
+        Loc moveLoc = child->prevMoveLoc;
+        if(moveLoc == Board::PASS_LOC)
+          continue;
+        int pos = NNPos::locToPos(moveLoc, rootBoard.x_size, nnXLen, nnYLen);
+        double plaOwnership = rootPla == P_WHITE ? whiteOwnerMap[pos] : -whiteOwnerMap[pos];
+        bool oppOwned = plaOwnership < -extreme;
+        bool adjToPlaOwned = false;
+        for(int j = 0; j < 4; j++) {
+          Loc adj = moveLoc + rootBoard.adj_offsets[j];
+          int adjPos = NNPos::locToPos(adj, rootBoard.x_size, nnXLen, nnYLen);
+          double adjPlaOwnership = rootPla == P_WHITE ? whiteOwnerMap[adjPos] : -whiteOwnerMap[adjPos];
+          if(adjPlaOwnership > extreme) {
+            adjToPlaOwned = true;
+            break;
+          }
+        }
+        if(oppOwned && !adjToPlaOwned)
+          continue;
 
-    //Too few visits - reject move
-    if((numVisits <= 500 && weightSum <= 2 * sqrt(passWeight)) || weightSum <= 1e-10)
-      continue;
+        int64_t numVisits = child->stats.visits.load(std::memory_order_acquire);
+        double weightSum = child->stats.weightSum.load(std::memory_order_acquire);
+        double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
+        double leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
+        double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
 
-    double utility = utilityAvg;
-    double scoreMean = scoreMeanAvg;
-    double lead = leadAvg;
+        // Too few visits - reject move
+        if((numVisits <= 500 && weightSum <= 2 * sqrt(passWeight)) || weightSum <= 1e-10)
+          continue;
 
-    if(rootPla == P_WHITE
-       && utility > passUtility - 0.1
-       && scoreMean > passScoreMean - 0.5
-       && lead > passLead - 0.5)
-      return true;
-    if(rootPla == P_BLACK
-       && utility < passUtility + 0.1
-       && scoreMean < passScoreMean + 0.5
-       && lead < passLead + 0.5)
-      return true;
+        double utility = utilityAvg;
+        double scoreMean = scoreMeanAvg;
+        double lead = leadAvg;
+
+        if(rootPla == P_WHITE
+          && utility > passUtility - 0.1
+          && scoreMean > passScoreMean - 0.5
+          && lead > passLead - 0.5)
+          return true;
+        if(rootPla == P_BLACK
+          && utility < passUtility + 0.1
+          && scoreMean < passScoreMean + 0.5
+          && lead < passLead + 0.5)
+          return true;
+      }
+      return false;
+    }
+    // Use "oracle" access to the score in the hypothetical where the opponent responds by passing.
+    // If we lose in this hypothetical, then suppress passing.
+    case SearchParams::PassingBehavior::NoSuicide: {
+      Board boardCopy(rootBoard);
+      BoardHistory historyCopy(rootHistory);
+
+      Player opp = getOpp(n->nextPla);
+      historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, n->nextPla);
+      historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, opp);
+      historyCopy.endAndScoreGameNow(boardCopy);
+
+      float margin = historyCopy.finalWhiteMinusBlackScore;
+      bool whiteWillWin = margin > 0.0f;
+      bool oppIsWhite = getOpp(n->nextPla) == P_WHITE;
+      bool oppWillWin = whiteWillWin == oppIsWhite;
+      return oppWillWin;
+    }
+    // Suppress passing if we're behind.
+    case SearchParams::PassingBehavior::OnlyWhenAhead: {
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin < 0.0;
+    }
+    // Suppress passing if we're ahead.
+    case SearchParams::PassingBehavior::OnlyWhenBehind: {
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin > 0.0;
+    }
+    default:
+      ASSERT_UNREACHABLE;
   }
   return false;
 }

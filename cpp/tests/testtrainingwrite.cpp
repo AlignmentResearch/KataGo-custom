@@ -905,7 +905,7 @@ xxxxxxxx.
     botSpec.botIdx = 0;
     botSpec.botName = modelFile;
     botSpec.nnEval = nnEval;
-    botSpec.baseParams;
+    botSpec.baseParams = SearchParams();
     botSpec.baseParams.maxVisits = 10;
     ForkData* forkData = new ForkData();
 
@@ -1061,7 +1061,7 @@ void Tests::runSelfplayStatTestsWithNN(const string& modelFile) {
     botSpec.botIdx = 0;
     botSpec.botName = modelFile;
     botSpec.nnEval = nnEval;
-    botSpec.baseParams;
+    botSpec.baseParams = SearchParams();
     botSpec.baseParams.maxVisits = 10;
 
     ConfigParser cfg(cfgParams);

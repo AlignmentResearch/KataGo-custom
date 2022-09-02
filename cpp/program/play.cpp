@@ -126,13 +126,22 @@ void GameInitializer::initShared(ConfigParser& cfg, Logger& logger) {
 
   allowedBSizes = cfg.getInts("bSizes", 2, Board::MAX_LEN);
   allowedBSizeRelProbs = cfg.getDoubles("bSizeRelProbs",0.0,1e100);
+  komiByBSize = cfg.contains("komiByBSize") ? cfg.getFloats("komiByBSize",0.0,19.0 * 19.0) : vector<float>();
 
   allowRectangleProb = cfg.contains("allowRectangleProb") ? cfg.getDouble("allowRectangleProb",0.0,1.0) : 0.0;
+  if(allowRectangleProb > 0.0 && !komiByBSize.empty())
+    throw IOError("If allowRectangleProb is non-zero, komiByBSize must not be set in " + cfg.getFileName());
 
-  if(!cfg.contains("komiMean") && !(cfg.contains("komiAuto") && cfg.getBool("komiAuto")))
-    throw IOError("Must specify either komiMean=<komi value> or komiAuto=True in config");
-  if(cfg.contains("komiMean") && (cfg.contains("komiAuto") && cfg.getBool("komiAuto")))
-    throw IOError("Must specify only one of komiMean=<komi value> or komiAuto=True in config");
+  bool hasKomiAuto = cfg.contains("komiAuto") && cfg.getBool("komiAuto");
+  bool hasKomiByBSize = !komiByBSize.empty();
+  bool hasKomiMean = cfg.contains("komiMean");
+  if (hasKomiAuto + hasKomiByBSize + hasKomiMean != 1)
+    throw IOError(
+      "Must specify exactly one of komiAuto=true, komiByBSize, or komiMean; got komiAuto: " +
+      Global::boolToString(hasKomiAuto) +
+      " komiByBSize: " + Global::boolToString(hasKomiByBSize) +
+      " komiMean: " + Global::boolToString(hasKomiMean) + " in " + cfg.getFileName()
+    );
 
   komiMean = cfg.contains("komiMean") ? cfg.getFloat("komiMean",Rules::MIN_USER_KOMI,Rules::MAX_USER_KOMI) : 7.5f;
   komiStdev = cfg.contains("komiStdev") ? cfg.getFloat("komiStdev",0.0f,60.0f) : 0.0f;
@@ -293,6 +302,8 @@ void GameInitializer::initShared(ConfigParser& cfg, Logger& logger) {
     throw IOError("bSizes must have at least one value in " + cfg.getFileName());
   if(allowedBSizes.size() != allowedBSizeRelProbs.size())
     throw IOError("bSizes and bSizeRelProbs must have same number of values in " + cfg.getFileName());
+  if (!komiByBSize.empty() && komiByBSize.size() != allowedBSizes.size())
+    throw IOError("komiByBSize and bSizes must have the same number of elements in " + cfg.getFileName());
 
   minBoardXSize = allowedBSizes[0];
   minBoardYSize = allowedBSizes[0];
@@ -401,6 +412,19 @@ int GameInitializer::getMaxBoardYSize() const {
   return maxBoardYSize;
 }
 
+float GameInitializer::getKomiMeanForBSize(int size) const {
+  if(komiByBSize.empty())
+    return komiMean;
+  
+  auto iter = std::find(allowedBSizes.begin(), allowedBSizes.end(), size);
+  if(iter == allowedBSizes.end())
+    throw StringError("GameInitializer::getKomiMeanForBSize: size not in allowedBSizes");
+  
+  int idx = iter - allowedBSizes.begin();
+  float komi = komiByBSize.at(idx);
+  return komi;
+}
+
 Rules GameInitializer::createRules() {
   lock_guard<std::mutex> lock(createGameMutex);
   return createRulesUnsynchronized();
@@ -503,7 +527,7 @@ void GameInitializer::createGameSharedUnsynchronized(
     //No handicap when starting from a sampled position.
     double thisHandicapProb = 0.0;
     extraBlackAndKomi = PlayUtils::chooseExtraBlackAndKomi(
-      komiMean, komiStdev, komiAllowIntegerProb,
+      getKomiMeanForBSize(board.x_size), komiStdev, komiAllowIntegerProb,
       thisHandicapProb, numExtraBlackFixed,
       komiBigStdevProb, komiBigStdev, sqrt(board.x_size*board.y_size), rand
     );
@@ -527,7 +551,7 @@ void GameInitializer::createGameSharedUnsynchronized(
     hist.clear(board,pla,rules,0);
 
     extraBlackAndKomi = PlayUtils::chooseExtraBlackAndKomi(
-      komiMean, komiStdev, komiAllowIntegerProb,
+      getKomiMeanForBSize(board.x_size), komiStdev, komiAllowIntegerProb,
       handicapProb, numExtraBlackFixed,
       komiBigStdevProb, komiBigStdev, sqrt(board.x_size*board.y_size), rand
     );

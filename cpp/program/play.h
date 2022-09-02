@@ -113,6 +113,7 @@ class GameInitializer {
   int getMinBoardYSize() const;
   int getMaxBoardXSize() const;
   int getMaxBoardYSize() const;
+  float getKomiMeanForBSize(int size) const;
 
  private:
   void initShared(ConfigParser& cfg, Logger& logger);
@@ -141,6 +142,7 @@ class GameInitializer {
 
   std::vector<int> allowedBSizes;
   std::vector<double> allowedBSizeRelProbs;
+  std::vector<float> komiByBSize;
 
   double allowRectangleProb;
 

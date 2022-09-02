@@ -416,7 +416,6 @@ float GameInitializer::getKomiMeanForBSize(int size) const {
   
   int idx = iter - allowedBSizes.begin();
   float komi = komiByBSize.at(idx);
-  // cout << "Board size " << size << "x" << size << ", komi " << komi << endl;
   return komi;
 }
 

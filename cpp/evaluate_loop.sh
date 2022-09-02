@@ -17,19 +17,27 @@ mkdir -p "$OUTPUT_DIR"/sgfs
 LAST_STEP=0
 while true
 do
+    if [[ ! -d "$MODELS_DIR" || ! -d "$VICTIMS_DIR" ]]
+    then
+        echo "Waiting for $MODELS_DIR and $VICTIMS_DIR to exist..."
+        sleep 10
+        continue
+    fi
     # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
     VICTIM=$(ls -Art "$VICTIMS_DIR" | tail -n 1)
-    if [ -z "$VICTIM" ]
-    then
-        echo "No victim found, waiting..."
-        sleep 60
+
+    # Get directories in models/ in *natural sorted order* and see if any are new.
+    # This means that the numeric components of the directory names will be sorted based
+    # on their numeric value, not as strings, so early models will be evaluated first.
+    MODELS=$(ls -v "$MODELS_DIR")
+
+    if [[ ! -z "$MODELS" || ! -z "$VICTIM" ]]; then
+        echo "Waiting for an adversary and a victim to exist..."
+        sleep 30
         continue
     fi
 
-    # Loop over directories in models/ in *natural sorted order* and see if any are new.
-    # This means that the numeric components of the directory names will be sorted based
-    # on their numeric value, not as strings, so early models will be evaluated first.
-    for MODEL_DIR in $(ls -v "$MODELS_DIR") ; do
+    for MODEL_DIR in $MODELS ; do
         if [[ "$MODEL_DIR" =~ -s([0-9]+) ]] ; then
             # The first capture group is the step number
             STEP=${BASH_REMATCH[1]}

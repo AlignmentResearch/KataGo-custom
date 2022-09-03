@@ -31,7 +31,7 @@ do
     # on their numeric value, not as strings, so early models will be evaluated first.
     MODELS=$(ls -v "$MODELS_DIR")
 
-    if [[ ! -z "$MODELS" || ! -z "$VICTIM" ]]; then
+    if [[ -z "$MODELS" || -z "$VICTIM" ]]; then
         echo "Waiting for an adversary and a victim to exist..."
         sleep 30
         continue

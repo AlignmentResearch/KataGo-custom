@@ -415,11 +415,11 @@ int GameInitializer::getMaxBoardYSize() const {
 float GameInitializer::getKomiMeanForBSize(int size) const {
   if(komiByBSize.empty())
     return komiMean;
-
+  
   auto iter = std::find(allowedBSizes.begin(), allowedBSizes.end(), size);
   if(iter == allowedBSizes.end())
     throw StringError("GameInitializer::getKomiMeanForBSize: size not in allowedBSizes");
-
+  
   int idx = iter - allowedBSizes.begin();
   float komi = komiByBSize.at(idx);
   return komi;

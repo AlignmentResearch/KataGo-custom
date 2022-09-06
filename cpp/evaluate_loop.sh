@@ -1,9 +1,10 @@
 #!/bin/bash -eu
-if [[ $# -ne 1 ]]
+if [[ $# -lt 1 || $# -gt 2 ]]
 then
-    echo "Usage: $0 BASE_DIR"
+    echo "Usage: $0 BASE_DIR [SLEEP_INTERVAL]"
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
-    echo "BASE_DIR containing selfplay data and models and related directories"
+    echo "BASE_DIR is the root of the training run, containing selfplay data, models and related directories"
+    echo "SLEEP_INTERVAL is the number of seconds to sleep between each check for new models, default 30"
     exit 0
 fi
 
@@ -15,6 +16,7 @@ mkdir -p "$OUTPUT_DIR"/logs
 mkdir -p "$OUTPUT_DIR"/sgfs
 
 LAST_STEP=0
+SLEEP_INTERVAL=${2:-30}
 while true
 do
     if [[ ! -d "$MODELS_DIR" || ! -d "$VICTIMS_DIR" ]]
@@ -33,17 +35,17 @@ do
 
     if [[ -z "$MODELS" || -z "$VICTIM" ]]; then
         echo "Waiting for an adversary and a victim to exist..."
-        sleep 30
+        sleep $SLEEP_INTERVAL
         continue
     fi
 
-    for MODEL_DIR in $MODELS ; do
-        if [[ "$MODEL_DIR" =~ -s([0-9]+) ]] ; then
+    for MODEL_DIR in $MODELS; do
+        if [[ "$MODEL_DIR" =~ -s([0-9]+) ]]; then
             # The first capture group is the step number
             STEP=${BASH_REMATCH[1]}
 
             # Have we evaluated this model yet?
-            if [ "$STEP" -gt "$LAST_STEP" ] ; then
+            if [ "$STEP" -gt "$LAST_STEP" ]; then
                 # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
                 VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
 
@@ -62,5 +64,5 @@ do
             fi
         fi
     done
-    sleep 30
+    sleep $SLEEP_INTERVAL
 done

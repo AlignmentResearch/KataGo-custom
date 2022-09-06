@@ -3,8 +3,8 @@ if [[ $# -lt 1 || $# -gt 2 ]]
 then
     echo "Usage: $0 BASE_DIR [SLEEP_INTERVAL]"
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
-    echo "BASE_DIR is the root of the training run, containing selfplay data, models and related directories"
-    echo "SLEEP_INTERVAL is the number of seconds to sleep between each check for new models, default 30"
+    echo "BASE_DIR is the root of the training run, containing selfplay data, models and related directories."
+    echo "SLEEP_INTERVAL is the number of seconds to sleep between each check for new models, default 30."
     exit 0
 fi
 

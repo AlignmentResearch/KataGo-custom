@@ -136,7 +136,12 @@ void GameInitializer::initShared(ConfigParser& cfg, Logger& logger) {
   bool hasKomiByBSize = !komiByBSize.empty();
   bool hasKomiMean = cfg.contains("komiMean");
   if (hasKomiAuto + hasKomiByBSize + hasKomiMean != 1)
-    throw IOError("Must specify exactly one of komiAuto=true, komiByBSize, or komiMean in " + cfg.getFileName());
+    throw IOError(
+      "Must specify exactly one of komiAuto=true, komiByBSize, or komiMean; got komiAuto: " +
+      Global::boolToString(hasKomiAuto) +
+      " komiByBSize: " + Global::boolToString(hasKomiByBSize) +
+      " komiMean: " + Global::boolToString(hasKomiMean) + " in " + cfg.getFileName()
+    );
 
   komiMean = cfg.contains("komiMean") ? cfg.getFloat("komiMean",Rules::MIN_USER_KOMI,Rules::MAX_USER_KOMI) : 7.5f;
   komiStdev = cfg.contains("komiStdev") ? cfg.getFloat("komiStdev",0.0f,60.0f) : 0.0f;
@@ -406,6 +411,7 @@ int GameInitializer::getMaxBoardXSize() const {
 int GameInitializer::getMaxBoardYSize() const {
   return maxBoardYSize;
 }
+
 float GameInitializer::getKomiMeanForBSize(int size) const {
   if(komiByBSize.empty())
     return komiMean;

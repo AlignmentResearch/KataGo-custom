@@ -82,7 +82,6 @@ int MainCmds::match(const vector<string>& args) {
   //Load the names of the bots and which model each bot is using
   vector<string> nnModelFilesByBot(numBots);
   vector<string> botNames(numBots);
-  vector<bool> useVictimplays(numBots);
   for(int i = 0; i<numBots; i++) {
     string idxStr = Global::intToString(i);
 
@@ -97,11 +96,6 @@ int MainCmds::match(const vector<string>& args) {
       nnModelFilesByBot[i] = cfg.getString("nnModelFile"+idxStr);
     else
       nnModelFilesByBot[i] = cfg.getString("nnModelFile");
-
-    if(cfg.contains("useVictimplay"+idxStr))
-      useVictimplays[i] = Global::stringToBool(cfg.getString("useVictimplay"+idxStr));
-    else
-      useVictimplays[i] = false;
   }
 
   //Dedup and load each necessary model exactly once

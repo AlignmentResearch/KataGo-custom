@@ -367,6 +367,9 @@ vector<SearchParams> Setup::loadParams(
 
     string idxStr = Global::intToString(i);
 
+    if(cfg.contains("passingBehavior"+idxStr)) params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"+idxStr));
+    else if (cfg.contains("passingBehavior"))  params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"));
+
     if(cfg.contains("searchAlgorithm"+idxStr)) params.searchAlgo = SearchParams::strToSearchAlgo(cfg.getString("searchAlgorithm"+idxStr));
     else if (cfg.contains("searchAlgorithm"))  params.searchAlgo = SearchParams::strToSearchAlgo(cfg.getString("searchAlgorithm"));
 

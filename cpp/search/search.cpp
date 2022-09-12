@@ -559,8 +559,9 @@ void Search::evaluateNode(
       // intermediate computations done on them (which are later ignored) that
       // would crash if done an invalid NNOutput.
       //
-      // This shouldn't impact performance because of the result will be cached
-      // in nnCacheTable and reused in the runWholeSearch() call below.
+      // This doesn't impact performance because of the result will be cached
+      // in nnCacheTable and reused in the runWholeSearch() call below. This was
+      // checked in a debugger.
       //
       // The last argument (includeOwnerMap) is hardcoded to true in order to
       // always get a cache hit, since runWholeSearch later calls evaluate with

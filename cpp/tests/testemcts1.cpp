@@ -283,13 +283,15 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
 
     return ret;
   }();
-  const SearchParams emcts1Params = [&]() {
+  const SearchParams emcts1Params_v1 = [&]() {
     SearchParams ret = searchParamss[1];
     setSimpleSearchParams(ret);
-
-    // Make EMCTS model of victim only have single visit
-    ret.oppVisitsOverride = 1;  // TODO(tony): Test more than just this case.
-
+    ret.oppVisitsOverride = 1;
+    return ret;
+  }();
+  const SearchParams emcts1Params_v8 = [&]() {
+    SearchParams ret = emcts1Params_v1;
+    ret.oppVisitsOverride = 8;
     return ret;
   }();
 
@@ -297,12 +299,17 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
       getNNEval(CONST_POLICY_1_PATH, cfg, logger, 42);  // move over pass
   auto nnEval2 =
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
-  Search bot11(emcts1Params, nnEval1.get(), &logger, "forty-two", mctsParams,
-               nnEval1.get());
-  Search bot12(emcts1Params, nnEval1.get(), &logger, "forty-two", mctsParams,
-               nnEval2.get());
+  Search bot11_v1(emcts1Params_v1, nnEval1.get(), &logger, "forty-two",
+                  mctsParams, nnEval1.get());
+  Search bot12_v1(emcts1Params_v1, nnEval1.get(), &logger, "forty-two",
+                  mctsParams, nnEval2.get());
 
-  for (auto bot_ptr : {&bot11, &bot12}) {
+  Search bot11_v8(emcts1Params_v8, nnEval1.get(), &logger, "forty-two",
+                  mctsParams, nnEval1.get());
+  Search bot12_v8(emcts1Params_v8, nnEval1.get(), &logger, "forty-two",
+                  mctsParams, nnEval2.get());
+
+  for (auto bot_ptr : {&bot11_v1, &bot12_v1, &bot11_v8, &bot12_v8}) {
     Search& bot = *bot_ptr;
 
     const int BOARD_SIZE = 9;
@@ -329,10 +336,10 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);
 
-      if (&bot == &bot11) {
+      if (&bot == &bot11_v1 || &bot == &bot11_v8) {
         checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP1_WIN_PROB,
                           CP1_LOSS_PROB);
-      } else if (&bot == &bot12) {
+      } else if (&bot == &bot12_v1 || &bot == &bot12_v8) {
         checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
                           CP2_LOSS_PROB);
       }

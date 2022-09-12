@@ -1100,7 +1100,9 @@ ComputeHandle* NeuralNet::createComputeHandle(
     logger->write(
       "TensorRT backend thread " + Global::intToString(serverThreadIdx) + ": Found GPU " + string(prop.name) +
       " memory " + Global::uint64ToString(prop.totalGlobalMem) + " compute capability major " +
-      Global::intToString(prop.major) + " minor " + Global::intToString(prop.minor));
+      Global::intToString(prop.major) + " minor " + Global::intToString(prop.minor)
+      + "device " + Global::intToString(gpuIdxForThisThread)
+    );
     logger->write(
       "TensorRT backend thread " + Global::intToString(serverThreadIdx) + ": Initializing (may take a long time)");
   }

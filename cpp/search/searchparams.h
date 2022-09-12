@@ -35,6 +35,9 @@ struct SearchParams {
   // Overrides the number of vists we use in EMCTS to simulate the victim.
   std::optional<int> oppVisitsOverride;
 
+  // Overrides the number of root symmetries that are sampled for EMCTS
+  std::optional<int> oppRootSymmetriesOverride;
+
   // Whether we are allowed to be the first player that passes in a game.
   bool canPassFirst;
 

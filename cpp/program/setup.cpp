@@ -376,6 +376,9 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("oppVisitsOverride"+idxStr)) params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if (cfg.contains("oppVisitsOverride"))  params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride",        (int64_t)1, (int64_t)1 << 50);
 
+    if(cfg.contains("oppRootSymmetriesOverride"+idxStr)) params.oppRootSymmetriesOverride = cfg.getInt64("oppRootSymmetriesOverride"+idxStr, (int64_t)1, (int64_t)4);
+    else if (cfg.contains("oppRootSymmetriesOverride"))  params.oppRootSymmetriesOverride = cfg.getInt64("oppRootSymmetriesOverride",        (int64_t)1, (int64_t)4);
+
     if(cfg.contains("canPassFirst"+idxStr)) params.canPassFirst = cfg.getBool("canPassFirst"+idxStr);
 
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);

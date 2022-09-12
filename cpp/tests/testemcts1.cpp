@@ -245,7 +245,8 @@ void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
 
     Player curPla = P_BLACK;
     for (int midx = 0; midx < numMovesToSimulate; midx++) {
-      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
+      // Change up visit count to make tests more varied
+      bot.searchParams.maxVisits = maxVisits + midx;
 
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);
@@ -287,11 +288,13 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
     SearchParams ret = searchParamss[1];
     setSimpleSearchParams(ret);
     ret.oppVisitsOverride = 1;
+    ret.oppRootSymmetriesOverride = 1;
     return ret;
   }();
   const SearchParams emcts1Params_v8 = [&]() {
     SearchParams ret = emcts1Params_v1;
     ret.oppVisitsOverride = 8;
+    ret.oppRootSymmetriesOverride = 4;
     return ret;
   }();
 
@@ -331,7 +334,9 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
 
     Player curPla = P_BLACK;
     for (int midx = 0; midx < numMovesToSimulate; midx++) {
-      bot.searchParams.maxVisits = maxVisits + midx;  // Make tests more varied
+      // Change up visit count to make tests more varied
+      bot.searchParams.maxVisits =
+          (maxVisits / bot.oppBot.get()->searchParams.maxVisits) + midx;
 
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);

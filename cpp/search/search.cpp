@@ -477,6 +477,8 @@ Search::Search(
         assert(oppNNEval != nullptr);
 
         oppParams.maxVisits = params.oppVisitsOverride.value_or(oppParams.maxVisits);
+        oppParams.rootNumSymmetriesToSample =
+          params.oppRootSymmetriesOverride.value_or(oppParams.rootNumSymmetriesToSample);
         oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
         break;
     }

@@ -223,15 +223,15 @@ int MainCmds::match(const vector<string>& args) {
           search->setCopyOfExternalPatternBonusTable(patternBonusTables[spec.botIdx]);
         };
 
-        logger.write(
-          "Launching game between " +
-          botSpecB.botName + "-" + botSpecB.baseParams.getSearchAlgoAsStr() + " (B) " +
-          botSpecW.botName + "-" + botSpecW.baseParams.getSearchAlgoAsStr() + " (W)..."
-        );
+        const string gameDescription = "game " + seed + " between "
+          + botSpecB.botName + "-" + botSpecB.baseParams.getSearchAlgoAsStr() + " (B) "
+          + botSpecW.botName + "-" + botSpecW.baseParams.getSearchAlgoAsStr() + " (W)";
+        logger.write("Launching " + gameDescription);
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
           shouldStopFunc, nullptr, afterInitialization, nullptr
         );
+        logger.write("Finished " + gameDescription);
       }
 
       bool shouldContinue = gameData != NULL;

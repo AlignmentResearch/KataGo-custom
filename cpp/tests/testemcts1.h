@@ -55,6 +55,7 @@ void resetBot(Search& bot, int board_size, const Rules& rules);
 // Helper struct for dealing with a search tree.
 struct SearchTree {
   const SearchNode* const root;
+  const BoardHistory rootHist;
 
   // DFS visit order.
   // So a child will always come after its parent in this list.
@@ -68,6 +69,8 @@ struct SearchTree {
   std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
 
   std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
+
+  BoardHistory getNodeHistory(const SearchNode* node) const;
 };
 
 // Optional param: terminal_node_visits (specify if you want to override

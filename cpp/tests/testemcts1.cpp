@@ -352,6 +352,15 @@ void EMCTS1Tests::checkMCTSSearch(const Search& bot, const float win_prob,
   // Not equality since sometimes we visit terminal nodes multiple times.
   testAssert(tree.all_nodes.size() <= bot.searchParams.maxPlayouts);
 
+  // Test { nodes without nnOutputs } == { terminal nodes }
+  for (auto node : tree.all_nodes) {
+    if (node->getNNOutput() == nullptr) {
+      assert(tree.getNodeHistory(node).isGameFinished);
+    } else {
+      assert(!tree.getNodeHistory(node).isGameFinished);
+    }
+  }
+
   // Test weights are as expected
   for (auto node : tree.all_nodes) {
     if (node->getNNOutput() == nullptr) {
@@ -397,10 +406,19 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
   // Not equality since sometimes we visit terminal nodes multiple times.
   testAssert(tree.all_nodes.size() <= bot.searchParams.maxPlayouts);
 
+  // Test { nodes without nnOutputs } == { terminal nodes }
+  for (auto node : tree.all_nodes) {
+    if (node->getNNOutput() == nullptr) {
+      testAssert(tree.getNodeHistory(node).isGameFinished);
+    } else {
+      testAssert(!tree.getNodeHistory(node).isGameFinished);
+    }
+  }
+
   // Test weights are as expected
   for (auto node : tree.all_nodes) {
     if (node->getNNOutput() == nullptr) {
-      // Terminal nodes don't have a nnoutput, so we directly check
+      // Terminal nodes don't have a nnOutput, so we directly check
       // weightSum. They might also be visited more than once.
       testAssert(NodeStats(node->stats).weightSum >= 1);
     } else if (node->nextPla == bot.rootPla) {
@@ -411,23 +429,25 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
   }
 
   // Test nnOutputs are as expected
-  // TODO(tony): Renable tests here
-  /*
   for (auto node : tree.all_nodes) {
     if (node->getNNOutput() == nullptr) continue;
 
-    const float win_prob =
-        (node->nextPla == bot.rootPla) ? win_prob1 : win_prob2;
-    const float loss_prob =
-        (node->nextPla == bot.rootPla) ? loss_prob1 : loss_prob2;
+    if (node->nextPla == bot.rootPla) {  // Adversary node
+      const float win_prob =
+          (node->nextPla == bot.rootPla) ? win_prob1 : win_prob2;
+      const float loss_prob =
+          (node->nextPla == bot.rootPla) ? loss_prob1 : loss_prob2;
 
-    testAssert(approxEqual(node->getNNOutput()->whiteWinProb,
-                           node->nextPla == P_WHITE ? win_prob : loss_prob));
-    testAssert(approxEqual(node->getNNOutput()->whiteLossProb,
-                           node->nextPla == P_WHITE ? loss_prob : win_prob));
-    testAssert(approxEqual(node->getNNOutput()->whiteNoResultProb, 0));
+      testAssert(approxEqual(node->getNNOutput()->whiteWinProb,
+                             node->nextPla == P_WHITE ? win_prob : loss_prob));
+      testAssert(approxEqual(node->getNNOutput()->whiteLossProb,
+                             node->nextPla == P_WHITE ? loss_prob : win_prob));
+      testAssert(approxEqual(node->getNNOutput()->whiteNoResultProb, 0));
+    } else {  // Victim node
+      testAssert(node->getNNOutput()->oppLocs.has_value());
+      testAssert(node->getNNOutput()->oppPlaySelectionValues.has_value());
+    }
   }
-  */
 
   // Test backup
   for (auto node : tree.all_nodes) {
@@ -438,8 +458,7 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
 
   checkFinalMoveSelection(bot);
 
-  // TODO(tony): Renable tests here
-  // checkPlayoutLogic(bot);
+  checkPlayoutLogic(bot);
 }
 
 void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
@@ -573,9 +592,9 @@ void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
 
 void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
   if (bot.searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
-    // We need temperature to be zero for EMCTS1 to be determinstic.
-    testAssert(bot.searchParams.chosenMoveTemperature == 0);
-    testAssert(bot.searchParams.chosenMoveTemperatureEarly == 0);
+    // We need temperature to be zero for opponent to be determinstic.
+    testAssert(bot.oppBot.get()->searchParams.chosenMoveTemperature == 0);
+    testAssert(bot.oppBot.get()->searchParams.chosenMoveTemperatureEarly == 0);
   }
 
   SearchTree tree(bot);
@@ -598,6 +617,9 @@ void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
     return averageStats(bot, filterToVisited(tree.getSubtreeNodes(node)),
                         &visits);
   };
+
+  // Cache for which moves the opponent makes at opponent nodes.
+  unordered_map<const SearchNode*, const SearchNode*> oppNodeCache;
 
 #ifdef DEBUG
   auto checkOnePlayout = [&](const bool is_last_playout) -> int {
@@ -670,24 +692,17 @@ void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
       if (bot.searchParams.searchAlgo ==
               SearchParams::SearchAlgorithm::EMCTS1 &&
           node->nextPla != bot.rootPla) {
-        int bestMovePos = -1;
-        double maxPolicyProb = -1e50;
-        for (int pos = 0; pos < bot.policySize; pos++) {
+        if (oppNodeCache.find(node) == oppNodeCache.end()) {
+          bot.oppBot.get()->setPosition(node->nextPla, board, history);
           const Loc loc =
-              NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
-                              bot.nnXLen, bot.nnYLen);
+              bot.oppBot.get()->runWholeSearchAndGetMove(node->nextPla);
+          const int bestMovePos = NNPos::locToPos(loc, bot.rootBoard.x_size,
+                                                  bot.nnXLen, bot.nnYLen);
 
-          if (loc == Board::NULL_LOC) continue;
-          if (!history.isLegal(board, loc, node->nextPla)) continue;
-
-          const double curPolicyProb = policyProbs[pos];
-          if (curPolicyProb > maxPolicyProb) {
-            maxPolicyProb = curPolicyProb;
-            bestMovePos = pos;
-          }
+          oppNodeCache[node] = movePosNode[bestMovePos];
         }
 
-        return dfs(movePosNode[bestMovePos], dfs);
+        return dfs(oppNodeCache.at(node), dfs);
       }
 
 #ifdef DEBUG
@@ -827,7 +842,8 @@ void EMCTS1Tests::resetBot(Search& bot, int board_size, const Rules& rules) {
   bot.setPosition(P_BLACK, board, hist);
 }
 
-EMCTS1Tests::SearchTree::SearchTree(const Search& bot) : root(bot.rootNode) {
+EMCTS1Tests::SearchTree::SearchTree(const Search& bot)
+    : root(bot.rootNode), rootHist(bot.rootHistory) {
   auto build = [this](const SearchNode* node, auto&& dfs) -> void {
     all_nodes.push_back(node);
     children[node] = {};
@@ -868,6 +884,24 @@ std::vector<const SearchNode*> EMCTS1Tests::SearchTree::getPathToRoot(
     path.push_back((*path.rbegin())->parent);
   }
   return path;
+}
+
+BoardHistory EMCTS1Tests::SearchTree::getNodeHistory(
+    const SearchNode* node) const {
+  const auto pathRootToNode = [&]() {
+    auto path = getPathToRoot(node);
+    std::reverse(path.begin(), path.end());
+    return path;
+  }();
+
+  Board board = rootHist.getRecentBoard(0);
+  BoardHistory hist = rootHist;
+  for (auto& n : pathRootToNode) {
+    if (n == root) continue;  // Skip root node
+    hist.makeBoardMoveTolerant(board, n->prevMoveLoc, getOpp(n->nextPla));
+  }
+
+  return hist;
 }
 
 NodeStats EMCTS1Tests::averageStats(

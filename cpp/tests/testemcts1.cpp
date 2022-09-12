@@ -255,6 +255,9 @@ void EMCTS1Tests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
 
       bot.makeMove(loc, curPla);
       curPla = getOpp(curPla);
+
+      // Break if game is finished.
+      if (bot.rootHistory.isGameFinished) break;
     }
   }
 }

@@ -32,8 +32,8 @@ struct SearchParams {
   SearchAlgorithm searchAlgo;
   std::string getSearchAlgoAsStr() const;
 
-  // Whether to noise opponent nodes during EMCTS1
-  bool EMCTS1_noiseOppNodes;
+  // Overrides the number of vists we use in EMCTS to simulate the victim.
+  std::optional<int> oppVisitsOverride;
 
   // Whether we are allowed to be the first player that passes in a game.
   bool canPassFirst;

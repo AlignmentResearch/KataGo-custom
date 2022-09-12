@@ -415,11 +415,11 @@ int GameInitializer::getMaxBoardYSize() const {
 float GameInitializer::getKomiMeanForBSize(int size) const {
   if(komiByBSize.empty())
     return komiMean;
-  
+
   auto iter = std::find(allowedBSizes.begin(), allowedBSizes.end(), size);
   if(iter == allowedBSizes.end())
     throw StringError("GameInitializer::getKomiMeanForBSize: size not in allowedBSizes");
-  
+
   int idx = iter - allowedBSizes.begin();
   float komi = komiByBSize.at(idx);
   return komi;
@@ -894,7 +894,7 @@ static NNRawStats computeNNRawStats(const Search* bot, const Board& board, const
   MiscNNInputParams nnInputParams;
   nnInputParams.drawEquivalentWinsForWhite = bot->searchParams.drawEquivalentWinsForWhite;
   Board b = board;
-  bot->getNNEvaluator()->evaluate(b,hist,pla,nnInputParams,buf,false,false);
+  bot->nnEvaluator->evaluate(b,hist,pla,nnInputParams,buf,false,false);
   NNOutput& nnOutput = *(buf.result);
 
   NNRawStats nnRawStats;
@@ -1261,12 +1261,20 @@ FinishedGameData* Play::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed, nullptr);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed);
     botW = botB;
   }
   else {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, searchRandSeed + "@B", botSpecW.nnEval);
-    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, searchRandSeed + "@W", botSpecB.nnEval);
+    botB = new Search(
+        botSpecB.baseParams, botSpecB.nnEval,
+        &logger, searchRandSeed + "@B",
+        botSpecW.baseParams, botSpecW.nnEval
+    );
+    botW = new Search(
+        botSpecW.baseParams, botSpecW.nnEval,
+        &logger, searchRandSeed + "@W",
+        botSpecB.baseParams, botSpecB.nnEval
+    );
   }
 
   FinishedGameData* gameData = runGame(
@@ -1348,8 +1356,8 @@ FinishedGameData* Play::runGame(
   }
   //Vary komi more when things are completely random to set a better prior for how komi affects evals
   if(playSettings.fancyKomiVarying &&
-     botB->getNNEvaluator()->isNeuralNetLess() &&
-     (botW == NULL || botW->getNNEvaluator()->isNeuralNetLess())) {
+     botB->nnEvaluator->isNeuralNetLess() &&
+     (botW == NULL || botW->nnEvaluator->isNeuralNetLess())) {
     double randKomi = hist.rules.komi + 1.5 * sqrt(board.x_size * board.y_size) * gameRand.nextGaussianTruncated(2.5);
     extraBlackAndKomi.komiMean = (float)randKomi;
     PlayUtils::setKomiWithNoise(extraBlackAndKomi,hist,gameRand);
@@ -1862,7 +1870,7 @@ FinishedGameData* Play::runGame(
           Search* toMoveBot2 = sp2->pla == P_BLACK ? botB : botW;
           MiscNNInputParams nnInputParams;
           nnInputParams.drawEquivalentWinsForWhite = toMoveBot2->searchParams.drawEquivalentWinsForWhite;
-          toMoveBot2->getNNEvaluator()->evaluate(
+          toMoveBot2->nnEvaluator->evaluate(
             sp2->board,sp2->hist,sp2->pla,nnInputParams,
             nnResultBuf,false,false
           );
@@ -2085,7 +2093,7 @@ void Play::maybeForkGame(
     copyHist.makeBoardMoveAssumeLegal(copy,loc,pla,NULL);
     MiscNNInputParams nnInputParams;
     nnInputParams.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
-    bot->getNNEvaluator()->evaluate(copy,copyHist,getOpp(pla),nnInputParams,buf,false,false);
+    bot->nnEvaluator->evaluate(copy,copyHist,getOpp(pla),nnInputParams,buf,false,false);
     std::shared_ptr<NNOutput> nnOutput = std::move(buf.result);
     double whiteScore = nnOutput->whiteScoreMean;
     if(bestMove == Board::NULL_LOC || (pla == P_WHITE && whiteScore > bestScore) || (pla == P_BLACK && whiteScore < bestScore)) {
@@ -2337,12 +2345,20 @@ FinishedGameData* GameRunner::runGame(
   Search* botB;
   Search* botW;
   if(botSpecB.botIdx == botSpecW.botIdx) {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed, nullptr);
+    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed);
     botW = botB;
   }
   else {
-    botB = new Search(botSpecB.baseParams, botSpecB.nnEval, &logger, seed + "@B", botSpecW.nnEval);
-    botW = new Search(botSpecW.baseParams, botSpecW.nnEval, &logger, seed + "@W", botSpecB.nnEval);
+    botB = new Search(
+        botSpecB.baseParams, botSpecB.nnEval,
+        &logger, seed + "@B",
+        botSpecW.baseParams, botSpecW.nnEval
+    );
+    botW = new Search(
+        botSpecW.baseParams, botSpecW.nnEval,
+        &logger, seed + "@W",
+        botSpecB.baseParams, botSpecB.nnEval
+    );
   }
   if(afterInitialization != nullptr) {
     if(botSpecB.botIdx == botSpecW.botIdx) {

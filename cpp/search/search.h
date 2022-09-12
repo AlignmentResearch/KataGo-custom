@@ -315,12 +315,7 @@ struct Search {
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;
-private: // SHOULD NOT BE ACCESSED EXCEPT THROUGH getNNEvaluator or setNNEval
-  NNEvaluator* nnEval__; //externally owned
-  NNEvaluator* oppNNEval__; //externally owned
-public:
-  NNEvaluator* getNNEvaluator(const SearchNode& node) const;
-  NNEvaluator* getNNEvaluator() const; // returns nnEval__
+  NNEvaluator* nnEvaluator; //externally owned
   int nnXLen;
   int nnYLen;
   int policySize;
@@ -347,6 +342,29 @@ public:
   std::mutex oldNNOutputsToCleanUpMutex;
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
+  //================================================================================================================
+  // EMCTS related
+  //================================================================================================================
+
+  // Our model of the opponent.
+  std::unique_ptr<Search> oppBot;
+
+  void evaluateNode(
+    const SearchNode& node,
+    Board& board,
+    const BoardHistory& history,
+    Player nextPlayer,
+    const MiscNNInputParams& nnInputParams,
+    NNResultBuf& buf,
+    bool skipCache,
+    bool includeOwnerMap
+  ) const;
+
+  //================================================================================================================
+  // Constructors and Destructors
+  // search.cpp
+  //================================================================================================================
+
   //Note - randSeed controls a few things in the search, but a lot of the randomness actually comes from
   //random symmetries of the neural net evaluations, see nneval.h
   Search(
@@ -354,6 +372,7 @@ public:
     NNEvaluator* nnEval,
     Logger* logger,
     const std::string& randSeed,
+    SearchParams oppParams = SearchParams(),
     NNEvaluator* oppNNEval = nullptr
   );
   ~Search();
@@ -457,13 +476,6 @@ public:
     std::vector<double>& playSelectionValues,
     const int numChildren,
     const double scaleMaxToAtLeast = 0.0
-  ) const;
-
-  bool getPlaySelectionValuesWithDirectPolicy(
-    const SearchThread& thread,
-    const SearchNode& node,
-    std::vector<Loc>& locs,
-    std::vector<double>& playSelectionValues
   ) const;
 
   //Useful utility function exposed for outside use

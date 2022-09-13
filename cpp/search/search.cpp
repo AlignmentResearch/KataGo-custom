@@ -2938,7 +2938,7 @@ void Search::selectBestChildToDescend(
 
   // If we are searching with EMCTS1 and are on an opponents move,
   // we choose via oppPlaySelectionValues, in a fashion that emulates
-  // getChosenMoveLoc() exactly.
+  // oppBot.getChosenMoveLoc() exactly.
   if (
     searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla

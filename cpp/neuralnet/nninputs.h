@@ -131,6 +131,10 @@ struct NNOutput {
   //If not NULL, then contains policy with dirichlet noise or any other noise adjustments for this node
   float* noisedPolicyProbs;
 
+  // For EMCTS, sometimes contains locs and playSelectionValues computed via Search.runWholeSearch
+  std::optional<std::vector<Loc>> oppLocs;
+  std::optional<std::vector<double>> oppPlaySelectionValues;
+
   NNOutput(); //Does NOT initialize values
   NNOutput(const NNOutput& other);
   ~NNOutput();

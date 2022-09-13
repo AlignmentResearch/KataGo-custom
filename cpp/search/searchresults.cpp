@@ -288,44 +288,6 @@ bool Search::clipAndScalePlaySelectionValues(
   return true;
 }
 
-bool Search::getPlaySelectionValuesWithDirectPolicy(
-  const SearchThread& thread,
-  const SearchNode& node,
-  std::vector<Loc>& locs,
-  std::vector<double>& playSelectionValues
-) const {
-  // Returns the selection values for all legal moves suggested by policy with non-negative policy probability.
-  //
-  // Iterates over all moves, filtering out any where the policy probability is negative (which may occur
-  // due to the addition of noise) or illegal (based on board history). Then scales the (noised) policy
-  // probabilities with clipAndScalePlaySelectionValues.
-  assert(node.nextPla == thread.pla);
-
-  locs.clear();
-  playSelectionValues.clear();
-
-  const NNOutput* nnOutput = node.getNNOutput();
-  if (nnOutput == NULL)
-    return false;
-
-  for (int movePos = 0; movePos < policySize; movePos++) {
-    const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
-    const double policyProb = policyProbs[movePos];
-    if (policyProb <= 0)
-      continue;
-
-    const Loc moveLoc = NNPos::posToLoc(
-      movePos, thread.board.x_size, thread.board.y_size, nnXLen, nnYLen);
-    if (!thread.history.isLegal(thread.board, moveLoc, thread.pla))
-      continue;
-
-    locs.push_back(moveLoc);
-    playSelectionValues.push_back(policyProb);
-  }
-
-  return clipAndScalePlaySelectionValues(playSelectionValues, locs.size());
-}
-
 void Search::maybeRecomputeNormToTApproxTable() {
   if(normToTApproxZ <= 0.0 || normToTApproxZ != searchParams.lcbStdevs || normToTApproxTable.size() <= 0) {
     normToTApproxZ = searchParams.lcbStdevs;
@@ -524,7 +486,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     return false;
   if(!rootHistory.existsNonPassingLegalMove(rootBoard, rootPla))
     return false;
-  
+
   // When using standard passing, we should only suppressPass in territory scoring. Otherwise, short circuit.
   if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
     if(!searchParams.fillDameBeforePass)

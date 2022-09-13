@@ -430,6 +430,7 @@ Search::Search(
   NNEvaluator* nnEval,
   Logger* lg,
   const string& rSeed,
+  SearchParams oppParams,
   NNEvaluator* oppNNEval
 )
   :rootPla(P_BLACK),
@@ -454,8 +455,7 @@ Search::Search(
    normToTApproxTable(),
    rootNode(NULL),
    mutexPool(NULL),
-   nnEval__(nnEval),
-   oppNNEval__(oppNNEval),
+   nnEvaluator(nnEval),
    nnXLen(),
    nnYLen(),
    policySize(),
@@ -472,12 +472,17 @@ Search::Search(
    oldNNOutputsToCleanUp()
 {
   switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::EMCTS1: {
+        assert(searchParams.numThreads == 1); // We do not support multithreading with EMCTS1 (yet).
+        assert(oppNNEval != nullptr);
+
+        oppParams.maxVisits = params.oppVisitsOverride.value_or(oppParams.maxVisits);
+        oppParams.rootNumSymmetriesToSample =
+          params.oppRootSymmetriesOverride.value_or(oppParams.rootNumSymmetriesToSample);
+        oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
+        break;
+    }
     case SearchParams::SearchAlgorithm::MCTS:
-      oppNNEval__ = nullptr;
-      break;
-    case SearchParams::SearchAlgorithm::EMCTS1:
-      assert(oppNNEval__ != nullptr);
-      assert(searchParams.numThreads == 1); // We do not support multithreading with EMCTS1 (yet).
       break;
     default:
       ASSERT_UNREACHABLE;
@@ -520,18 +525,73 @@ Search::~Search() {
   killThreads();
 }
 
-NNEvaluator* Search::getNNEvaluator(const SearchNode& node) const {
-  switch (searchParams.searchAlgo) {
-    case SearchParams::SearchAlgorithm::MCTS:
-      return nnEval__;
-    case SearchParams::SearchAlgorithm::EMCTS1:
-      return node.nextPla == rootNode->nextPla ? nnEval__ : oppNNEval__;
+void Search::evaluateNode(
+  const SearchNode& node,
+  Board& board,
+  const BoardHistory& history,
+  Player nextPlayer,
+  const MiscNNInputParams& nnInputParams,
+  NNResultBuf& buf,
+  bool skipCache,
+  bool includeOwnerMap
+) const {
+  switch(searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS: {
+      nnEvaluator->evaluate(
+        board, history, nextPlayer, nnInputParams,
+        buf, skipCache, includeOwnerMap
+      );
+      return;
+    }
+
+    case SearchParams::SearchAlgorithm::EMCTS1: {
+      if (node.nextPla == rootNode->nextPla) {
+        // it's "our" (the adversary's) turn -- search as usual
+        nnEvaluator->evaluate(
+          board, history, nextPlayer, nnInputParams,
+          buf, skipCache, includeOwnerMap
+        );
+        return;
+      }
+
+      // We evaluate using the opponent nnEval to populate buf.result with valid
+      // NNOutput values, which are needed for the Search not to crash.
+      // Technically, these values are not used by EMCTS, but there are
+      // intermediate computations done on them (which are later ignored) that
+      // would crash if done an invalid NNOutput.
+      //
+      // This doesn't impact performance because of the result will be cached
+      // in nnCacheTable and reused in the runWholeSearch() call below. This was
+      // checked in a debugger.
+      //
+      // The last argument (includeOwnerMap) is hardcoded to true in order to
+      // always get a cache hit, since runWholeSearch later calls evaluate with
+      // includeOwnerMap=true on the root node.
+      oppBot.get()->nnEvaluator->evaluate(
+        board, history, nextPlayer, nnInputParams,
+        buf, skipCache, true
+      );
+      assert(buf.hasResult);
+
+      oppBot.get()->setPosition(node.nextPla, board, history);
+      oppBot.get()->runWholeSearch(node.nextPla);
+
+      buf.result->oppLocs = vector<Loc>();
+      buf.result->oppPlaySelectionValues = vector<double>();
+      const bool suc = oppBot.get()->getPlaySelectionValues(
+        buf.result.get()->oppLocs.value(),
+        buf.result.get()->oppPlaySelectionValues.value(),
+        0.0
+      );
+      assert(suc);
+
+      return;
+    }
+
     default:
       ASSERT_UNREACHABLE;
   }
 }
-
-NNEvaluator* Search::getNNEvaluator() const { return nnEval__; }
 
 static void threadTaskLoop(Search* search, int threadIdx) {
   while(true) {
@@ -737,7 +797,7 @@ void Search::setCopyOfExternalPatternBonusTable(const std::unique_ptr<PatternBon
 
 void Search::setNNEval(NNEvaluator* nnEval) {
   clearSearch();
-  nnEval__ = nnEval;
+  nnEvaluator = nnEval;
   nnXLen = nnEval->getNNXLen();
   nnYLen = nnEval->getNNYLen();
   assert(nnXLen > 0 && nnXLen <= NNPos::MAX_BOARD_LEN);
@@ -1790,7 +1850,7 @@ void Search::computeRootNNEvaluation(NNResultBuf& nnResultBuf, bool includeOwner
       getOpp(pla) == playoutDoublingAdvantagePla ? -searchParams.playoutDoublingAdvantage : searchParams.playoutDoublingAdvantage
     );
   }
-  getNNEvaluator()->evaluate(
+  nnEvaluator->evaluate(
     board, hist, pla,
     nnInputParams,
     nnResultBuf, skipCache, includeOwnerMap
@@ -2036,30 +2096,8 @@ void Search::addDirichletNoise(const SearchParams& searchParams, Rand& rand, int
 
 
 shared_ptr<NNOutput>* Search::maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const {
-  if (
-      searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS
-   || (searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
-       && !searchParams.EMCTS1_noiseOppNodes)
-  ) {
-    // Regular MCTS behavior:
-    //   - add noise iff we are the root
-    if (isRoot) { /* noise */ }
-    else { return NULL; /* no noise */ }
-  } else if (
-      searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
-   && searchParams.EMCTS1_noiseOppNodes
-  ) {
-    // EMCTS1 adjusement (when noiseOppNodesDuringEMCTS1 = true):
-    //   - if we are the root, add noise
-    //   - if we are a different color than the root, add noise
-    //   - otherwise don't add noise
-    if (isRoot) { /* noise */ }
-    else if (thread.pla != rootNode->nextPla) { /* noise */ }
-    else { return NULL; /* no noise */ }
-  } else {
-    ASSERT_UNREACHABLE;
-  }
-
+  if(!isRoot)
+    return NULL;
   if(!searchParams.rootNoiseEnabled && searchParams.rootPolicyTemperature == 1.0 && searchParams.rootPolicyTemperatureEarly == 1.0 && rootHintLoc == Board::NULL_LOC)
     return NULL;
   if(oldNNOutput == NULL)
@@ -2899,7 +2937,8 @@ void Search::selectBestChildToDescend(
   const std::vector<int>& avoidMoveUntilByLoc = thread.pla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
 
   // If we are searching with EMCTS1 and are on an opponents move,
-  // we sample directly from the opponents policy.
+  // we choose via oppPlaySelectionValues, in a fashion that emulates
+  // oppBot.getChosenMoveLoc() exactly.
   if (
     searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
     && node.nextPla != rootNode->nextPla
@@ -2907,25 +2946,27 @@ void Search::selectBestChildToDescend(
     // EMCTS1 does not support avoidMoveUntilByLoc.
     assert(avoidMoveUntilByLoc.size() == 0);
 
-    // bestChildMoveLoc is sampled directly from policy
-    // (with an appropriately calcuated temperature).
     {
-      vector<Loc> locs;
-      vector<double> playSelectionValues;
-      const bool suc = getPlaySelectionValuesWithDirectPolicy(thread, node, locs, playSelectionValues);
-      assert(suc);
-      assert(locs.size() == playSelectionValues.size());
+      const Search& opp = *(oppBot.get());
+      const SearchParams& oppParams = opp.searchParams;
 
-      const double temperature = calculateTemperature(
-        searchParams.chosenMoveTemperatureHalflife,
-        searchParams.chosenMoveTemperatureEarly,
-        searchParams.chosenMoveTemperature,
+      const vector<double>& oppPlaySelectionValues = node.getNNOutput()->oppPlaySelectionValues.value();
+      const vector<Loc>& oppLocs = node.getNNOutput()->oppLocs.value();
+      assert(oppPlaySelectionValues.size() == oppLocs.size());
+
+      const double oppTemp = opp.calculateTemperature(
+        oppParams.chosenMoveTemperatureHalflife,
+        oppParams.chosenMoveTemperatureEarly,
+        oppParams.chosenMoveTemperature,
         thread.history.initialTurnNumber + thread.history.moveHistory.size()
       );
-      const uint32_t idxChosen = chooseIndexWithTemperature(
-        thread.rand, playSelectionValues.data(), playSelectionValues.size(), temperature
+      const uint32_t idxChosen = opp.chooseIndexWithTemperature(
+        thread.rand,
+        oppPlaySelectionValues.data(),
+        oppPlaySelectionValues.size(), oppTemp
       );
-      bestChildMoveLoc = locs[idxChosen];
+
+      bestChildMoveLoc = oppLocs[idxChosen];
     }
 
     // Check if bestChildMoveLoc is an existing child node.
@@ -3422,7 +3463,8 @@ bool Search::initNodeNNOutput(
       std::swap(symmetryIndexes[i], symmetryIndexes[thread.rand.nextInt(i,SymmetryHelpers::NUM_SYMMETRIES-1)]);
       nnInputParams.symmetry = symmetryIndexes[i];
       bool skipCacheThisIteration = true; //Skip cache since there's no guarantee which symmetry is in the cache
-      getNNEvaluator(node)->evaluate(
+      evaluateNode(
+        node,
         thread.board, thread.history, thread.pla,
         nnInputParams,
         thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
@@ -3432,7 +3474,8 @@ bool Search::initNodeNNOutput(
     result = new std::shared_ptr<NNOutput>(new NNOutput(ptrs));
   }
   else {
-    getNNEvaluator(node)->evaluate(
+    evaluateNode(
+      node,
       thread.board, thread.history, thread.pla,
       nnInputParams,
       thread.nnResultBuf, skipCache, includeOwnerMap
@@ -3518,7 +3561,7 @@ double Search::computeNodeWeight(const SearchNode& node) const {
 
   if(!searchParams.useUncertainty)
     return 1.0;
-  if(!getNNEvaluator(node)->supportsShorttermError())
+  if(!nnEvaluator->supportsShorttermError())
     return 1.0;
 
   double scoreMean = (double)nnOutput->whiteScoreMean;
@@ -3560,14 +3603,14 @@ bool Search::playoutDescend(
   ) {
     //Avoid running "too fast", by making sure that a leaf evaluation takes roughly the same time as a genuine nn eval
     //This stops a thread from building a silly number of visits to distort MCTS statistics other threads are stuck on the GPU.
-    getNNEvaluator(node)->waitForNextNNEvalIfAny();
+    nnEvaluator->waitForNextNNEvalIfAny();
     if(thread.history.isNoResult) {
       double winLossValue = 0.0;
       double noResultValue = 1.0;
       double scoreMean = 0.0;
       double scoreMeanSq = 0.0;
       double lead = 0.0;
-      double weight = (searchParams.useUncertainty && getNNEvaluator(node)->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
+      double weight = (searchParams.useUncertainty && nnEvaluator->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
       addLeafValue(node, winLossValue, noResultValue, scoreMean, scoreMeanSq, lead, weight, true, false);
       return true;
     }
@@ -3577,7 +3620,7 @@ bool Search::playoutDescend(
       double scoreMean = ScoreValue::whiteScoreDrawAdjust(thread.history.finalWhiteMinusBlackScore,searchParams.drawEquivalentWinsForWhite,thread.history);
       double scoreMeanSq = ScoreValue::whiteScoreMeanSqOfScoreGridded(thread.history.finalWhiteMinusBlackScore,searchParams.drawEquivalentWinsForWhite);
       double lead = scoreMean;
-      double weight = (searchParams.useUncertainty && getNNEvaluator(node)->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
+      double weight = (searchParams.useUncertainty && nnEvaluator->supportsShorttermError()) ? searchParams.uncertaintyMaxWeight : 1.0;
       addLeafValue(node, winLossValue, noResultValue, scoreMean, scoreMeanSq, lead, weight, true, false);
       return true;
     }

@@ -48,7 +48,6 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 SearchParams::SearchParams()
   :passingBehavior(PassingBehavior::Standard),
    searchAlgo(SearchAlgorithm::MCTS),
-   EMCTS1_noiseOppNodes(true),
    canPassFirst(true),
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),

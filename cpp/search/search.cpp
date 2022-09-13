@@ -546,6 +546,7 @@ void Search::evaluateNode(
 
     case SearchParams::SearchAlgorithm::EMCTS1: {
       if (node.nextPla == rootNode->nextPla) {
+        // it's "our" (the adversary's) turn -- search as usual
         nnEvaluator->evaluate(
           board, history, nextPlayer, nnInputParams,
           buf, skipCache, includeOwnerMap

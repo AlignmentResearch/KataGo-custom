@@ -1241,7 +1241,7 @@ static Loc runBotWithLimits(
     toMoveBot->searchParams.useLcbForSelection = lcb;
   }
 
-  return loc;
+  return loc != Board::NULL_LOC ? loc : Board::PASS_LOC;
 }
 
 
@@ -2241,7 +2241,8 @@ FinishedGameData* GameRunner::runGame(
   const std::function<bool()>& shouldStop,
   std::function<NNEvaluator*()> checkForNewNNEval,
   std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization,
-  std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove
+  std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove,
+  NNEvaluator* predictorNNEval
 ) {
   const bool forVictimPlay = playSettings.forSelfPlay && (bSpecB.botIdx != bSpecW.botIdx);
 
@@ -2349,15 +2350,21 @@ FinishedGameData* GameRunner::runGame(
     botW = botB;
   }
   else {
+    // NOTE: this code assumes the invariant from runOneVictimplayGame that the victim
+    // is always botIdx == 0 and the adv is always botIdx == 1.
     botB = new Search(
         botSpecB.baseParams, botSpecB.nnEval,
         &logger, seed + "@B",
-        botSpecW.baseParams, botSpecW.nnEval
+        botSpecW.baseParams,
+        // If black is the adversary and we have a predictor network, use that
+        predictorNNEval && botSpecB.botIdx == 1 ? predictorNNEval : botSpecW.nnEval
     );
     botW = new Search(
         botSpecW.baseParams, botSpecW.nnEval,
         &logger, seed + "@W",
-        botSpecB.baseParams, botSpecB.nnEval
+        botSpecB.baseParams,
+        // If white is the victim and we have a predictor network, use that
+        predictorNNEval && botSpecW.botIdx == 1 ? predictorNNEval : botSpecB.nnEval
     );
   }
   if(afterInitialization != nullptr) {

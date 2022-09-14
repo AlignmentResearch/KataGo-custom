@@ -362,8 +362,7 @@ struct Search {
     const MiscNNInputParams& nnInputParams,
     NNResultBuf& buf,
     bool skipCache,
-    bool includeOwnerMap,
-    bool forSymmetries = false
+    bool includeOwnerMap
   ) const;
 
   //================================================================================================================

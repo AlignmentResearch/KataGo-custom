@@ -534,8 +534,7 @@ void Search::evaluateNode(
   const MiscNNInputParams& nnInputParams,
   NNResultBuf& buf,
   bool skipCache,
-  bool includeOwnerMap,
-  bool forSymmetries
+  bool includeOwnerMap
 ) const {
   switch(searchParams.searchAlgo) {
     case SearchParams::SearchAlgorithm::MCTS: {
@@ -555,7 +554,6 @@ void Search::evaluateNode(
         );
         return;
       }
-      assert(!forSymmetries);
 
       // We evaluate using the opponent nnEval to populate buf.result with valid
       // NNOutput values, which are needed for the Search not to crash.
@@ -3471,7 +3469,7 @@ bool Search::initNodeNNOutput(
         node,
         thread.board, thread.history, thread.pla,
         nnInputParams,
-        thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap, true
+        thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
       );
       ptrs.push_back(std::move(thread.nnResultBuf.result));
     }

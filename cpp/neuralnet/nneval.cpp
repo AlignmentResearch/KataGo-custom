@@ -738,15 +738,15 @@ void NNEvaluator::evaluate(
   //and causing policy weights to be different, which would reduce performance of successive searches in a game
   //by making the successive searches distribute their playouts less coherently and using the cache more poorly.
   if(hadResultWithoutOwnerMap) {
-    buf.result->whiteWinProb = resultWithoutOwnerMap->whiteWinProb;
+    buf.result->shorttermScoreError = resultWithoutOwnerMap->shorttermScoreError;
+    buf.result->shorttermWinlossError = resultWithoutOwnerMap->shorttermWinlossError;
+    buf.result->varTimeLeft = resultWithoutOwnerMap->varTimeLeft;
+    buf.result->whiteLead = resultWithoutOwnerMap->whiteLead;
     buf.result->whiteLossProb = resultWithoutOwnerMap->whiteLossProb;
     buf.result->whiteNoResultProb = resultWithoutOwnerMap->whiteNoResultProb;
     buf.result->whiteScoreMean = resultWithoutOwnerMap->whiteScoreMean;
     buf.result->whiteScoreMeanSq = resultWithoutOwnerMap->whiteScoreMeanSq;
-    buf.result->whiteLead = resultWithoutOwnerMap->whiteLead;
-    buf.result->varTimeLeft = resultWithoutOwnerMap->varTimeLeft;
-    buf.result->shorttermWinlossError = resultWithoutOwnerMap->shorttermWinlossError;
-    buf.result->shorttermScoreError = resultWithoutOwnerMap->shorttermScoreError;
+    buf.result->whiteWinProb = resultWithoutOwnerMap->whiteWinProb;
     std::copy(resultWithoutOwnerMap->policyProbs, resultWithoutOwnerMap->policyProbs + NNPos::MAX_NN_POLICY_SIZE, buf.result->policyProbs);
     buf.result->nnXLen = resultWithoutOwnerMap->nnXLen;
     buf.result->nnYLen = resultWithoutOwnerMap->nnYLen;

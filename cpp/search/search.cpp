@@ -475,6 +475,7 @@ Search::Search(
     case SearchParams::SearchAlgorithm::EMCTS1: {
         assert(searchParams.numThreads == 1); // We do not support multithreading with EMCTS1 (yet).
         assert(oppNNEval != nullptr);
+        assert(oppParams.searchAlgo != SearchParams::SearchAlgorithm::EMCTS1);
 
         oppParams.maxVisits = params.oppVisitsOverride.value_or(oppParams.maxVisits);
         oppParams.rootNumSymmetriesToSample =
@@ -526,7 +527,7 @@ Search::~Search() {
 }
 
 void Search::evaluateNode(
-  const SearchNode& node,
+  SearchNode& node,
   Board& board,
   const BoardHistory& history,
   Player nextPlayer,
@@ -576,11 +577,12 @@ void Search::evaluateNode(
       oppBot.get()->setPosition(node.nextPla, board, history);
       oppBot.get()->runWholeSearch(node.nextPla);
 
-      buf.result->oppLocs = vector<Loc>();
-      buf.result->oppPlaySelectionValues = vector<double>();
+      node.oppLocs = vector<Loc>();
+      node.oppPlaySelectionValues = vector<double>();
+
       const bool suc = oppBot.get()->getPlaySelectionValues(
-        buf.result.get()->oppLocs.value(),
-        buf.result.get()->oppPlaySelectionValues.value(),
+        node.oppLocs.value(),
+        node.oppPlaySelectionValues.value(),
         0.0
       );
       assert(suc);
@@ -2950,8 +2952,8 @@ void Search::selectBestChildToDescend(
       const Search& opp = *(oppBot.get());
       const SearchParams& oppParams = opp.searchParams;
 
-      const vector<double>& oppPlaySelectionValues = node.getNNOutput()->oppPlaySelectionValues.value();
-      const vector<Loc>& oppLocs = node.getNNOutput()->oppLocs.value();
+      const vector<double>& oppPlaySelectionValues = node.oppPlaySelectionValues.value();
+      const vector<Loc>& oppLocs = node.oppLocs.value();
       assert(oppPlaySelectionValues.size() == oppLocs.size());
 
       const double oppTemp = opp.calculateTemperature(

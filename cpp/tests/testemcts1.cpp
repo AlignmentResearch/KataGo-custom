@@ -459,8 +459,8 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
                              node->nextPla == P_WHITE ? loss_prob : win_prob));
       testAssert(approxEqual(node->getNNOutput()->whiteNoResultProb, 0));
     } else {  // Victim node
-      testAssert(node->getNNOutput()->oppLocs.has_value());
-      testAssert(node->getNNOutput()->oppPlaySelectionValues.has_value());
+      testAssert(node->oppLocs.has_value());
+      testAssert(node->oppPlaySelectionValues.has_value());
     }
   }
 

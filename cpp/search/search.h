@@ -188,6 +188,11 @@ struct SearchNode {
 
   std::atomic<int32_t> dirtyCounter;
 
+  // For EMCTS, sometimes contains locs and playSelectionValues computed via Search.runWholeSearch.
+  // Note that these are NOT threadsafe. We don't currently support multithreading for EMCTS.
+  std::optional<std::vector<Loc>> oppLocs;
+  std::optional<std::vector<double>> oppPlaySelectionValues;
+
   //--------------------------------------------------------------------------------
   SearchNode(Player prevPla, Loc prevMoveLoc, SearchNode* parent);
   ~SearchNode();
@@ -350,7 +355,7 @@ struct Search {
   std::unique_ptr<Search> oppBot;
 
   void evaluateNode(
-    const SearchNode& node,
+    SearchNode& node,
     Board& board,
     const BoardHistory& history,
     Player nextPlayer,

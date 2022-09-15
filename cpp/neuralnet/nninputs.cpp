@@ -322,8 +322,6 @@ NNOutput::NNOutput(const NNOutput& other) {
   varTimeLeft = other.varTimeLeft;
   shorttermWinlossError = other.shorttermWinlossError;
   shorttermScoreError = other.shorttermScoreError;
-  oppLocs = other.oppLocs;
-  oppPlaySelectionValues = other.oppPlaySelectionValues;
 
   nnXLen = other.nnXLen;
   nnYLen = other.nnYLen;
@@ -353,13 +351,6 @@ NNOutput::NNOutput(const vector<shared_ptr<NNOutput>>& others) {
     assert(others[i]->nnHash == others[0]->nnHash);
   }
   nnHash = others[0]->nnHash;
-
-  // We don't support averaging nodes with oppLocs or oppPlaySelectionValues.
-  // These types of nodes are created for EMCTS.
-  for (auto other: others) {
-    assert(!other.get()->oppLocs.has_value());
-    assert(!other.get()->oppPlaySelectionValues.has_value());
-  }
 
   whiteWinProb = 0.0f;
   whiteLossProb = 0.0f;
@@ -459,8 +450,6 @@ NNOutput& NNOutput::operator=(const NNOutput& other) {
   varTimeLeft = other.varTimeLeft;
   shorttermWinlossError = other.shorttermWinlossError;
   shorttermScoreError = other.shorttermScoreError;
-  oppLocs = other.oppLocs;
-  oppPlaySelectionValues = other.oppPlaySelectionValues;
 
   nnXLen = other.nnXLen;
   nnYLen = other.nnYLen;

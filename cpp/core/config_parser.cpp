@@ -119,6 +119,26 @@ void ConfigParser::readStreamContent(istream& in) {
     contentStream << line << "\n";
     curLineNum += 1;
     line = Global::trim(line);
+
+    // Check for environment variables
+    size_t simpleEnvVarStart = line.find("$");
+    while(simpleEnvVarStart != string::npos) {
+      size_t simpleEnvVarEnd = line.find_first_of(" \t\r");
+      
+    }
+    size_t envVarStart = line.find("${");
+    while(envVarStart != string::npos) {
+      size_t envVarEnd = line.find("}", envVarStart);
+      if(envVarEnd == string::npos)
+        throw ConfigParsingError("Environment variable not closed with }" + lineAndFileInfo());
+
+      string envVarName = line.substr(envVarStart+2, envVarEnd-envVarStart-2);
+      const char* envVarValue = getenv(envVarName.c_str());
+      if(envVarValue == NULL)
+        throw ConfigParsingError("Environment variable " + envVarName + " not defined" + lineAndFileInfo());
+      line = line.substr(0,envVarStart) + string(envVarValue) + line.substr(envVarEnd+1);
+      envVarStart = line.find("${");
+    }
     if(line.length() <= 0 || line[0] == '#')
       continue;
 

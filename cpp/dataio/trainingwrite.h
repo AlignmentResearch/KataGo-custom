@@ -252,7 +252,7 @@ class TrainingDataWriter {
  public:
   TrainingDataWriter(const std::string& outputDir, int inputsVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, const std::string& randSeed);
   TrainingDataWriter(std::ostream* debugOut, int inputsVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyWriteEvery, const std::string& randSeed);
-  TrainingDataWriter(const std::string& outputDir, std::ostream* debugOut, int inputsVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyWriteEvery, const std::string& randSeed);
+  TrainingDataWriter(const std::string& outputDir, const std::string& victimOutputDir, std::ostream* debugOut, int inputsVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyWriteEvery, const std::string& randSeed);
   ~TrainingDataWriter();
 
   void writeGame(const FinishedGameData& data);
@@ -267,8 +267,10 @@ class TrainingDataWriter {
 
  private:
   std::string outputDir;
+  std::string victimOutputDir;
   int inputsVersion;
   Rand rand;
+  TrainingWriteBuffers *victimBuffers = nullptr;
   TrainingWriteBuffers* writeBuffers;
 
   std::ostream* debugOut;
@@ -281,6 +283,7 @@ class TrainingDataWriter {
   void writeAndClearIfFull();
   static bool isVictimNamePattern(const std::string &name);
   static Player getVictimPlayerColor(const FinishedGameData& data);
+  bool flushBuffersIfNonempty(std::string& resultingFilename, bool forVictim);
 
 };
 

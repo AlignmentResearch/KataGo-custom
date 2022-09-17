@@ -331,6 +331,7 @@ struct GTPEngine {
 
   //Stores the params we want to be using during genmoves or analysis
   SearchParams params;
+  SearchParams opParams;
 
   TimeControls bTimeControls;
   TimeControls wTimeControls;
@@ -354,7 +355,7 @@ struct GTPEngine {
   GTPEngine(
     const string& modelFile,
     const string& opFile,
-    SearchParams initialParams, Rules initialRules,
+    SearchParams initialParams, SearchParams opInitialParams, Rules initialRules,
     bool assumeMultiBlackHandicap, bool prevtEncore,
     double dynamicPDACapPerOppLead, double staticPDA, bool staticPDAPrecedence,
     double normAvoidRepeatedPatternUtility, double hcapAvoidRepeatedPatternUtility,
@@ -383,6 +384,7 @@ struct GTPEngine {
      bot(nullptr),
      currentRules(initialRules),
      params(initialParams),
+     opParams(opInitialParams),
      bTimeControls(),
      wTimeControls(),
      initialBoard(),
@@ -494,7 +496,7 @@ struct GTPEngine {
     else
       searchRandSeed = Global::uint64ToString(seedRand.nextUInt64());
 
-    bot = new AsyncBot(params, nnEval, &logger, searchRandSeed);
+    bot = new AsyncBot(params, nnEval, &logger, searchRandSeed, opParams, opNNEval);
     bot->setCopyOfExternalPatternBonusTable(patternBonusTable);
 
     Board board(boardXSize,boardYSize);
@@ -1515,7 +1517,7 @@ int MainCmds::gtp(const vector<string>& args) {
 
   ConfigParser cfg;
   string nnModelFile;
-  string nnWhiteFile;
+  string opNNModelFile;
   string overrideVersion;
   KataGoCommandLine cmd("Run KataGo main GTP engine for playing games or casual analysis.");
   try {
@@ -1524,19 +1526,19 @@ int MainCmds::gtp(const vector<string>& args) {
     cmd.setShortUsageArgLimit();
     cmd.addOverrideConfigArg();
 
-    TCLAP::ValueArg<string> nnWhiteFileArg(
-      "", "nn-white-file",
-      "Path to white model. If specified the other model is used as the black model.",
-      false, string(), "WHITE_MODEL"
+    TCLAP::ValueArg<string> opNNFileArg(
+      "", "victim-model",
+      "Path to victim model (for EMCTS search).",
+      false, string(), "VICTIM_MODEL"
     );
-    cmd.add(nnWhiteFileArg);
+    cmd.add(opNNFileArg);
 
     TCLAP::ValueArg<string> overrideVersionArg("","override-version","Force KataGo to say a certain value in response to gtp version command",false,string(),"VERSION");
     cmd.add(overrideVersionArg);
     cmd.parseArgs(args);
     nnModelFile = cmd.getModelFile();
     overrideVersion = overrideVersionArg.getValue();
-    nnWhiteFile = nnWhiteFileArg.getValue();
+    opNNModelFile = opNNFileArg.getValue();
 
     cmd.getConfig(cfg);
   }
@@ -1576,7 +1578,13 @@ int MainCmds::gtp(const vector<string>& args) {
     initialRules.komi = forcedKomi;
   }
 
-  SearchParams initialParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_GTP);
+  vector<SearchParams> paramss = Setup::loadParams(cfg,Setup::SETUP_FOR_GTP);
+  if (opNNModelFile == "") {
+    assert(paramss.size() == 1);
+  } else {
+    assert(1 <= paramss.size() && paramss.size() <= 2);
+  }
+  SearchParams& initialParams = paramss[0];
   logger.write("Using " + Global::intToString(initialParams.numThreads) + " CPU thread(s) for search");
   //Set a default for conservativePass that differs from matches or selfplay
   if(!cfg.contains("conservativePass") && !cfg.contains("conservativePass0"))
@@ -1634,15 +1642,15 @@ int MainCmds::gtp(const vector<string>& args) {
   std::unique_ptr<PatternBonusTable> patternBonusTable = nullptr;
   {
     std::vector<std::unique_ptr<PatternBonusTable>> tables = Setup::loadAvoidSgfPatternBonusTables(cfg,logger);
-    assert(tables.size() == 1);
+    assert(tables.size() >= 1);
     patternBonusTable = std::move(tables[0]);
   }
 
   Player perspective = Setup::parseReportAnalysisWinrates(cfg,C_EMPTY);
 
   GTPEngine* engine = new GTPEngine(
-    nnModelFile,nnWhiteFile,
-    initialParams,initialRules,
+    nnModelFile,opNNModelFile,
+    initialParams,opNNModelFile == "" ? SearchParams() : paramss[1], initialRules,
     assumeMultipleStartingBlackMovesAreHandicap,preventEncore,
     dynamicPlayoutDoublingAdvantageCapPerOppLead,
     staticPlayoutDoublingAdvantage,staticPDATakesPrecedence,

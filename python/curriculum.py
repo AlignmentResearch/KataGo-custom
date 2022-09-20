@@ -703,13 +703,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def setup_logging(selfplay_dir: str, log_level: int) -> None:
-    """Setup logging to file {args.selfplay_dir}/curriculum-<timestamp>.log and stdout."""
+    """Setup logging to file {selfplay_dir}/curriculum-<timestamp>.log and stdout."""
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
     timestamp = datetime.datetime.utcnow().isoformat()
     file_handler = logging.FileHandler(
-        filename=f"{selfplay_dir}/curriculum-{timestamp}.log"
+        filename=f"{selfplay_dir}/curriculum-{timestamp}.log",
     )
     stdout_handler = logging.StreamHandler(stream=sys.stdout)
 

@@ -702,13 +702,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def setup_logging(log_level: int) -> None:
-    """Setup logging to file /outputs/curriculum-<timestamp>.log and stdout."""
+def setup_logging(selfplay_dir: str, log_level: int) -> None:
+    """Setup logging to file {selfplay_dir}/curriculum-<timestamp>.log and stdout."""
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
     timestamp = datetime.datetime.utcnow().isoformat()
-    file_handler = logging.FileHandler(filename=f"/outputs/curriculum-{timestamp}.log")
+    file_handler = logging.FileHandler(
+        filename=f"{selfplay_dir}/curriculum-{timestamp}.log",
+    )
     stdout_handler = logging.StreamHandler(stream=sys.stdout)
 
     root_logger.addHandler(file_handler)
@@ -737,7 +739,7 @@ def make_curriculum(args: argparse.Namespace) -> Curriculum:
 def main():
     """Main console entry point to script."""
     args = parse_args()
-    setup_logging(args.log_level)
+    setup_logging(args.selfplay_dir, args.log_level)
     curriculum = make_curriculum(args)
 
     try:

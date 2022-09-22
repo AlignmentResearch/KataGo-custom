@@ -54,6 +54,7 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
   parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
   parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
+  parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, action='store_true')
   return vars(parser.parse_args())
 
 
@@ -84,6 +85,7 @@ max_train_bucket_size = args["max_train_bucket_size"]
 max_train_steps_since_last_reload = args["max_train_steps_since_last_reload"]
 verbose = args["verbose"]
 no_export = args["no_export"]
+disable_vtimeloss = args["disable_vtimeloss"]
 logfilemode = "a"
 
 if samples_per_epoch is None:
@@ -332,7 +334,7 @@ def model_fn(features,labels,mode,params):
   if (num_epochs_this_instance + lr_scale_before_export_epochs) % epochs_per_export <= num_epochs_this_instance % epochs_per_export:
     lr_scale_to_use = lr_scale_before_export
 
-  built = ModelUtils.build_model_from_tfrecords_features(features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale_to_use,gnorm_clip_scale,num_gpus_used)
+  built = ModelUtils.build_model_from_tfrecords_features(features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale_to_use,gnorm_clip_scale,num_gpus_used,use_vtimeloss=not disable_vtimeloss)
 
   if mode == tf.estimator.ModeKeys.PREDICT:
     model = built

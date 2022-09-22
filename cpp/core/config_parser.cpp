@@ -99,8 +99,6 @@ void ConfigParser::processIncludedFile(const std::string &fname) {
 
   string baseDir = extractBaseDir(fname);
   if(!baseDir.empty()) {
-    if(baseDir[0] == '\\' || baseDir[0] == '/')
-      throw ConfigParsingError("Absolute paths in the included files are not supported yet");
     baseDirs.push_back(baseDir);
   }
 

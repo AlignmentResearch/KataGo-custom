@@ -133,6 +133,26 @@ double Search::getScoreStdev(double scoreMean, double scoreMeanSq) {
   return sqrt(variance);
 }
 
+string Search::getRankStr() const {
+  const auto getVisitStr = [](const Search* bot, string prefix) {
+    return prefix + "v=" + std::to_string(bot->searchParams.maxVisits) + "," +
+           prefix + "rsym=" +
+           std::to_string(bot->searchParams.rootNumSymmetriesToSample);
+  };
+
+  switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      return "algo=MCTS," + getVisitStr(this, "");
+
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      return "algo=EMCTS1," + getVisitStr(this, "") + "," +
+             getVisitStr(oppBot.get(), "opp_");
+
+    default:
+      ASSERT_UNREACHABLE;
+  }
+}
+
 //-----------------------------------------------------------------------------------------
 
 SearchChildPointer::SearchChildPointer():

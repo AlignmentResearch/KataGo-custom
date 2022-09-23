@@ -1,5 +1,6 @@
 #include "../program/play.h"
 
+#include "../core/datetime.h"
 #include "../core/global.h"
 #include "../core/fileutils.h"
 #include "../program/playutils.h"
@@ -1364,9 +1365,9 @@ FinishedGameData* Play::runGame(
   }
 
   gameData->bName = botSpecB.botName;
-  gameData->bRank = "v" + std::to_string(botSpecB.baseParams.maxVisits);
   gameData->wName = botSpecW.botName;
-  gameData->wRank = "v" + std::to_string(botSpecW.baseParams.maxVisits);
+  gameData->bRank = botB->getRankStr();
+  gameData->wRank = botW->getRankStr();
   gameData->bIdx = botSpecB.botIdx;
   gameData->wIdx = botSpecW.botIdx;
 
@@ -1963,6 +1964,7 @@ FinishedGameData* Play::runGame(
     }
   }
 
+  gameData->endDateTimeStr = DateTime::getCompactDateTimeString();
   return gameData;
 }
 

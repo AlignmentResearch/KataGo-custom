@@ -212,6 +212,13 @@ bool Search::getPlaySelectionValues(
     while(true) {
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
+        if(suppressPass && moveLoc == Board::PASS_LOC) {
+          locs.push_back(moveLoc);
+          playSelectionValues.push_back(0.);
+          numChildren++;
+          continue;
+        }
+
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
         double policyProb = policyProbs[movePos];
         if(!rootHistory.isLegal(rootBoard,moveLoc,rootPla) || policyProb < 0 || (obeyAllowedRootMove && !isAllowedRootMove(moveLoc)))
@@ -494,6 +501,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
       return false;
   }
+  // cout << "behavior:" << SearchParams::passingBehaviorToStr(searchParams.passingBehavior) << endl;
 
   const SearchNode& node = *n;
   const NNOutput* nnOutput = node.getNNOutput();
@@ -566,6 +574,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           }
         }
       }
+      cout << "Not suppressing pass" << endl;
       return false;
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns

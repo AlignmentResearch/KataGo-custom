@@ -79,6 +79,9 @@ bool Search::getPlaySelectionValues(
     if(child == NULL)
       break;
     Loc moveLoc = child->prevMoveLoc;
+    if(suppressPass && moveLoc == Board::PASS_LOC) {
+      continue;
+    }
 
     int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
     double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
@@ -87,16 +90,9 @@ bool Search::getPlaySelectionValues(
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
       maxChildWeight = childWeight;
-    if(suppressPass && moveLoc == Board::PASS_LOC) {
-      playSelectionValues.push_back(0.0);
-      if(retVisitCounts != NULL)
-        (*retVisitCounts).push_back(0.0);
-    }
-    else {
-      playSelectionValues.push_back((double)childWeight);
-      if(retVisitCounts != NULL)
-        (*retVisitCounts).push_back((double)childVisits);
-    }
+    playSelectionValues.push_back((double)childWeight);
+    if(retVisitCounts != NULL)
+      (*retVisitCounts).push_back((double)childVisits);
   }
 
   int numChildren = playSelectionValues.size();
@@ -141,7 +137,6 @@ bool Search::getPlaySelectionValues(
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
       if(suppressPass && child->prevMoveLoc == Board::PASS_LOC) {
-        playSelectionValues[i] = 0;
         continue;
       }
       if(i != mostWeightedIdx) {
@@ -213,9 +208,6 @@ bool Search::getPlaySelectionValues(
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
         if(suppressPass && moveLoc == Board::PASS_LOC) {
-          locs.push_back(moveLoc);
-          playSelectionValues.push_back(0.);
-          numChildren++;
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();

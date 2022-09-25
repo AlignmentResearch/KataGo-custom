@@ -2662,6 +2662,7 @@ ComputeHandle* NeuralNet::createComputeHandle(
       + " memory " + Global::uint64ToString(prop.totalGlobalMem)
       + " compute capability major " + Global::intToString(prop.major)
       + " minor " + Global::intToString(prop.minor)
+      + " device " + Global::intToString(gpuIdxForThisThread)
     );
     logger->write(
       "Cuda backend thread " + Global::intToString(serverThreadIdx) + ": Model version " + Global::intToString(loadedModel->modelDesc.version) +

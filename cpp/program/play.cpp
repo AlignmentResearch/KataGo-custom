@@ -626,6 +626,7 @@ MatchPairer::MatchPairer(
    baseParamss(bParamss),
    excludeBot(exclude),
    secondaryBots(),
+   secondaryBots2(),
    blackPriority(),
    nextMatchups(),
    nextMatchupsBuf(),
@@ -655,6 +656,12 @@ MatchPairer::MatchPairer(
       secondaryBots = cfg.getInts("secondaryBots",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
     for(int i = 0; i<secondaryBots.size(); i++)
       assert(secondaryBots[i] >= 0 && secondaryBots[i] < numBots);
+
+    if(cfg.contains("secondaryBots2"))
+      secondaryBots2 = cfg.getInts("secondaryBots2",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
+    for(int i = 0; i<secondaryBots2.size(); i++)
+      assert(secondaryBots2[i] >= 0 && secondaryBots2[i] < numBots);
+
     for(int i = 0; i<numBots; i++) {
       string idxStr = Global::intToString(i);
       if(cfg.contains("blackPriority" + idxStr))
@@ -736,7 +743,11 @@ pair<int,int> MatchPairer::getMatchupPairUnsynchronized() {
       for(int j = 0; j<numBots; j++) {
         if(excludeBot[j])
           continue;
-        if(i < j && !(contains(secondaryBots,i) && contains(secondaryBots,j))) {
+        if(
+          i < j
+          && !(contains(secondaryBots,i) && contains(secondaryBots,j))
+          && !(contains(secondaryBots2,i) && contains(secondaryBots2,j))
+        ) {
           nextMatchupsBuf.push_back(make_pair(i,j));
         }
       }

@@ -213,9 +213,6 @@ bool Search::getPlaySelectionValues(
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
         if(suppressPass && moveLoc == Board::PASS_LOC) {
-          locs.push_back(moveLoc);
-          playSelectionValues.push_back(0.);
-          numChildren++;
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();

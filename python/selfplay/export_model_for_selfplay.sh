@@ -32,7 +32,6 @@ mkdir -p "$BASEDIR"/models
 function exportStuff() {
     FROMDIR="$1"
     TODIR="$2"
-    echo "Exporting from $FROMDIR to $TODIR"
 
     #Sort by timestamp so that we process in order of oldest to newest if there are multiple
     for FILEPATH in $(find "$BASEDIR"/"$FROMDIR"/ -mindepth 1 -maxdepth 1 -printf "%T@ %p\n" | sort -n | cut -d ' ' -f 2)

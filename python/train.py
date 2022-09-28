@@ -389,23 +389,27 @@ def model_fn(features,labels,mode,params):
     sys.stderr.flush()
 
     initial_weights_dir = os.path.join(traindir,"initial_weights")
+    trainlog(f"{initial_weights_dir=} {os.path.exists(initial_weights_dir)=}")
     if os.path.exists(initial_weights_dir) and not initial_weights_already_loaded:
-      print("Initial weights dir found at: " + initial_weights_dir)
+      trainlog("Initial weights dir found at: " + initial_weights_dir)
       checkpoint_path = None
       for initial_weights_file in os.listdir(initial_weights_dir):
-        if initial_weights_file.startswith("model") and initial_weights_file.endswith(".index"):
+        if (initial_weights_file.startswith("model") or initial_weights_file.startswith("variables")) and initial_weights_file.endswith(".index"):
           checkpoint_path = os.path.join(initial_weights_dir, initial_weights_file[0:len(initial_weights_file)-len(".index")])
           break
-      if checkpoint_path is not None:
-        print("Initial weights checkpoint to use found at: " + checkpoint_path)
+
+      if not checkpoint_path:
+        raise RuntimeError("No checkpoint found in initial weights dir: " + initial_weights_dir)
+      else:
+        trainlog("Initial weights checkpoint to use found at: " + checkpoint_path)
         vars_in_checkpoint = tf.contrib.framework.list_variables(checkpoint_path)
         varname_in_checkpoint = {}
-        print("Checkpoint contains:")
+        trainlog("Checkpoint contains:")
         for varandshape in vars_in_checkpoint:
-          print(varandshape)
+          trainlog(varandshape)
           varname_in_checkpoint[varandshape[0]] = True
 
-        print("Modifying graph to load weights from checkpoint upon init...")
+        trainlog("Modifying graph to load weights from checkpoint upon init...")
         sys.stdout.flush()
         sys.stderr.flush()
 

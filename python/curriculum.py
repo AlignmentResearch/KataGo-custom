@@ -417,6 +417,15 @@ class Curriculum:
             "Copying the latest victim '{}'...".format(self._cur_victim),
         )
         self._try_victim_copy()
+
+        # Maybe also warmstart the predictor with the victim
+        predictor_dir = victims_output_dir.parent / "predictor"
+        if predictor_dir.exists():
+            logging.info("Warm starting predictor with victim network...")
+            models_dir = predictor_dir / "models" / "bootstrap"
+            models_dir.mkdir(exist_ok=True, parents=True)
+            self._try_victim_copy(dest_dir=models_dir, dest_name="model.bin.gz")
+        
         logging.info("Curriculum initial setup is complete")
 
     def _load_latest_victim_params(self) -> Optional[VictimParams]:
@@ -477,9 +486,10 @@ class Curriculum:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)
 
-    def _try_victim_copy(self, force_if_exists=False):
+    def _try_victim_copy(self, force_if_exists=False, dest_dir=None, dest_name=None):
+        dest_dir = dest_dir or self.victims_output_dir
         victim_name = self._cur_victim.name
-        victim_path = self.victims_output_dir / victim_name
+        victim_path = dest_dir / (dest_name or victim_name)
         victim_path_tmp = self.victims_output_dir_tmp / victim_name
 
         if not force_if_exists and os.path.exists(victim_path):
@@ -489,7 +499,7 @@ class Curriculum:
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
                 # Make sure directories exist
-                os.makedirs(self.victims_output_dir, exist_ok=True)
+                os.makedirs(dest_dir, exist_ok=True)
                 os.makedirs(self.victims_output_dir_tmp, exist_ok=True)
                 self._update_victim_config()
 

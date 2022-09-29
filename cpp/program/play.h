@@ -229,6 +229,7 @@ class MatchPairer {
   std::vector<bool> excludeBot;
   std::vector<bool> useVictimplays;
   std::vector<int> secondaryBots;
+  std::vector<int> secondaryBots2;
   std::vector<int> blackPriority;
   std::vector<std::pair<int,int>> nextMatchups;
   std::vector<std::pair<int,int>> nextMatchupsBuf;

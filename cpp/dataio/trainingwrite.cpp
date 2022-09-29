@@ -1,5 +1,6 @@
 #include "../dataio/trainingwrite.h"
 
+#include "../core/datetime.h"
 #include "../core/fileutils.h"
 #include "../neuralnet/modelversion.h"
 
@@ -48,7 +49,10 @@ SidePosition::~SidePosition()
 //-------------------------------------------------------------------------------------
 
 FinishedGameData::FinishedGameData()
-  :bName(),
+  :startDateTimeStr(DateTime::getCompactDateTimeString()),
+   endDateTimeStr("nan"),
+
+   bName(),
    wName(),
    bRank(),
    wRank(),

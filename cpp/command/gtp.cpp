@@ -1592,7 +1592,12 @@ int MainCmds::gtp(const vector<string>& args) {
   if(!cfg.contains("fillDameBeforePass") && !cfg.contains("fillDameBeforePass0"))
     initialParams.fillDameBeforePass = true;
 
-  const bool ponderingEnabled = cfg.getBool("ponderingEnabled");
+  const bool ponderingEnabled = cfg.contains("ponderingEnabled") ? cfg.getBool("ponderingEnabled") : false;
+  if (ponderingEnabled && initialParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
+    // EMCTS expects to conduct searches with the root node always being one
+    // fixed color. Pondering breaks this.
+    throw StringError("Pondering must be disabled for EMCTS.");
+  }
 
   const enabled_t cleanupBeforePass = cfg.contains("cleanupBeforePass") ? cfg.getEnabled("cleanupBeforePass") : enabled_t::Auto;
   const enabled_t friendlyPass = cfg.contains("friendlyPass") ? cfg.getEnabled("friendlyPass") : enabled_t::Auto;

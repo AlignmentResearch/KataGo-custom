@@ -1579,12 +1579,27 @@ int MainCmds::gtp(const vector<string>& args) {
   }
 
   vector<SearchParams> paramss = Setup::loadParams(cfg,Setup::SETUP_FOR_GTP);
-  if (opNNModelFile == "") {
-    assert(paramss.size() == 1);
-  } else {
-    assert(1 <= paramss.size() && paramss.size() <= 2);
-  }
+  assert(!paramss.empty());
   SearchParams& initialParams = paramss[0];
+  switch (initialParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      if (paramss.size() != 1) {
+        throw StringError(
+            "Expect 1 bot for MCTS, got " + Global::intToString(paramss.size())
+        );
+      }
+      break;
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      if (paramss.size() != 2) {
+        throw StringError(
+            "Expect 2 bots for EMCTS, got " + Global::intToString(paramss.size())
+        );
+      }
+      break;
+    default:
+      ASSERT_UNREACHABLE;
+  }
+
   logger.write("Using " + Global::intToString(initialParams.numThreads) + " CPU thread(s) for search");
   //Set a default for conservativePass that differs from matches or selfplay
   if(!cfg.contains("conservativePass") && !cfg.contains("conservativePass0"))

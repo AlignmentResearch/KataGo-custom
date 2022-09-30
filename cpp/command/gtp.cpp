@@ -1595,6 +1595,9 @@ int MainCmds::gtp(const vector<string>& args) {
             "Expect 2 bots for EMCTS, got " + Global::intToString(paramss.size())
         );
       }
+      if (opNNModelFile == "") {
+        throw StringError("-victim-model flag must be specified for EMCTS");
+      }
       break;
     default:
       ASSERT_UNREACHABLE;
@@ -1670,7 +1673,7 @@ int MainCmds::gtp(const vector<string>& args) {
 
   GTPEngine* engine = new GTPEngine(
     nnModelFile,opNNModelFile,
-    initialParams,opNNModelFile == "" ? SearchParams() : paramss[1], initialRules,
+    initialParams,paramss.size() > 1 ? paramss[1] : SearchParams(),initialRules,
     assumeMultipleStartingBlackMovesAreHandicap,preventEncore,
     dynamicPlayoutDoublingAdvantageCapPerOppLead,
     staticPlayoutDoublingAdvantage,staticPDATakesPrecedence,

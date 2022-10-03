@@ -2258,9 +2258,6 @@ FinishedGameData* GameRunner::runGame(
   NNEvaluator* predictorNNEval
 ) {
   const bool forVictimPlay = playSettings.forSelfPlay && (bSpecB.botIdx != bSpecW.botIdx);
-  if (predictorNNEval) {
-    cout << "Using predictor for " << bSpecB.botName << " vs " << bSpecW.botName << endl;
-  }
 
   // checkForNewNNEval is non-NULL when switchNetsMidGame is true.
   // We do not currently support switchNetsMidGame if we are doing victimPlay.

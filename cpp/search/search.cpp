@@ -133,6 +133,26 @@ double Search::getScoreStdev(double scoreMean, double scoreMeanSq) {
   return sqrt(variance);
 }
 
+string Search::getRankStr() const {
+  const auto getVisitStr = [](const Search* bot, string prefix) {
+    return prefix + "v=" + std::to_string(bot->searchParams.maxVisits) + "," +
+           prefix + "rsym=" +
+           std::to_string(bot->searchParams.rootNumSymmetriesToSample);
+  };
+
+  switch (searchParams.searchAlgo) {
+    case SearchParams::SearchAlgorithm::MCTS:
+      return "algo=MCTS," + getVisitStr(this, "");
+
+    case SearchParams::SearchAlgorithm::EMCTS1:
+      return "algo=EMCTS1," + getVisitStr(this, "") + "," +
+             getVisitStr(oppBot.get(), "opp_");
+
+    default:
+      ASSERT_UNREACHABLE;
+  }
+}
+
 //-----------------------------------------------------------------------------------------
 
 SearchChildPointer::SearchChildPointer():
@@ -1206,6 +1226,15 @@ void Search::runWholeSearch(
     logger->write("Warning: int64_t atomic numPlayoutsShared is not lock free");
   if(!std::atomic_is_lock_free(&shouldStopNow))
     logger->write("Warning: bool atomic shouldStopNow is not lock free");
+  if (rootNode != NULL
+      && rootNode->oppPlaySelectionValues.has_value()
+      && searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
+    logger->write(
+        "Warning: EMCTS doesn't expect to search when the root node is a "
+        "victim node. Clearing search."
+    );
+    clearSearch();
+  }
 
   //Do this first, just in case this causes us to clear things and have 0 effective time carried over
   beginSearch(pondering);

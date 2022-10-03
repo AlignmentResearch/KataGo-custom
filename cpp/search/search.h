@@ -572,6 +572,7 @@ struct Search {
   //Helpers-----------------------------------------------------------------------
   int getPos(Loc moveLoc) const;
   static double getScoreStdev(double scoreMeanAvg, double scoreMeanSqAvg);
+  std::string getRankStr() const;
 
 private:
   static constexpr double POLICY_ILLEGAL_SELECTION_VALUE = -1e50;

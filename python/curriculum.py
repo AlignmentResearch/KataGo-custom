@@ -425,7 +425,7 @@ class Curriculum:
             models_dir = predictor_dir / "models" / "bootstrap"
             models_dir.mkdir(exist_ok=True, parents=True)
             self._try_victim_copy(dest_dir=models_dir, dest_name="model.bin.gz")
-        
+
         logging.info("Curriculum initial setup is complete")
 
     def _load_latest_victim_params(self) -> Optional[VictimParams]:

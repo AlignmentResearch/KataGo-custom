@@ -5,7 +5,14 @@
 
 class AsyncBot {
  public:
-  AsyncBot(SearchParams params, NNEvaluator* nnEval, Logger* logger, const std::string& randSeed);
+  AsyncBot(
+      SearchParams params,
+      NNEvaluator* nnEval,
+      Logger* logger,
+      const std::string& randSeed,
+      SearchParams oppParams = SearchParams(),
+      NNEvaluator* oppNNEval = nullptr
+  );
   ~AsyncBot();
 
   AsyncBot(const AsyncBot& other) = delete;

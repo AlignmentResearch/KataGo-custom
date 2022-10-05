@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import sys
 import time
@@ -215,8 +216,12 @@ def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, Color, Color]:
 def get_max_visits(game: sgf.Sgf_game, color: Color) -> int:
     """Get max visits for player `color` in `game`."""
     visit_key = color.value + "R"  # BR or WR: black/white rank
-    game_root = game.get_root()
-    return int(game_root.get(visit_key).lstrip("v"))
+    visit_string = game.get_root().get(visit_key)
+    visit_num = re.search("v=([0-9]+)", visit_string)
+    if not visit_num:
+        raise ValueError(f"Could not find visit count in '{visit_string}'")
+
+    return int(visit_num[1])
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:

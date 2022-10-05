@@ -1184,7 +1184,7 @@ static SearchLimitsThisMove getSearchLimitsThisMove(
 //Returns the move chosen
 static Loc runBotWithLimits(
   Search* toMoveBot, Player pla, const PlaySettings& playSettings,
-  const SearchLimitsThisMove& limits
+  const SearchLimitsThisMove& limits, Logger& logger
 ) {
   if(limits.clearBotBeforeSearchThisMove)
     toMoveBot->clearSearch();
@@ -1253,7 +1253,11 @@ static Loc runBotWithLimits(
     toMoveBot->searchParams.useLcbForSelection = lcb;
   }
 
-  return loc != Board::NULL_LOC ? loc : Board::PASS_LOC;
+  if (loc == Board::NULL_LOC) {
+    logger.write("WARNING: Bot returned null move, returning pass instead");
+    return Board::PASS_LOC;
+  }
+  return loc;
 }
 
 
@@ -1521,7 +1525,7 @@ FinishedGameData* Play::runGame(
     SearchLimitsThisMove limits = getSearchLimitsThisMove(
       toMoveBot, pla, playSettings, gameRand, historicalMctsWinLossValues, clearBotBeforeSearch, otherGameProps
     );
-    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits);
+    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
 
     if(loc == Board::NULL_LOC || !toMoveBot->isLegalStrict(loc,pla))
       failIllegalMove(toMoveBot,logger,board,loc);

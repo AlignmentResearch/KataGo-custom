@@ -117,7 +117,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     TCLAP::ValueArg<string> maxGamesTotalArg("","max-games-total","Terminate after this many games",false,string(),"NGAMES");
     TCLAP::ValueArg<string> nnPredictorPathArg("","nn-predictor-path","Path to predictor model(s)",false,string(),"PREDICTOR");
     TCLAP::ValueArg<string> nnVictimPathArg("","nn-victim-path","Path to victim model(s)",victimplay,string(),"VICTIM");
-    TCLAP::ValueArg<string> victimOutputDirArg("","victim-output-dir","Dir to output files for victim",false,string(),"DIR");
+    TCLAP::ValueArg<string> victimOutputDirArg("","victim-output-dir","Dir to output files for victim predictor training",false,string(),"DIR");
     cmd.add(modelsDirArg);
     cmd.add(outputDirArg);
     cmd.add(maxGamesTotalArg);
@@ -397,7 +397,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     mutex& modelMutex,
     bool allowRandom
   ) -> std::shared_ptr<NNEvaluator> {
-    // Harder case: reloading models
     shared_ptr<NNEvaluator> outputPtr;
     string modelName = "random";
     string modelFile;
@@ -497,7 +496,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &nnPredictorPath,
     &predictorNNEvals,
     &predictorMutex,
-    &loadNN,
     &modelLoad
   ](int threadIdx) {
     auto shouldStopFunc = []() noexcept {

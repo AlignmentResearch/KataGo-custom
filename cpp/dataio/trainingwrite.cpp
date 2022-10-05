@@ -1016,7 +1016,6 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
 
     auto buffers = writeBuffers;
     if (forVictimPlay && nextPlayer == victimPlayer) {
-      // Skip writing data when it is victim to move.
       if (victimBuffers)
         buffers = victimBuffers;
       else

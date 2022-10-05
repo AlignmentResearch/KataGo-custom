@@ -167,7 +167,7 @@ int MainCmds::match(const vector<string>& args) {
   
   NNEvaluator *predictorEval = nullptr;
   if (nnPredictorPath != "") {
-    const string expectedSha256;
+    const string expectedSha256 = "";
     predictorEval = Setup::initializeNNEvaluator(
       nnPredictorPath, nnPredictorPath, expectedSha256, cfg, logger, seedRand, maxConcurrentEvals, expectedConcurrentEvals,
       maxBoardXSizeUsed, maxBoardYSizeUsed, defaultMaxBatchSize, defaultRequireExactNNLen,

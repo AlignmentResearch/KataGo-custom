@@ -497,7 +497,6 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
       return false;
   }
-  // cout << "behavior:" << SearchParams::passingBehaviorToStr(searchParams.passingBehavior) << endl;
 
   const SearchNode& node = *n;
   const NNOutput* nnOutput = node.getNNOutput();
@@ -570,7 +569,6 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           }
         }
       }
-      cout << "Not suppressing pass" << endl;
       return false;
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns

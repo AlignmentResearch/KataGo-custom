@@ -1501,6 +1501,8 @@ void WriteSgf::writeSgf(
     out << "BR[" << gameData->bRank << "]";
     out << "WR[" << gameData->wRank << "]";
     out << "HA[" << gameData->handicapForSgf << "]";
+    out << "DT[" << gameData->startDateTimeStr
+        <<   "~" << gameData->endDateTimeStr << "]";
   }
   else {
     BoardHistory histCopy(endHist);

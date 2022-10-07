@@ -261,6 +261,7 @@ class TrainingDataWriter {
   void writeGame(const FinishedGameData& data);
   void flushIfNonempty();
   bool flushIfNonempty(std::string& resultingFilename);
+  bool flushBuffersIfNonempty(std::string& resultingFilename, bool forVictim);
 
   bool isEmpty() const;
   int64_t numRowsInBuffer() const;
@@ -286,7 +287,6 @@ class TrainingDataWriter {
   void writeAndClearIfFull();
   static bool isVictimNamePattern(const std::string &name);
   static Player getVictimPlayerColor(const FinishedGameData& data);
-  bool flushBuffersIfNonempty(std::string& resultingFilename, bool forVictim);
 
 };
 

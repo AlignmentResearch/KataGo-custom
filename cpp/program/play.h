@@ -206,6 +206,7 @@ class MatchPairer {
     int botIdx;
     std::string botName;
     NNEvaluator* nnEval;
+    NNEvaluator* predictorNNEval;
     SearchParams baseParams;
   };
 
@@ -332,8 +333,7 @@ public:
     const std::function<bool()>& shouldStop,
     std::function<NNEvaluator*()> checkForNewNNEval,
     std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization,
-    std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove,
-    NNEvaluator* predictorNNEval = nullptr
+    std::function<void(const Board&, const BoardHistory&, Player, Loc, const std::vector<double>&, const std::vector<double>&, const std::vector<double>&, const Search*)> onEachMove
   );
 
   const GameInitializer* getGameInitializer() const;

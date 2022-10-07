@@ -58,6 +58,7 @@ static FinishedGameData* runOneVictimplayGame(
   adversaryBotSpec.botIdx = 1; // adversary is always idx 1
   adversaryBotSpec.botName = advNNEval->getModelName();
   adversaryBotSpec.nnEval = advNNEval;
+  adversaryBotSpec.predictorNNEval = predictorNNEval;
   adversaryBotSpec.baseParams = advSearchParams;
 
   MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
@@ -71,8 +72,7 @@ static FinishedGameData* runOneVictimplayGame(
     shouldStopFunc,
     nullptr, // checkForNewNNEval
     nullptr, // afterInitialization
-    nullptr, // onEachMove
-    predictorNNEval
+    nullptr  // onEachMove
   );
 
   const bool victimIsBlack = advColor == C_WHITE;
@@ -351,13 +351,14 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
     //Note that this inputsVersion passed here is NOT necessarily the same as the one used in the neural net self play, it
     //simply controls the input feature version for the written data
+    int onlyWriteEvery = 1;
     TrainingDataWriter* tdataWriter = new TrainingDataWriter(
       tdataOutputDir, tdataVictimOutputDir, NULL, inputsVersion, maxRowsPerTrainFile,
-      firstFileRandMinProp, dataBoardLen, dataBoardLen, 1, Global::uint64ToHexString(rand.nextUInt64())
+      firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
     );
     TrainingDataWriter* vdataWriter = new TrainingDataWriter(
       vdataOutputDir, vdataVictimOutputDir, NULL, inputsVersion, maxRowsPerValFile,
-      firstFileRandMinProp, dataBoardLen, dataBoardLen, 1, Global::uint64ToHexString(rand.nextUInt64())
+      firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
     );
 
     tdataWriter->forVictimPlay = victimplay;

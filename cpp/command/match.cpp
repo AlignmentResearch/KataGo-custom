@@ -39,11 +39,9 @@ int MainCmds::match(const vector<string>& args) {
     cmd.addConfigFileArg("","match_example.cfg");
 
     TCLAP::ValueArg<string> logFileArg("","log-file","Log file to output to",false,string(),"FILE");
-    TCLAP::ValueArg<string> nnPredictorArg("","nn-predictor-path","Path to predictor model",false,string(),"PREDICTOR");
     TCLAP::ValueArg<string> sgfOutputDirArg("","sgf-output-dir","Dir to output sgf files",false,string(),"DIR");
 
     cmd.add(logFileArg);
-    cmd.add(nnPredictorArg);
     cmd.add(sgfOutputDirArg);
 
     cmd.setShortUsageArgLimit();
@@ -52,7 +50,6 @@ int MainCmds::match(const vector<string>& args) {
     cmd.parseArgs(args);
 
     logFile = logFileArg.getValue();
-    nnPredictorPath = nnPredictorArg.getValue();
     sgfOutputDir = sgfOutputDirArg.getValue();
 
     cmd.getConfig(cfg);
@@ -81,6 +78,12 @@ int MainCmds::match(const vector<string>& args) {
       if(!contains(includeBots,i))
         excludeBot[i] = true;
     }
+  }
+
+  // Maybe load the predictor path
+  string predictorPath = "";
+  if (cfg.contains("predictorPath")) {
+    predictorPath = cfg.getString("predictorPath");
   }
 
   //Load the names of the bots and which model each bot is using
@@ -230,6 +233,12 @@ int MainCmds::match(const vector<string>& args) {
 
       MatchPairer::BotSpec botSpecB;
       MatchPairer::BotSpec botSpecW;
+      if (predictorEval) {
+        if (botSpecB.botIdx == 1)
+          botSpecB.predictorNNEval = predictorEval;
+        else
+          botSpecW.predictorNNEval = predictorEval;
+      }
       if(matchPairer->getMatchup(botSpecB, botSpecW, logger)) {
         string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization = [&patternBonusTables](const MatchPairer::BotSpec& spec, Search* search) {
@@ -243,7 +252,7 @@ int MainCmds::match(const vector<string>& args) {
         logger.write("Launching " + gameDescription);
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
-          shouldStopFunc, nullptr, afterInitialization, nullptr, predictorEval
+          shouldStopFunc, nullptr, afterInitialization, nullptr
         );
         logger.write("Finished " + gameDescription);
       }

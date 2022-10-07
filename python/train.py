@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-from pathlib import Path
 from typing import Any, Mapping
 import sys
 import os
@@ -88,13 +87,6 @@ verbose = args["verbose"]
 no_export = args["no_export"]
 disable_vtimeloss = args["disable_vtimeloss"]
 logfilemode = "a"
-
-run_victim_eval = os.path.exists("/victim-weights")
-if run_victim_eval:
-  print(
-    "There's a victim-weights dir. Assuming we're training the predictor and should "
-    "run eval on the victim as a baseline every epoch."
-  )
 
 if samples_per_epoch is None:
   samples_per_epoch = 1000000
@@ -405,7 +397,7 @@ def model_fn(features,labels,mode,params):
           checkpoint_path = os.path.join(initial_weights_dir, initial_weights_file[0:len(initial_weights_file)-len(".index")])
           break
 
-      if not checkpoint_path:
+      if checkpoint_path is None:
         raise RuntimeError("No checkpoint found in initial weights dir: " + initial_weights_dir)
       else:
         print("Initial weights checkpoint to use found at: " + checkpoint_path)
@@ -450,7 +442,7 @@ else:
   parse_input = tfrecordio.make_tf_record_parser(model_config,pos_len,batch_size,multi_num_gpus = None)
 
 def train_input_fn(train_files_to_use,total_num_train_files,batches_to_use,mode,input_context):
-  # assert(mode == tf.estimator.ModeKeys.TRAIN)
+  assert(mode == tf.estimator.ModeKeys.TRAIN)
   if input_context:
     assert(input_context.num_input_pipelines == 1)
   trainlog("Constructing train input pipe, %d/%d files used (%d batches)" % (len(train_files_to_use),total_num_train_files,batches_to_use))
@@ -477,7 +469,7 @@ def val_input_fn(vdatadir):
 
 # TRAINING PARAMETERS ------------------------------------------------------------
 
-def build_estimator(model_dir, initial_weights_dir=None) -> tf.estimator.Estimator:
+def build_estimator() -> tf.estimator.Estimator:
   config_kwargs = dict(
     save_checkpoints_steps=1000000000, #We get checkpoints every time we complete an epoch anyways
     keep_checkpoint_every_n_hours=1000000,
@@ -489,8 +481,8 @@ def build_estimator(model_dir, initial_weights_dir=None) -> tf.estimator.Estimat
     session_config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_frac
     return tf.estimator.Estimator(
       model_fn=model_fn,
-      model_dir=model_dir,
-      params=dict(initial_weights_dir=initial_weights_dir),
+      model_dir=traindir,
+      params={},
       config=tf.estimator.RunConfig(
         session_config=session_config,
         **config_kwargs,
@@ -507,7 +499,7 @@ def build_estimator(model_dir, initial_weights_dir=None) -> tf.estimator.Estimat
     )
     return tf.estimator.Estimator(
       model_fn=model_fn,
-      model_dir=model_dir,
+      model_dir=traindir,
       params={},
       config=tf.estimator.RunConfig(
         session_config = session_config,
@@ -519,7 +511,7 @@ def build_estimator(model_dir, initial_weights_dir=None) -> tf.estimator.Estimat
 
 
 trainlog("Beginning training")
-estimator = build_estimator(traindir)
+estimator = build_estimator()
 
 
 class CheckpointSaverListenerFunction(tf.estimator.CheckpointSaverListener):
@@ -807,48 +799,6 @@ while True:
 
       time.sleep(1)
       os.rename(savepathtmp,savepath)
-
-  # Evaluate the victim baseline if it exists
-  if run_victim_eval:
-    # Find the most recently modified victim model ending in .bin.gz in victim_dir
-    victim_dir = Path("/outputs/victims")
-    victim_model = max(
-      victim_dir.glob("*.gz"),
-      key=os.path.getmtime,
-      default=None
-    )
-    if victim_model is None:
-      trainlog("No victim model found in victim_dir")
-    else:
-      all_weights = [x for x in Path("/victim-weights").iterdir() if x.is_dir()]
-
-      # First remove the .txt.gz
-      victim_name = victim_model.name.split(".")[0]
-      # Then remove the kata-
-      prefix = 'kata1-'
-      if victim_name.startswith(prefix):
-        victim_name = victim_name[len(prefix):]
-
-      # Note that it's sufficient for the victim name to be *contained* in the path stem since
-      # there are weird inconsistencies where the inner folder inside the zipfile has a kata1-
-      # prefix in some cases but most of the time it doesn't.
-      weights = [
-        p for p in all_weights
-        if victim_name in p.stem
-      ]
-      if len(weights) == 0:
-        raise ValueError(f"No TF weights found matching victim name {victim_name}; found {all_weights}")
-      elif len(weights) > 1:
-        raise ValueError(f"Couldn't unambiguously find TF weights for victim named {victim_name}; found {weights}")
-
-      trainlog("Loading victim model from " + str(weights[0]))
-      with tf.compat.v1.variable_scope("victim"):
-        victim_estimator = build_estimator(model_dir=None, initial_weights_dir=str(weights[0] / 'saved_model' / 'variables'))
-        results = victim_estimator.evaluate(
-          (lambda mode, input_context=None: train_input_fn(train_files_to_use,num_train_files,batches_to_use_so_far,mode,input_context)),
-          steps=num_batches_per_subepoch
-        )
-      trainlog(f"Finished evaluating victim model: {results}")
 
   #Validate
   trainlog("Beginning validation after epoch!")

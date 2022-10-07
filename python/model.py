@@ -1276,7 +1276,7 @@ def huber_loss(x,y,delta):
 
 
 class Target_vars:
-  def __init__(self,model,for_optimization,placeholders):
+  def __init__(self,model,for_optimization,placeholders,use_vtimeloss):
     policy_output = model.policy_output
     value_output = model.value_output
     miscvalues_output = model.miscvalues_output
@@ -1594,7 +1594,6 @@ class Target_vars:
         self.td_score_loss +
         self.scoremean_loss +
         self.lead_loss +
-        self.variance_time_loss +
         self.scorebelief_pdf_loss +
         self.scorebelief_cdf_loss +
         self.ownership_loss +
@@ -1606,7 +1605,7 @@ class Target_vars:
         self.shortterm_score_error_loss +
         self.reg_loss +
         self.scale_reg_loss
-      )
+      ) + (self.variance_time_loss if use_vtimeloss else 0)
 
       # self.opt_loss = tf.Print(
       #   self.opt_loss,
@@ -1693,7 +1692,7 @@ class ModelUtils:
     logf("Model: %d total parameters" % total_parameters)
 
   @staticmethod
-  def build_model_from_tfrecords_features(features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale=None,gnorm_clip_scale=None,num_gpus_used=1):
+  def build_model_from_tfrecords_features(features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale=None,gnorm_clip_scale=None,num_gpus_used=1,use_vtimeloss=True):
     trainlog("Building model")
 
     num_bin_input_features = Model.get_num_bin_input_features(model_config)
@@ -1759,14 +1758,14 @@ class ModelUtils:
     if mode == tf.estimator.ModeKeys.EVAL:
       model = Model(model_config,pos_len,placeholders,is_training=False)
 
-      target_vars = Target_vars(model,for_optimization=True,placeholders=placeholders)
+      target_vars = Target_vars(model,for_optimization=True,placeholders=placeholders,use_vtimeloss=use_vtimeloss)
       metrics = Metrics(model,target_vars,include_debug_stats=False)
       return (model,target_vars,metrics)
 
     if mode == tf.estimator.ModeKeys.TRAIN:
       model = Model(model_config,pos_len,placeholders,is_training=True)
 
-      target_vars = Target_vars(model,for_optimization=True,placeholders=placeholders)
+      target_vars = Target_vars(model,for_optimization=True,placeholders=placeholders,use_vtimeloss=use_vtimeloss)
       metrics = Metrics(model,target_vars,include_debug_stats=False)
       global_step = tf.compat.v1.train.get_global_step()
       global_step_float = tf.cast(global_step, tf.float32)

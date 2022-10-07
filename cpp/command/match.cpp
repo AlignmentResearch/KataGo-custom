@@ -32,15 +32,18 @@ int MainCmds::match(const vector<string>& args) {
 
   ConfigParser cfg;
   string logFile;
+  string nnPredictorPath;
   string sgfOutputDir;
   try {
     KataGoCommandLine cmd("Play different nets against each other with different search settings in a match or tournament.");
     cmd.addConfigFileArg("","match_example.cfg");
 
     TCLAP::ValueArg<string> logFileArg("","log-file","Log file to output to",false,string(),"FILE");
+    TCLAP::ValueArg<string> nnPredictorArg("","nn-predictor-path","Path to predictor model",false,string(),"PREDICTOR");
     TCLAP::ValueArg<string> sgfOutputDirArg("","sgf-output-dir","Dir to output sgf files",false,string(),"DIR");
 
     cmd.add(logFileArg);
+    cmd.add(nnPredictorArg);
     cmd.add(sgfOutputDirArg);
 
     cmd.setShortUsageArgLimit();
@@ -49,6 +52,7 @@ int MainCmds::match(const vector<string>& args) {
     cmd.parseArgs(args);
 
     logFile = logFileArg.getValue();
+    nnPredictorPath = nnPredictorArg.getValue();
     sgfOutputDir = sgfOutputDirArg.getValue();
 
     cmd.getConfig(cfg);
@@ -160,6 +164,16 @@ int MainCmds::match(const vector<string>& args) {
     Setup::SETUP_FOR_MATCH
   );
   logger.write("Loaded neural net");
+  
+  NNEvaluator *predictorEval = nullptr;
+  if (nnPredictorPath != "") {
+    const string expectedSha256 = "";
+    predictorEval = Setup::initializeNNEvaluator(
+      nnPredictorPath, nnPredictorPath, expectedSha256, cfg, logger, seedRand, maxConcurrentEvals, expectedConcurrentEvals,
+      maxBoardXSizeUsed, maxBoardYSizeUsed, defaultMaxBatchSize, defaultRequireExactNNLen,
+      Setup::SETUP_FOR_MATCH
+    );
+  }
 
   vector<NNEvaluator*> nnEvalsByBot(numBots);
   for(int i = 0; i<numBots; i++) {
@@ -194,7 +208,7 @@ int MainCmds::match(const vector<string>& args) {
   std::signal(SIGTERM, signalHandler);
 
   auto runMatchLoop = [
-    &gameRunner,&matchPairer,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables
+    &gameRunner,&matchPairer,&predictorEval,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables
   ](
     uint64_t threadHash
   ) {
@@ -229,7 +243,7 @@ int MainCmds::match(const vector<string>& args) {
         logger.write("Launching " + gameDescription);
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
-          shouldStopFunc, nullptr, afterInitialization, nullptr
+          shouldStopFunc, nullptr, afterInitialization, nullptr, predictorEval
         );
         logger.write("Finished " + gameDescription);
       }
@@ -280,6 +294,9 @@ int MainCmds::match(const vector<string>& args) {
       delete nnEvals[i];
     }
   }
+  if (predictorEval)
+    delete predictorEval;
+
   NeuralNet::globalCleanup();
   ScoreValue::freeTables();
 

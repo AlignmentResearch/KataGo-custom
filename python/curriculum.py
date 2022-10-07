@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 import shutil
 import sys
 import time
@@ -215,8 +216,12 @@ def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, Color, Color]:
 def get_max_visits(game: sgf.Sgf_game, color: Color) -> int:
     """Get max visits for player `color` in `game`."""
     visit_key = color.value + "R"  # BR or WR: black/white rank
-    game_root = game.get_root()
-    return int(game_root.get(visit_key).lstrip("v"))
+    visit_string = game.get_root().get(visit_key)
+    visit_num = re.search("v=([0-9]+)", visit_string)
+    if not visit_num:
+        raise ValueError(f"Could not find visit count in '{visit_string}'")
+
+    return int(visit_num[1])
 
 
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
@@ -417,6 +422,15 @@ class Curriculum:
             "Copying the latest victim '{}'...".format(self._cur_victim),
         )
         self._try_victim_copy()
+
+        # Maybe also warmstart the predictor with the victim
+        predictor_dir = victims_output_dir.parent / "predictor"
+        if predictor_dir.exists():
+            logging.info("Warm starting predictor with victim network...")
+            models_dir = predictor_dir / "models" / "bootstrap"
+            models_dir.mkdir(exist_ok=True, parents=True)
+            self._try_victim_copy(dest_dir=models_dir, dest_name="model.bin.gz")
+
         logging.info("Curriculum initial setup is complete")
 
     def _load_latest_victim_params(self) -> Optional[VictimParams]:
@@ -477,9 +491,10 @@ class Curriculum:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)
 
-    def _try_victim_copy(self, force_if_exists=False):
+    def _try_victim_copy(self, force_if_exists=False, dest_dir=None, dest_name=None):
+        dest_dir = dest_dir or self.victims_output_dir
         victim_name = self._cur_victim.name
-        victim_path = self.victims_output_dir / victim_name
+        victim_path = dest_dir / (dest_name or victim_name)
         victim_path_tmp = self.victims_output_dir_tmp / victim_name
 
         if not force_if_exists and os.path.exists(victim_path):
@@ -489,7 +504,7 @@ class Curriculum:
         for _ in range(self.MAX_VICTIM_COPYING_EFFORTS):
             try:
                 # Make sure directories exist
-                os.makedirs(self.victims_output_dir, exist_ok=True)
+                os.makedirs(dest_dir, exist_ok=True)
                 os.makedirs(self.victims_output_dir_tmp, exist_ok=True)
                 self._update_victim_config()
 
@@ -702,13 +717,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def setup_logging(log_level: int) -> None:
-    """Setup logging to file /outputs/curriculum-<timestamp>.log and stdout."""
+def setup_logging(selfplay_dir: str, log_level: int) -> None:
+    """Setup logging to file {selfplay_dir}/curriculum-<timestamp>.log and stdout."""
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
     timestamp = datetime.datetime.utcnow().isoformat()
-    file_handler = logging.FileHandler(filename=f"/outputs/curriculum-{timestamp}.log")
+    file_handler = logging.FileHandler(
+        filename=f"{selfplay_dir}/curriculum-{timestamp}.log",
+    )
     stdout_handler = logging.StreamHandler(stream=sys.stdout)
 
     root_logger.addHandler(file_handler)
@@ -737,7 +754,7 @@ def make_curriculum(args: argparse.Namespace) -> Curriculum:
 def main():
     """Main console entry point to script."""
     args = parse_args()
-    setup_logging(args.log_level)
+    setup_logging(args.selfplay_dir, args.log_level)
     curriculum = make_curriculum(args)
 
     try:

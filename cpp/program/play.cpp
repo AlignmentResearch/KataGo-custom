@@ -1,5 +1,6 @@
 #include "../program/play.h"
 
+#include "../core/datetime.h"
 #include "../core/global.h"
 #include "../core/fileutils.h"
 #include "../program/playutils.h"
@@ -625,6 +626,7 @@ MatchPairer::MatchPairer(
    baseParamss(bParamss),
    excludeBot(exclude),
    secondaryBots(),
+   secondaryBots2(),
    blackPriority(),
    nextMatchups(),
    nextMatchupsBuf(),
@@ -654,6 +656,12 @@ MatchPairer::MatchPairer(
       secondaryBots = cfg.getInts("secondaryBots",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
     for(int i = 0; i<secondaryBots.size(); i++)
       assert(secondaryBots[i] >= 0 && secondaryBots[i] < numBots);
+
+    if(cfg.contains("secondaryBots2"))
+      secondaryBots2 = cfg.getInts("secondaryBots2",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
+    for(int i = 0; i<secondaryBots2.size(); i++)
+      assert(secondaryBots2[i] >= 0 && secondaryBots2[i] < numBots);
+
     for(int i = 0; i<numBots; i++) {
       string idxStr = Global::intToString(i);
       if(cfg.contains("blackPriority" + idxStr))
@@ -735,7 +743,11 @@ pair<int,int> MatchPairer::getMatchupPairUnsynchronized() {
       for(int j = 0; j<numBots; j++) {
         if(excludeBot[j])
           continue;
-        if(i < j && !(contains(secondaryBots,i) && contains(secondaryBots,j))) {
+        if(
+          i < j
+          && !(contains(secondaryBots,i) && contains(secondaryBots,j))
+          && !(contains(secondaryBots2,i) && contains(secondaryBots2,j))
+        ) {
           nextMatchupsBuf.push_back(make_pair(i,j));
         }
       }
@@ -1172,7 +1184,7 @@ static SearchLimitsThisMove getSearchLimitsThisMove(
 //Returns the move chosen
 static Loc runBotWithLimits(
   Search* toMoveBot, Player pla, const PlaySettings& playSettings,
-  const SearchLimitsThisMove& limits
+  const SearchLimitsThisMove& limits, Logger& logger
 ) {
   if(limits.clearBotBeforeSearchThisMove)
     toMoveBot->clearSearch();
@@ -1241,7 +1253,11 @@ static Loc runBotWithLimits(
     toMoveBot->searchParams.useLcbForSelection = lcb;
   }
 
-  return loc != Board::NULL_LOC ? loc : Board::PASS_LOC;
+  if (loc == Board::NULL_LOC) {
+    logger.write("WARNING: Bot returned null move, returning pass instead");
+    return Board::PASS_LOC;
+  }
+  return loc;
 }
 
 
@@ -1364,9 +1380,9 @@ FinishedGameData* Play::runGame(
   }
 
   gameData->bName = botSpecB.botName;
-  gameData->bRank = "v" + std::to_string(botSpecB.baseParams.maxVisits);
   gameData->wName = botSpecW.botName;
-  gameData->wRank = "v" + std::to_string(botSpecW.baseParams.maxVisits);
+  gameData->bRank = botB->getRankStr();
+  gameData->wRank = botW->getRankStr();
   gameData->bIdx = botSpecB.botIdx;
   gameData->wIdx = botSpecW.botIdx;
 
@@ -1509,7 +1525,7 @@ FinishedGameData* Play::runGame(
     SearchLimitsThisMove limits = getSearchLimitsThisMove(
       toMoveBot, pla, playSettings, gameRand, historicalMctsWinLossValues, clearBotBeforeSearch, otherGameProps
     );
-    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits);
+    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
 
     if(loc == Board::NULL_LOC || !toMoveBot->isLegalStrict(loc,pla))
       failIllegalMove(toMoveBot,logger,board,loc);
@@ -1963,6 +1979,7 @@ FinishedGameData* Play::runGame(
     }
   }
 
+  gameData->endDateTimeStr = DateTime::getCompactDateTimeString();
   return gameData;
 }
 

@@ -55,6 +55,7 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-max-train-steps-since-last-reload', help='Approx total of training allowed if shuffling stops', type=float, required=False)
   parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
   parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
+  parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, action='store_true')
   return vars(parser.parse_args())
 
 
@@ -85,6 +86,7 @@ max_train_bucket_size = args["max_train_bucket_size"]
 max_train_steps_since_last_reload = args["max_train_steps_since_last_reload"]
 verbose = args["verbose"]
 no_export = args["no_export"]
+disable_vtimeloss = args["disable_vtimeloss"]
 logfilemode = "a"
 
 run_victim_eval = os.path.exists("/victim-weights")
@@ -340,44 +342,7 @@ def model_fn(features,labels,mode,params):
   if (num_epochs_this_instance + lr_scale_before_export_epochs) % epochs_per_export <= num_epochs_this_instance % epochs_per_export:
     lr_scale_to_use = lr_scale_before_export
 
-  initial_weights_dir = params.get('initial_weights_dir', os.path.join(traindir,"initial_weights"))
-  if initial_weights_dir and os.path.exists(initial_weights_dir) and not initial_weights_already_loaded:
-    print("Initial weights dir found at: " + initial_weights_dir)
-    checkpoint_path = None
-    for file in os.listdir(initial_weights_dir):
-      if (file.startswith("model") or file.startswith("variables")) and file.endswith(".index"):
-        checkpoint_path = os.path.join(initial_weights_dir, file[0:len(file)-len(".index")])
-        break
-    if checkpoint_path is not None:
-      print("Initial weights checkpoint to use found at: " + checkpoint_path)
-      vars_in_checkpoint = tf.contrib.framework.list_variables(checkpoint_path)
-      varname_in_checkpoint = {}
-      print("Checkpoint contains:")
-      for varandshape in vars_in_checkpoint:
-        print(varandshape)
-        varname_in_checkpoint[varandshape[0]] = True
-
-      print("Modifying graph to load weights from checkpoint upon init...")
-      sys.stdout.flush()
-      sys.stderr.flush()
-
-      variables_to_restore = tf.compat.v1.global_variables()
-      assignment_mapping = {}
-      for v in variables_to_restore:
-        name = v.name.split(":")[0] # drop the ":0" at the end of each var
-        if name in varname_in_checkpoint:
-          assignment_mapping[name] = v
-        elif ("swa_model/"+name) in varname_in_checkpoint:
-          print(f"{name=} {v.shape=}")
-          assignment_mapping[("swa_model/"+name)] = v
-
-      tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)
-      if tf.estimator.ModeKeys.TRAIN:
-        initial_weights_already_loaded = True
-
-  built = ModelUtils.build_model_from_tfrecords_features(
-    features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale_to_use,gnorm_clip_scale,num_gpus_used
-  )
+  built = ModelUtils.build_model_from_tfrecords_features(features,mode,print_model,trainlog,model_config,pos_len,batch_size,lr_scale_to_use,gnorm_clip_scale,num_gpus_used,use_vtimeloss=not disable_vtimeloss)
 
   if mode == tf.estimator.ModeKeys.PREDICT:
     model = built
@@ -430,6 +395,42 @@ def model_fn(features,labels,mode,params):
 
     sys.stdout.flush()
     sys.stderr.flush()
+
+    initial_weights_dir = os.path.join(traindir,"initial_weights")
+    if os.path.exists(initial_weights_dir) and not initial_weights_already_loaded:
+      print("Initial weights dir found at: " + initial_weights_dir)
+      checkpoint_path = None
+      for initial_weights_file in os.listdir(initial_weights_dir):
+        if (initial_weights_file.startswith("model") or initial_weights_file.startswith("variables")) and initial_weights_file.endswith(".index"):
+          checkpoint_path = os.path.join(initial_weights_dir, initial_weights_file[0:len(initial_weights_file)-len(".index")])
+          break
+
+      if not checkpoint_path:
+        raise RuntimeError("No checkpoint found in initial weights dir: " + initial_weights_dir)
+      else:
+        print("Initial weights checkpoint to use found at: " + checkpoint_path)
+        vars_in_checkpoint = tf.contrib.framework.list_variables(checkpoint_path)
+        varname_in_checkpoint = {}
+        print("Checkpoint contains:")
+        for varandshape in vars_in_checkpoint:
+          print(varandshape)
+          varname_in_checkpoint[varandshape[0]] = True
+
+        print("Modifying graph to load weights from checkpoint upon init...")
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+        variables_to_restore = tf.compat.v1.global_variables()
+        assignment_mapping = {}
+        for v in variables_to_restore:
+          name = v.name.split(":")[0] # drop the ":0" at the end of each var
+          if name in varname_in_checkpoint:
+            assignment_mapping[name] = v
+          elif ("swa_model/"+name) in varname_in_checkpoint:
+            assignment_mapping[("swa_model/"+name)] = v
+
+        tf.compat.v1.train.init_from_checkpoint(checkpoint_path, assignment_mapping)
+        initial_weights_already_loaded = True
 
     ops = [train_step] + log_ops
 

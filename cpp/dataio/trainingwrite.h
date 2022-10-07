@@ -50,6 +50,9 @@ struct SidePosition {
 STRUCT_NAMED_PAIR(std::string,name,int,turnIdx,ChangedNeuralNet);
 
 struct FinishedGameData {
+  std::string startDateTimeStr;
+  std::string endDateTimeStr;
+
   std::string bName;
   std::string wName;
   std::string bRank;

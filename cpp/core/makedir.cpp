@@ -1,6 +1,5 @@
 #include "../core/makedir.h"
 
-#include <cerrno>
 #include <filesystem>
 
 namespace fs = std::filesystem;

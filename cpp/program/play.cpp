@@ -1184,7 +1184,7 @@ static SearchLimitsThisMove getSearchLimitsThisMove(
 //Returns the move chosen
 static Loc runBotWithLimits(
   Search* toMoveBot, Player pla, const PlaySettings& playSettings,
-  const SearchLimitsThisMove& limits
+  const SearchLimitsThisMove& limits, Logger& logger
 ) {
   if(limits.clearBotBeforeSearchThisMove)
     toMoveBot->clearSearch();
@@ -1253,6 +1253,10 @@ static Loc runBotWithLimits(
     toMoveBot->searchParams.useLcbForSelection = lcb;
   }
 
+  if (loc == Board::NULL_LOC) {
+    logger.write("WARNING: Bot returned null move, returning pass instead");
+    return Board::PASS_LOC;
+  }
   return loc;
 }
 
@@ -1521,7 +1525,7 @@ FinishedGameData* Play::runGame(
     SearchLimitsThisMove limits = getSearchLimitsThisMove(
       toMoveBot, pla, playSettings, gameRand, historicalMctsWinLossValues, clearBotBeforeSearch, otherGameProps
     );
-    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits);
+    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
 
     if(loc == Board::NULL_LOC || !toMoveBot->isLegalStrict(loc,pla))
       failIllegalMove(toMoveBot,logger,board,loc);
@@ -2365,12 +2369,16 @@ FinishedGameData* GameRunner::runGame(
     botB = new Search(
         botSpecB.baseParams, botSpecB.nnEval,
         &logger, seed + "@B",
-        botSpecW.baseParams, botSpecW.nnEval
+        botSpecW.baseParams,
+        // If black is the adversary and we have a predictor network, use that
+        botSpecB.predictorNNEval ? botSpecB.predictorNNEval : botSpecW.nnEval
     );
     botW = new Search(
         botSpecW.baseParams, botSpecW.nnEval,
         &logger, seed + "@W",
-        botSpecB.baseParams, botSpecB.nnEval
+        botSpecB.baseParams,
+        // If white is the victim and we have a predictor network, use that
+        botSpecW.predictorNNEval ? botSpecW.predictorNNEval : botSpecB.nnEval
     );
   }
   if(afterInitialization != nullptr) {

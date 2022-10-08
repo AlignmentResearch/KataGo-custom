@@ -45,7 +45,8 @@ static FinishedGameData* runOneVictimplayGame(
   const std::function<bool()>& shouldStopFunc,
   Logger &logger,
   const int gameIdx,
-  const string &seed
+  const string &seed,
+  NNEvaluator* predictorNNEval = nullptr
 ) {
   MatchPairer::BotSpec victimBotSpec;
   victimBotSpec.botIdx = 0; // victim is always idx 0
@@ -57,6 +58,7 @@ static FinishedGameData* runOneVictimplayGame(
   adversaryBotSpec.botIdx = 1; // adversary is always idx 1
   adversaryBotSpec.botName = advNNEval->getModelName();
   adversaryBotSpec.nnEval = advNNEval;
+  adversaryBotSpec.predictorNNEval = predictorNNEval;
   adversaryBotSpec.baseParams = advSearchParams;
 
   MatchPairer::BotSpec& botSpecB = advColor == C_BLACK ? adversaryBotSpec : victimBotSpec;
@@ -102,6 +104,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   ConfigParser cfg;
   string modelsDir;
   string outputDir;
+  string victimOutputDir;
+  string nnPredictorPath;
   string nnVictimPath;
   int64_t maxGamesTotal = ((int64_t)1) << 62;
   try {
@@ -111,11 +115,15 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     TCLAP::ValueArg<string> modelsDirArg("","models-dir","Dir to poll and load models from",true,string(),"DIR");
     TCLAP::ValueArg<string> outputDirArg("","output-dir","Dir to output files",true,string(),"DIR");
     TCLAP::ValueArg<string> maxGamesTotalArg("","max-games-total","Terminate after this many games",false,string(),"NGAMES");
+    TCLAP::ValueArg<string> nnPredictorPathArg("","nn-predictor-path","Path to predictor model(s)",false,string(),"PREDICTOR");
     TCLAP::ValueArg<string> nnVictimPathArg("","nn-victim-path","Path to victim model(s)",victimplay,string(),"VICTIM");
+    TCLAP::ValueArg<string> victimOutputDirArg("","victim-output-dir","Dir to output files for victim predictor training",false,string(),"DIR");
     cmd.add(modelsDirArg);
     cmd.add(outputDirArg);
     cmd.add(maxGamesTotalArg);
+    cmd.add(nnPredictorPathArg);
     cmd.add(nnVictimPathArg);
+    cmd.add(victimOutputDirArg);
     cmd.parseArgs(args);
 
     modelsDir = modelsDirArg.getValue();
@@ -134,7 +142,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     checkDirNonEmpty("models-dir",modelsDir);
     checkDirNonEmpty("output-dir",outputDir);
 
+    nnPredictorPath = nnPredictorPathArg.getValue();
     nnVictimPath = nnVictimPathArg.getValue();
+    victimOutputDir = victimOutputDirArg.getValue();
 
     cmd.getConfig(cfg);
   }
@@ -145,7 +155,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   MakeDir::make(outputDir);
   MakeDir::make(modelsDir);
-
   Logger logger(&cfg);
   //Log to random file name to better support starting/stopping as well as multiple parallel runs
   logger.addFile(outputDir + "/log" + DateTime::getCompactDateTimeString() + "-" + Global::uint64ToHexString(seedRand.nextUInt64()) + ".log");
@@ -256,11 +265,15 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     }
   }
 
+  // Ditto for predictor models
+  vector<weak_ptr<NNEvaluator>> predictorNNEvals;
+  mutex predictorMutex;
+
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
     [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
      &loadNN,
-     &modelsDir,&outputDir,&logger,&cfg,numGameThreads,victimplay,
+     &modelsDir,&outputDir,&victimOutputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
 
     string modelName;
@@ -282,6 +295,12 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     string tdataOutputDir = modelOutputDir + "/tdata";
     string vdataOutputDir = modelOutputDir + "/vdata";
 
+    string tdataVictimOutputDir, vdataVictimOutputDir;
+    if(victimOutputDir != "") {
+      tdataVictimOutputDir = victimOutputDir + "/tdata";
+      vdataVictimOutputDir = victimOutputDir + "/vdata";
+    }
+
     //Try repeatedly to make directories, in case the filesystem is unhappy with us as we try to make the same dirs as another process.
     //Wait a random amount of time in between each failure.
     Rand rand;
@@ -293,6 +312,12 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         MakeDir::make(sgfOutputDir);
         MakeDir::make(tdataOutputDir);
         MakeDir::make(vdataOutputDir);
+
+        if (victimOutputDir != "") {
+          MakeDir::make(victimOutputDir);
+          MakeDir::make(tdataVictimOutputDir);
+          MakeDir::make(vdataVictimOutputDir);
+        }
         success = true;
       }
       catch(const StringError& e) {
@@ -323,10 +348,15 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
     //Note that this inputsVersion passed here is NOT necessarily the same as the one used in the neural net self play, it
     //simply controls the input feature version for the written data
+    int onlyWriteEvery = 1;
     TrainingDataWriter* tdataWriter = new TrainingDataWriter(
-      tdataOutputDir, inputsVersion, maxRowsPerTrainFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
+      tdataOutputDir, tdataVictimOutputDir, NULL, inputsVersion, maxRowsPerTrainFile,
+      firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
+    );
     TrainingDataWriter* vdataWriter = new TrainingDataWriter(
-      vdataOutputDir, inputsVersion, maxRowsPerValFile, firstFileRandMinProp, dataBoardLen, dataBoardLen, Global::uint64ToHexString(rand.nextUInt64()));
+      vdataOutputDir, vdataVictimOutputDir, NULL, inputsVersion, maxRowsPerValFile,
+      firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
+    );
 
     tdataWriter->forVictimPlay = victimplay;
     vdataWriter->forVictimPlay = victimplay;
@@ -355,6 +385,91 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   //Check for unused config keys
   cfg.warnUnusedKeys(cerr,&logger);
 
+  //Shared logic for (re)loading victim and predictor models
+  auto modelLoad = [&loadNN](
+    string modelPath,
+    string humanModelName,
+    vector<weak_ptr<NNEvaluator>>& existingNNEvals,
+    Logger& loadLogger,
+    string logPrefix,
+    mutex& modelMutex,
+    bool allowRandom
+  ) -> std::shared_ptr<NNEvaluator> {
+    shared_ptr<NNEvaluator> outputPtr;
+    string modelName = "random";
+    string modelFile;
+    string modelDir;
+    time_t modelTime;
+
+    // Keep trying to load the model until we succeed
+    while (
+      !LoadModel::findLatestModel(modelPath, loadLogger, modelName, modelFile, modelDir, modelTime, false) ||
+      (!allowRandom && modelName == "random")
+    ) {
+      loadLogger.write("No " + humanModelName + " available yet, waiting 30 sec...");
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
+
+    modelName = humanModelName + "-" + modelName;
+    bool modelLoaded = false;
+    int modelsReleased = 0;
+    std::vector<int> evalsInUse;
+    // scope for the mutex
+    {
+      lock_guard<mutex> lock(modelMutex);
+
+      // do not increase loop iterator by default
+      // since we'd like to sanitize the container in-place
+      for(auto it = existingNNEvals.begin(); it != existingNNEvals.end(); ) {
+        // 'it' is a weak_ptr<NNEvaluator>
+        shared_ptr<NNEvaluator> eval = it->lock();
+        if (!eval) {
+          // all references released, we can safely remove it
+          it = existingNNEvals.erase(it);
+          ++modelsReleased;
+          continue;
+        }
+
+        evalsInUse.push_back(eval.use_count() - 1);
+
+        if (eval->getModelName() == modelName) {
+          // found it already loaded, transfer ownership
+          swap(eval, outputPtr);
+          break;
+        }
+        ++it;
+      }
+
+      // nothing was found, load the new model
+      if(!outputPtr) {
+        modelLoaded = true;
+        outputPtr.reset(loadNN(modelName, modelFile));
+        existingNNEvals.push_back(outputPtr);
+      }
+    }
+
+    // we must have the evaluator here (either found or loaded)
+    // since the model definitely exists
+    assert(outputPtr);
+
+    std::string log_str;
+    if(modelLoaded) {
+      log_str += "\n  loaded " + humanModelName + ":" + modelName;
+    }
+    if(modelsReleased > 0) {
+      log_str += "\n sanitized " + to_string(modelsReleased) + " " + humanModelName + "s";
+    }
+    if(evalsInUse.size() > 1) {
+      log_str += "\n " + humanModelName + " counters in use:";
+      for(const auto& c: evalsInUse)
+        log_str += " " + to_string(c);
+    }
+    if(!log_str.empty()) {
+      loadLogger.write(logPrefix + log_str);
+    }
+    return outputPtr;
+  };
+
   //Shared across all game loop threads
   std::atomic<int64_t> numGamesStarted(0);
   ForkData* forkData = new ForkData();
@@ -376,7 +491,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &victimNNEvals,
     &victimMutex,
     &nnVictimPath,
-    &loadNN
+    &nnPredictorPath,
+    &predictorNNEvals,
+    &predictorMutex,
+    &modelLoad
   ](int threadIdx) {
     auto shouldStopFunc = []() noexcept {
       return shouldStop.load();
@@ -394,75 +512,15 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       SearchParams curVictimSearchParams;
       SearchParams curAdvSearchParams;
       if(reloadVictims) {
-        string modelName;
-        string modelFile;
-        string modelDir;
-        time_t modelTime;
-        bool foundModel = LoadModel::findLatestModel(
-              nnVictimPath, logger, modelName, modelFile, modelDir, modelTime, false);
-        if (modelName == "random" || !foundModel) {
-          logger.write("No victims available yet, waiting 30 sec...");
-          std::this_thread::sleep_for(std::chrono::seconds(30));
-          continue;
-        }
-
-        modelName = "victim-" + modelName;
-        bool modelLoaded = false;
-        int modelsReleased = 0;
-        std::vector<int> evalsInUse;
-        // scope for the mutex
-        {
-          lock_guard<mutex> lock(victimMutex);
-
-          // do not increase loop iterator by default
-          // since we'd like to sanitize the container in-place
-          for(auto it = victimNNEvals.begin(); it != victimNNEvals.end(); ) {
-            // 'it' is a weak_ptr<NNEvaluator>
-            shared_ptr<NNEvaluator> eval = it->lock();
-            if (!eval) {
-              // all references released, we can safely remove it
-              it = victimNNEvals.erase(it);
-              ++modelsReleased;
-              continue;
-            }
-
-            evalsInUse.push_back(eval.use_count() - 1);
-
-            if (eval->getModelName() == modelName) {
-              // found it already loaded, transfer ownership
-              swap(eval, curVictimNNEval);
-              break;
-            }
-            ++it;
-          }
-
-          // nothing was found, load the new model
-          if(!curVictimNNEval) {
-            modelLoaded = true;
-            curVictimNNEval.reset(loadNN(modelName, modelFile));
-            victimNNEvals.push_back(curVictimNNEval);
-          }
-        }
-
-        // we must have the evaluator here (either found or loaded)
-        // since the model definitely exists
-        assert(curVictimNNEval);
-
-        std::string log_str;
-        if(modelLoaded) {
-          log_str += "\n  loaded victim: " + modelName;
-        }
-        if(modelsReleased > 0) {
-          log_str += "\n sanitized " + to_string(modelsReleased) + " victims";
-        }
-        if(evalsInUse.size() > 1) {
-          log_str += "\n victim counters in use:";
-          for(const auto& c: evalsInUse)
-            log_str += " " + to_string(c);
-        }
-        if(!log_str.empty()) {
-          logger.write(logPrefix + log_str);
-        }
+        curVictimNNEval = modelLoad(
+          nnVictimPath,
+          "victim",
+          victimNNEvals,
+          logger,
+          logPrefix,
+          victimMutex,
+          false
+        );
 
         if(FileUtils::exists(victimCfgReloadPath)) {
           ConfigParser victimCfg;
@@ -506,6 +564,19 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         // no need for the mutex here since we never modify victimNNEval
         assert(victimNNEvals.size() == 1);
         curVictimNNEval = victimNNEvals[0].lock();
+      }
+
+      shared_ptr<NNEvaluator> curPredictorNNEval;
+      if (nnPredictorPath != "") {
+        curPredictorNNEval = modelLoad(
+          nnPredictorPath,
+          "predictor",
+          predictorNNEvals,
+          logger,
+          logPrefix,
+          predictorMutex,
+          true
+        );
       }
 
       // get the latest search parameters copy
@@ -553,7 +624,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           curVictimSearchParams, curAdvSearchParams,
           gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
           gameRunner, shouldStopFunc, logger,
-          gameIdx, seed
+          gameIdx, seed, curPredictorNNEval.get()
         );
       } else {
         manager->countOneGameStarted(nnEval);

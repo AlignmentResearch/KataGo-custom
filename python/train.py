@@ -393,10 +393,13 @@ def model_fn(features,labels,mode,params):
       print("Initial weights dir found at: " + initial_weights_dir)
       checkpoint_path = None
       for initial_weights_file in os.listdir(initial_weights_dir):
-        if initial_weights_file.startswith("model") and initial_weights_file.endswith(".index"):
+        if (initial_weights_file.startswith("model") or initial_weights_file.startswith("variables")) and initial_weights_file.endswith(".index"):
           checkpoint_path = os.path.join(initial_weights_dir, initial_weights_file[0:len(initial_weights_file)-len(".index")])
           break
-      if checkpoint_path is not None:
+
+      if checkpoint_path is None:
+        raise RuntimeError("No checkpoint found in initial weights dir: " + initial_weights_dir)
+      else:
         print("Initial weights checkpoint to use found at: " + checkpoint_path)
         vars_in_checkpoint = tf.contrib.framework.list_variables(checkpoint_path)
         varname_in_checkpoint = {}

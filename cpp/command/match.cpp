@@ -32,6 +32,7 @@ int MainCmds::match(const vector<string>& args) {
 
   ConfigParser cfg;
   string logFile;
+  string nnPredictorPath;
   string sgfOutputDir;
   try {
     KataGoCommandLine cmd("Play different nets against each other with different search settings in a match or tournament.");
@@ -77,6 +78,12 @@ int MainCmds::match(const vector<string>& args) {
       if(!contains(includeBots,i))
         excludeBot[i] = true;
     }
+  }
+
+  // Maybe load the predictor path
+  string predictorPath = "";
+  if (cfg.contains("predictorPath")) {
+    predictorPath = cfg.getString("predictorPath");
   }
 
   //Load the names of the bots and which model each bot is using
@@ -160,6 +167,16 @@ int MainCmds::match(const vector<string>& args) {
     Setup::SETUP_FOR_MATCH
   );
   logger.write("Loaded neural net");
+  
+  NNEvaluator *predictorEval = nullptr;
+  if (nnPredictorPath != "") {
+    const string expectedSha256 = "";
+    predictorEval = Setup::initializeNNEvaluator(
+      nnPredictorPath, nnPredictorPath, expectedSha256, cfg, logger, seedRand, maxConcurrentEvals, expectedConcurrentEvals,
+      maxBoardXSizeUsed, maxBoardYSizeUsed, defaultMaxBatchSize, defaultRequireExactNNLen,
+      Setup::SETUP_FOR_MATCH
+    );
+  }
 
   vector<NNEvaluator*> nnEvalsByBot(numBots);
   for(int i = 0; i<numBots; i++) {
@@ -194,7 +211,7 @@ int MainCmds::match(const vector<string>& args) {
   std::signal(SIGTERM, signalHandler);
 
   auto runMatchLoop = [
-    &gameRunner,&matchPairer,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables
+    &gameRunner,&matchPairer,&predictorEval,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables
   ](
     uint64_t threadHash
   ) {
@@ -216,6 +233,12 @@ int MainCmds::match(const vector<string>& args) {
 
       MatchPairer::BotSpec botSpecB;
       MatchPairer::BotSpec botSpecW;
+      if (predictorEval) {
+        if (botSpecB.botIdx == 1)
+          botSpecB.predictorNNEval = predictorEval;
+        else
+          botSpecW.predictorNNEval = predictorEval;
+      }
       if(matchPairer->getMatchup(botSpecB, botSpecW, logger)) {
         string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         std::function<void(const MatchPairer::BotSpec&, Search*)> afterInitialization = [&patternBonusTables](const MatchPairer::BotSpec& spec, Search* search) {
@@ -280,6 +303,9 @@ int MainCmds::match(const vector<string>& args) {
       delete nnEvals[i];
     }
   }
+  if (predictorEval)
+    delete predictorEval;
+
   NeuralNet::globalCleanup();
   ScoreValue::freeTables();
 

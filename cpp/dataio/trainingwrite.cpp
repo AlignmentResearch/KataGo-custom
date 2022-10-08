@@ -796,14 +796,14 @@ void TrainingWriteBuffers::writeToTextOstream(ostream& out) {
 //-------------------------------------------------------------------------------------
 
 TrainingDataWriter::TrainingDataWriter(const string& outDir, int iVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, const string& randSeed)
-  : TrainingDataWriter(outDir,NULL,iVersion,maxRowsPerFile,firstFileMinRandProp,dataXLen,dataYLen,1,randSeed)
+  : TrainingDataWriter(outDir, string(), NULL,iVersion,maxRowsPerFile,firstFileMinRandProp,dataXLen,dataYLen,1,randSeed)
 {}
 TrainingDataWriter::TrainingDataWriter(ostream* dbgOut, int iVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyEvery, const string& randSeed)
-  : TrainingDataWriter(string(),dbgOut,iVersion,maxRowsPerFile,firstFileMinRandProp,dataXLen,dataYLen,onlyEvery,randSeed)
+  : TrainingDataWriter(string(),string(), dbgOut,iVersion,maxRowsPerFile,firstFileMinRandProp,dataXLen,dataYLen,onlyEvery,randSeed)
 {}
 
-TrainingDataWriter::TrainingDataWriter(const string& outDir, ostream* dbgOut, int iVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyEvery, const string& randSeed)
-  :outputDir(outDir),inputsVersion(iVersion),rand(randSeed),writeBuffers(NULL),debugOut(dbgOut),debugOnlyWriteEvery(onlyEvery),rowCount(0)
+TrainingDataWriter::TrainingDataWriter(const string& outDir, const string& victimOutDir, ostream* dbgOut, int iVersion, int maxRowsPerFile, double firstFileMinRandProp, int dataXLen, int dataYLen, int onlyEvery, const string& randSeed)
+  :outputDir(outDir),victimOutputDir(victimOutDir),inputsVersion(iVersion),rand(randSeed),writeBuffers(NULL),debugOut(dbgOut),debugOnlyWriteEvery(onlyEvery),rowCount(0)
 {
   int numBinaryChannels;
   int numGlobalChannels;
@@ -835,6 +835,8 @@ TrainingDataWriter::TrainingDataWriter(const string& outDir, ostream* dbgOut, in
   }
 
   writeBuffers = new TrainingWriteBuffers(inputsVersion, maxRowsPerFile, numBinaryChannels, numGlobalChannels, dataXLen, dataYLen);
+  if (victimOutputDir != "")
+    victimBuffers = new TrainingWriteBuffers(inputsVersion, maxRowsPerFile, numBinaryChannels, numGlobalChannels, dataXLen, dataYLen);
 
   if(firstFileMinRandProp < 0 || firstFileMinRandProp > 1)
     throw StringError("TrainingDataWriter: firstFileMinRandProp not in [0,1]: " + Global::doubleToString(firstFileMinRandProp));
@@ -860,7 +862,11 @@ int64_t TrainingDataWriter::numRowsInBuffer() const {
 }
 
 void TrainingDataWriter::writeAndClearIfFull() {
-  if(writeBuffers->curRows >= writeBuffers->maxRows || (isFirstFile && writeBuffers->curRows >= firstFileMaxRows)) {
+  if(
+    (victimBuffers && victimBuffers->curRows >= victimBuffers->maxRows) ||
+    writeBuffers->curRows >= writeBuffers->maxRows ||
+    (isFirstFile && writeBuffers->curRows >= firstFileMaxRows)
+    ) {
     flushIfNonempty();
   }
 }
@@ -888,26 +894,36 @@ Player TrainingDataWriter::getVictimPlayerColor(const FinishedGameData &data)
 
 
 void TrainingDataWriter::flushIfNonempty() {
-  string resultingFilename;
-  flushIfNonempty(resultingFilename);
+  string tmp;
+  flushBuffersIfNonempty(tmp, false);
+  if (victimBuffers != NULL)
+    flushBuffersIfNonempty(tmp, true);
 }
 
 bool TrainingDataWriter::flushIfNonempty(string& resultingFilename) {
-  if(writeBuffers->curRows <= 0)
+  assert(victimBuffers == NULL);
+
+  return flushBuffersIfNonempty(resultingFilename, false);
+}
+
+bool TrainingDataWriter::flushBuffersIfNonempty(std::string& resultingFilename, bool forVictim) {
+  auto buffers = forVictim ? victimBuffers : writeBuffers;
+  auto outDir = forVictim ? victimOutputDir : outputDir;
+  if(buffers->curRows <= 0)
     return false;
 
   isFirstFile = false;
 
   if(debugOut != NULL) {
-    writeBuffers->writeToTextOstream(*debugOut);
-    writeBuffers->clear();
+    buffers->writeToTextOstream(*debugOut);
+    buffers->clear();
     resultingFilename = "";
   }
   else {
-    resultingFilename = outputDir + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".npz";
+    resultingFilename = outDir + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".npz";
     string tmpFilename = resultingFilename + ".tmp";
-    writeBuffers->writeToZipFile(tmpFilename);
-    writeBuffers->clear();
+    buffers->writeToZipFile(tmpFilename);
+    buffers->clear();
     FileUtils::rename(tmpFilename,resultingFilename);
   }
   return true;
@@ -998,13 +1014,19 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
       }
     }
 
+    auto buffers = writeBuffers;
     if (forVictimPlay && nextPlayer == victimPlayer) {
-      // Skip writing data when it is victim to move.
-    } else {
+      if (victimBuffers)
+        buffers = victimBuffers;
+      else
+        buffers = nullptr;
+    }
+
+    if (buffers) {
       while(targetWeight > 0.0) {
         if(targetWeight >= 1.0 || rand.nextBool(targetWeight)) {
           if(debugOut == NULL || rowCount % debugOnlyWriteEvery == 0) {
-            writeBuffers->addRow(
+            buffers->addRow(
               board,hist,nextPlayer,
               turnIdx,
               1.0,
@@ -1045,8 +1067,14 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   for(int i = 0; i<data.sidePositions.size(); i++) {
     SidePosition* sp = data.sidePositions[i];
 
-    // Skip writing data when it is victim to move.
-    if (forVictimPlay && sp->pla == victimPlayer) continue;
+    auto buffers = writeBuffers;
+    if (forVictimPlay && sp->pla == victimPlayer) {
+      // Skip writing data when it is victim to move and we're not writing victim data
+      if (victimBuffers)
+        buffers = victimBuffers;
+      else
+        continue;
+    }
 
     double targetWeight = sp->targetWeight;
     while(targetWeight > 0.0) {
@@ -1059,7 +1087,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
           bool isSidePosition = true;
           int numNeuralNetsBehindLatest = (int)data.changedNeuralNets.size() - sp->numNeuralNetChangesSoFar;
 
-          writeBuffers->addRow(
+          buffers->addRow(
             sp->board,sp->hist,sp->pla,
             turnIdx,
             1.0,

@@ -155,9 +155,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   MakeDir::make(outputDir);
   MakeDir::make(modelsDir);
-  if (victimOutputDir != "")
-    MakeDir::make(victimOutputDir);
-
   Logger logger(&cfg);
   //Log to random file name to better support starting/stopping as well as multiple parallel runs
   logger.addFile(outputDir + "/log" + DateTime::getCompactDateTimeString() + "-" + Global::uint64ToHexString(seedRand.nextUInt64()) + ".log");
@@ -317,7 +314,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         MakeDir::make(vdataOutputDir);
 
         if (victimOutputDir != "") {
-          MakeDir::make(modelOutputDir);
+          MakeDir::make(victimOutputDir);
           MakeDir::make(tdataVictimOutputDir);
           MakeDir::make(vdataVictimOutputDir);
         }

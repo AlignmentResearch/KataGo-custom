@@ -4,6 +4,7 @@
 static const std::map<SearchParams::PassingBehavior, const std::string> behavior_to_string = {
     {SearchParams::PassingBehavior::Standard, "standard"},
     {SearchParams::PassingBehavior::AvoidPassAliveTerritory, "avoid-pass-alive-territory"},
+    {SearchParams::PassingBehavior::ForceWinningPass, "force-winning-pass"},
     {SearchParams::PassingBehavior::LastResort, "last-resort"},
     {SearchParams::PassingBehavior::NoSuicide, "no-suicide"},
     {SearchParams::PassingBehavior::OnlyWhenAhead, "only-when-ahead"},

@@ -10,6 +10,8 @@ struct SearchParams {
     Standard,
     // Pass when the only legal alternatives are to play in your own pass-alive territory
     AvoidPassAliveTerritory,
+    // Forces a pass if it will make you win
+    ForceWinningPass,
     // Pass when the only legal alternatives are in territory your opponent "almost certainly" (95% chance) owns,
     // or that are "much worse" than passing
     LastResort,

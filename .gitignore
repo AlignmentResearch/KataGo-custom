@@ -58,8 +58,8 @@ out.txt
 .vscode
 
 # For vim
-*.swp
-*.swo
+.*.swp
+.*.swo
 
 # For cmake
 CMakeCache.txt

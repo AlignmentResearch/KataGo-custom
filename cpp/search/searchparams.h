@@ -5,13 +5,12 @@
 #include "../game/board.h"
 
 struct SearchParams {
+  // Modifications of pass suppression behavior.
   enum class PassingBehavior {
     // Essentially use vanilla MCTS to determine when passing makes sense
     Standard,
     // Pass when the only legal alternatives are to play in your own pass-alive territory
     AvoidPassAliveTerritory,
-    // Forces a pass if it will make you win
-    ForceWinningPass,
     // Pass when the only legal alternatives are in territory your opponent "almost certainly" (95% chance) owns,
     // or that are "much worse" than passing
     LastResort,
@@ -26,6 +25,8 @@ struct SearchParams {
   static PassingBehavior strToPassingBehavior(const std::string& behaviorStr);
   static std::string passingBehaviorToStr(PassingBehavior behavior);
   PassingBehavior passingBehavior;
+  // If enabled, then we will definitely pass if it wins us the game.
+  bool forceWinningPass;
 
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };

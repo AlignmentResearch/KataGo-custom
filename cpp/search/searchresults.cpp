@@ -466,7 +466,7 @@ const SearchNode* Search::getChildForMove(const SearchNode* node, Loc moveLoc) c
 Loc Search::getChosenMoveLoc() {
   if(rootNode == NULL)
     return Board::NULL_LOC;
-  if (searchParams.passingBehavior == SearchParams::PassingBehavior::ForceWinningPass
+  if (searchParams.forceWinningPass
       && rootHistory.isLegal(rootBoard, Board::PASS_LOC, rootPla)
       && rootHistory.passWouldEndGame(rootBoard, rootPla)) {
     Board boardCopy(rootBoard);
@@ -505,8 +505,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     return false;
 
   // When using standard passing, we should only suppressPass in territory scoring. Otherwise, short circuit.
-  if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard
-      || searchParams.passingBehavior == SearchParams::PassingBehavior::ForceWinningPass) {
+  if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
     if(!searchParams.fillDameBeforePass)
       return false;
     if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
@@ -538,8 +537,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
       break;
     }
   }
-  if(passNode == NULL && (searchParams.passingBehavior == SearchParams::PassingBehavior::Standard
-        || searchParams.passingBehavior == SearchParams::PassingBehavior::ForceWinningPass))
+  if(passNode == NULL && searchParams.passingBehavior == SearchParams::PassingBehavior::Standard)
     return false;
 
   double passWeight;
@@ -589,7 +587,6 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
     // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
-    case SearchParams::PassingBehavior::ForceWinningPass:
     case SearchParams::PassingBehavior::LastResort:
     case SearchParams::PassingBehavior::Standard: {
       const double extreme = 0.95;

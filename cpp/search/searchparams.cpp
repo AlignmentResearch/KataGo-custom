@@ -4,7 +4,6 @@
 static const std::map<SearchParams::PassingBehavior, const std::string> behavior_to_string = {
     {SearchParams::PassingBehavior::Standard, "standard"},
     {SearchParams::PassingBehavior::AvoidPassAliveTerritory, "avoid-pass-alive-territory"},
-    {SearchParams::PassingBehavior::ForceWinningPass, "force-winning-pass"},
     {SearchParams::PassingBehavior::LastResort, "last-resort"},
     {SearchParams::PassingBehavior::NoSuicide, "no-suicide"},
     {SearchParams::PassingBehavior::OnlyWhenAhead, "only-when-ahead"},
@@ -48,6 +47,7 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
   :passingBehavior(PassingBehavior::Standard),
+   forceWinningPass(false),
    searchAlgo(SearchAlgorithm::MCTS),
    canPassFirst(true),
    winLossUtilityFactor(1.0),

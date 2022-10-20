@@ -14,6 +14,9 @@
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nninterface.h"
 
+#define TRACE(x) cerr << #x << " = " << x << endl;
+#define _ << " _ " <<
+
 using namespace std;
 using namespace nvinfer1;
 
@@ -1248,6 +1251,23 @@ void NeuralNet::getOutput(
     SymmetryHelpers::copyInputsWithSymmetry(
       rowSpatial, rowSpatialInput, 1, nnYLen, nnXLen, numSpatialFeatures, false, inputBufs[nIdx]->symmetry);
   }
+  cerr << "CHECK: copied to rowGlobal & rowSpatial?\n";
+  TRACE(batchSize _ numGlobalFeatures _ numSpatialFeatures _ nnYLen _ nnXLen);
+  for(int nIdx = 0; nIdx < batchSize; nIdx++) {
+    TRACE(nIdx);
+    float* rowSpatialInput = &inputBuffers->inputBuffer[inputBuffers->singleInputElts * nIdx];
+    float* rowGlobalInput = &inputBuffers->inputGlobalBuffer[inputBuffers->singleInputGlobalElts * nIdx];
+    cerr << "rowGlobal" << nIdx << ":";
+    for (int i = 0; i < numGlobalFeatures; i++) {
+      cerr << ' ' << rowGlobalInput[i];
+    }
+    cerr << '\n';
+    cerr << "rowSpatial" << nIdx << ":";
+    for (int i = 0; i < numSpatialFeatures * nnYLen * nnXLen; i++) {
+      cerr << ' ' << rowSpatialInput[i];
+    }
+    cerr << '\n';
+  }
 
   assert(inputBuffers->singleInputElts == gpuHandle->getBufferRowElts("InputFeature"));
   assert(inputBuffers->singleInputGlobalElts == gpuHandle->getBufferRowElts("InputGlobalFeature"));
@@ -1279,7 +1299,26 @@ void NeuralNet::getOutput(
       inputBuffers->singleInputGlobalBytes * batchSize,
       cudaMemcpyHostToDevice));
 
+
+  // hmm but let's be serious here --- there's VERY little chance that things
+  // aren't copied to the GPU and aren't pulled out of the GPU --- otherwise how
+  // would TRT work most of the time? prob going to have to dig into what's
+  // being computed...
+  // ugh whatever, let's do some printing of gpuHandle->buffers
+  //
+  // gpuHandle = ComputeHandle (defined in this file)
+  cerr << "check if things copied to gpu\n";
+  for (size_t i = 0; i < gpuHandle->buffers.size(); i++) {
+    const auto& bufi = gpuHandle->buffers;
+    cerr << "gpuHandle->buffers " << i << " (a few entries; sz=" << bufi.size() << "):";
+    for (size_t j = 0; j < min(20UL, bufi.size()); j++) {
+      cerr << ' ' << bufi[j];
+    }
+    cerr << '\n';
+  }
+
   gpuHandle->exec->enqueue(batchSize, gpuHandle->buffers.data(), cudaStreamPerThread, nullptr);
+
 
   CUDA_ERR(
     "getOutput",
@@ -1288,6 +1327,7 @@ void NeuralNet::getOutput(
       gpuHandle->getBuffer("OutputPolicy"),
       inputBuffers->singlePolicyResultBytes * batchSize,
       cudaMemcpyDeviceToHost));
+  cerr << "TODO should check what immediate policy results look like\n";
   CUDA_ERR(
     "getOutput",
     cudaMemcpy(

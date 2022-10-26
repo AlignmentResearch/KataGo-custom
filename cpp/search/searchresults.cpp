@@ -70,6 +70,16 @@ bool Search::getPlaySelectionValues(
   double totalChildWeight = 0.0;
   double maxChildWeight = 0.0;
   const bool suppressPass = shouldSuppressPass(&node);
+  // AvoidPassAliveTerritory pass suppression can push the bot to start playing
+  // in its own pass-alive territory, a blatantly bad tactic. We should suppress
+  // those bad moves. More info at
+  // https://github.com/HumanCompatibleAI/KataGo-custom/issues/58
+  const bool suppressPassAliveTerritory =
+    searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory;
+  Color territories[suppressPassAliveTerritory ? Board::MAX_ARR_SIZE : 0];
+  if (suppressPassAliveTerritory) {
+    rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
+  }
 
   //Store up basic weights
   int childrenCapacity;
@@ -87,7 +97,9 @@ bool Search::getPlaySelectionValues(
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
       maxChildWeight = childWeight;
-    if(suppressPass && moveLoc == Board::PASS_LOC) {
+    const bool suppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
+      || (suppressPassAliveTerritory && playersMatch(territories[moveLoc], rootPla));
+    if(suppressedMove) {
       playSelectionValues.push_back(0.0);
       if(retVisitCounts != NULL)
         (*retVisitCounts).push_back(0.0);
@@ -212,7 +224,9 @@ bool Search::getPlaySelectionValues(
     while(true) {
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
-        if(suppressPass && moveLoc == Board::PASS_LOC) {
+        const bool suppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
+          || (suppressPassAliveTerritory && playersMatch(territories[moveLoc], rootPla));
+        if(suppressedMove) {
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();

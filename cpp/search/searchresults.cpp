@@ -480,6 +480,20 @@ const SearchNode* Search::getChildForMove(const SearchNode* node, Loc moveLoc) c
 Loc Search::getChosenMoveLoc() {
   if(rootNode == NULL)
     return Board::NULL_LOC;
+  if (searchParams.forceWinningPass
+      && rootHistory.isLegal(rootBoard, Board::PASS_LOC, rootPla)
+      && rootHistory.passWouldEndGame(rootBoard, rootPla)) {
+    Board boardCopy(rootBoard);
+    BoardHistory historyCopy(rootHistory);
+
+    historyCopy.makeBoardMoveAssumeLegal(boardCopy, Board::PASS_LOC, rootPla, nullptr);
+    historyCopy.endAndScoreGameNow(boardCopy);
+    const float whiteScoreMargin = historyCopy.finalWhiteMinusBlackScore;
+    if ((whiteScoreMargin > 0 && rootPla == P_WHITE)
+        || (whiteScoreMargin < 0 && rootPla == P_BLACK)) {
+      return Board::PASS_LOC;
+    }
+  }
 
   vector<Loc> locs;
   vector<double> playSelectionValues;
@@ -587,7 +601,8 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
     // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
-    case SearchParams::PassingBehavior::LastResort: {
+    case SearchParams::PassingBehavior::LastResort:
+    case SearchParams::PassingBehavior::Standard: {
       const double extreme = 0.95;
 
       for(int i = 0; i < childrenCapacity; i++) {

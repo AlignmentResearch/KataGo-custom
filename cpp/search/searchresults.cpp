@@ -1831,6 +1831,7 @@ bool Search::getAnalysisJson(
       moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
       moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
       moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
       moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
       moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["visits"] = data.numVisits;

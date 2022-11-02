@@ -235,19 +235,18 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     victim_name, victim_color, adv_color = get_victim_adv_colors(game)
     victim_visits = get_max_visits(game, victim_color)
     adv_visits = get_max_visits(game, adv_color)
-    win_color_string = game.get_winner()
-    win_color = Color.from_string(win_color_string) if win_color_string else None
 
     komi = game.get_komi()
     adv_komi = komi if adv_color == Color.WHITE else -komi
 
-    if win_color is None:
+    if win_score is None:
         # either the game tied (which should never happen under default rules)
         # or the game hit the move limit
         adv_minus_victim_score = 0
         adv_minus_victim_score_wo_komi = 0
         winner = None
     else:
+        win_color = Color.from_string(game.get_winner())
         winner = win_color == adv_color
         adv_minus_victim_score = win_score if winner else -win_score
         adv_minus_victim_score_wo_komi = adv_minus_victim_score - adv_komi

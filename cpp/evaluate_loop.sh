@@ -53,6 +53,7 @@ do
                 echo "Evaluating model $MODEL_DIR against victim $VICTIM_NAME"
                 /engines/KataGo-custom/cpp/katago match \
                     -config /go_attack/configs/match-1gpu.cfg \
+                    -config $VICTIMS_DIR/victim.cfg \
                     -override-config numGamesTotal=100 \
                     -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \
                     -override-config nnModelFile1="$MODELS_DIR"/"$MODEL_DIR"/model.bin.gz \

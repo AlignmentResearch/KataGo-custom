@@ -34,6 +34,7 @@ struct AnalyzeRequest {
   bool includeMovesOwnershipStdev;
   bool includePolicy;
   bool includePVVisits;
+  bool includeTree;
 
   bool reportDuringSearch;
   double reportDuringSearchEvery;
@@ -252,6 +253,7 @@ int MainCmds::analysis(const vector<string>& args) {
       request->includeOwnership,request->includeOwnershipStdev,
       request->includeMovesOwnership,request->includeMovesOwnershipStdev,
       request->includePVVisits,
+      request->includeTree,
       ret
     );
 
@@ -484,6 +486,7 @@ int MainCmds::analysis(const vector<string>& args) {
       rbase.includeMovesOwnershipStdev = false;
       rbase.includePolicy = false;
       rbase.includePVVisits = false;
+      rbase.includeTree = false;
       rbase.reportDuringSearch = false;
       rbase.reportDuringSearchEvery = 1.0;
       rbase.priority = 0;
@@ -890,6 +893,11 @@ int MainCmds::analysis(const vector<string>& args) {
         if(!suc)
           continue;
       }
+      if(input.find("includeTree") != input.end()) {
+        bool suc = parseBoolean(input, "includeTree", rbase.includeTree, "Must be a boolean");
+        if(!suc)
+          continue;
+      }
       if(input.find("reportDuringSearchEvery") != input.end()) {
         bool suc = parseDouble(input, "reportDuringSearchEvery", rbase.reportDuringSearchEvery, 0.001, 1000000.0, "Must be number of seconds from 0.001 to 1000000.0");
         if(!suc)
@@ -1020,6 +1028,7 @@ int MainCmds::analysis(const vector<string>& args) {
           newRequest->includeMovesOwnershipStdev = rbase.includeMovesOwnershipStdev;
           newRequest->includePolicy = rbase.includePolicy;
           newRequest->includePVVisits = rbase.includePVVisits;
+          newRequest->includeTree = rbase.includeTree;
           newRequest->reportDuringSearch = rbase.reportDuringSearch;
           newRequest->reportDuringSearchEvery = rbase.reportDuringSearchEvery;
           newRequest->priority = priority;

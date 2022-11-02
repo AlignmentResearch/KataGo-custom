@@ -558,6 +558,7 @@ struct Search {
     const Player perspective,
     int analysisPVLen, double ownershipMinWeight, bool preventEncore, bool includePolicy,
     bool includeOwnership, bool includeOwnershipStdev, bool includeMovesOwnership, bool includeMovesOwnershipStdev, bool includePVVisits,
+    bool includeTree,
     nlohmann::json& ret
   ) const;
 

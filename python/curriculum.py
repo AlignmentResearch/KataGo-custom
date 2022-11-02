@@ -719,6 +719,7 @@ def parse_args() -> argparse.Namespace:
 
 def setup_logging(selfplay_dir: str, log_level: int) -> None:
     """Setup logging to file {selfplay_dir}/curriculum-<timestamp>.log and stdout."""
+    pathlib.Path(selfplay_dir).mkdir(parents=True, exist_ok=True)
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 

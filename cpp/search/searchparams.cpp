@@ -47,6 +47,7 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 //have changed to preserve the behavior of tests.
 SearchParams::SearchParams()
   :passingBehavior(PassingBehavior::Standard),
+   forceWinningPass(false),
    searchAlgo(SearchAlgorithm::MCTS),
    canPassFirst(true),
    winLossUtilityFactor(1.0),

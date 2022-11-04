@@ -175,11 +175,7 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     try:
         result = game.get_root().get("RE")
     except KeyError:
-        logging.warning(
-            "No result (RE tag) present in SGF game: '%s'",
-            game,
-            exc_info=True,
-        )
+        # No RE[] tag may be because the game hit its move limit
         return None
     try:
         win_score = result.split("+")[1]
@@ -232,23 +228,25 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         return None
 
     game_hash = get_game_hash(game)
-    win_score = get_game_score(game)
-    if game_hash is None or win_score is None:
+    if game_hash is None:
         return None
 
     victim_name, victim_color, adv_color = get_victim_adv_colors(game)
     victim_visits = get_max_visits(game, victim_color)
     adv_visits = get_max_visits(game, adv_color)
-    win_color = Color.from_string(game.get_winner())
 
     komi = game.get_komi()
     adv_komi = komi if adv_color == Color.WHITE else -komi
 
-    if win_color is None:  # tie (should never happen under default rules)
+    win_score = get_game_score(game)
+    if win_score is None:
+        # either the game tied (which should never happen under default rules)
+        # or the game hit the move limit
         adv_minus_victim_score = 0
         adv_minus_victim_score_wo_komi = 0
         winner = None
     else:
+        win_color = Color.from_string(game.get_winner())
         winner = win_color == adv_color
         adv_minus_victim_score = win_score if winner else -win_score
         adv_minus_victim_score_wo_komi = adv_minus_victim_score - adv_komi

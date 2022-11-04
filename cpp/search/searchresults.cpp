@@ -69,6 +69,7 @@ bool Search::getPlaySelectionValues(
 
   double totalChildWeight = 0.0;
   double maxChildWeight = 0.0;
+  double maxUnsuppressedChildWeight = 0.0;
   const bool suppressPass = shouldSuppressPass(&node);
   // AvoidPassAliveTerritory pass suppression can push the bot to start playing
   // in its own pass-alive territory, a blatantly bad tactic. We should suppress
@@ -76,9 +77,9 @@ bool Search::getPlaySelectionValues(
   // https://github.com/HumanCompatibleAI/KataGo-custom/issues/58
   const bool suppressPassAliveTerritory =
     searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory;
-  Color territories[suppressPassAliveTerritory ? Board::MAX_ARR_SIZE : 0];
+  vector<Color> territories(suppressPassAliveTerritory ? Board::MAX_ARR_SIZE : 0);
   if (suppressPassAliveTerritory) {
-    rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
+    rootBoard.calculateArea(territories.data(), false, false, false, rootHistory.rules.multiStoneSuicideLegal);
   }
 
   //Store up basic weights
@@ -97,14 +98,17 @@ bool Search::getPlaySelectionValues(
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
       maxChildWeight = childWeight;
-    const bool suppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
+    const bool isSuppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
       || (suppressPassAliveTerritory && playersMatch(territories[moveLoc], rootPla));
-    if(suppressedMove) {
+    if(isSuppressedMove) {
       playSelectionValues.push_back(0.0);
       if(retVisitCounts != NULL)
         (*retVisitCounts).push_back(0.0);
     }
     else {
+      if (childWeight > maxUnsuppressedChildWeight) {
+        maxUnsuppressedChildWeight = childWeight;
+      }
       playSelectionValues.push_back((double)childWeight);
       if(retVisitCounts != NULL)
         (*retVisitCounts).push_back((double)childVisits);
@@ -152,7 +156,10 @@ bool Search::getPlaySelectionValues(
 
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
-      if(suppressPass && child->prevMoveLoc == Board::PASS_LOC) {
+      const Loc moveLoc = child->prevMoveLoc;
+      const bool isSuppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
+        || (suppressPassAliveTerritory && playersMatch(territories[moveLoc], rootPla));
+      if(isSuppressedMove) {
         playSelectionValues[i] = 0;
         continue;
       }
@@ -216,17 +223,23 @@ bool Search::getPlaySelectionValues(
   //If we have no children, then use the policy net directly. Only for the root, though, if calling this on any subtree
   //then just require that we have children, for implementation simplicity (since it requires that we have a board and a boardhistory too)
   //(and we also use isAllowedRootMove and avoidMoveUntilByLoc)
-  if(numChildren == 0) {
+  //We also use this branch if all of our children correspond to suppressed moves.
+  if(maxUnsuppressedChildWeight == 0.0) {
     if(nnOutput == NULL || &node != rootNode || !allowDirectPolicyMoves)
       return false;
+    locs.clear();
+    playSelectionValues.clear();
+    numChildren = 0;
+    if(retVisitCounts != NULL)
+      (*retVisitCounts).clear();
 
     bool obeyAllowedRootMove = true;
     while(true) {
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
-        const bool suppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
+        const bool isSuppressedMove = (suppressPass && moveLoc == Board::PASS_LOC)
           || (suppressPassAliveTerritory && playersMatch(territories[moveLoc], rootPla));
-        if(suppressedMove) {
+        if(isSuppressedMove) {
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();

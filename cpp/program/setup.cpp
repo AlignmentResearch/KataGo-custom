@@ -556,6 +556,11 @@ vector<SearchParams> Setup::loadParams(
     if(cfg.contains("useLcbForSelection"+idxStr)) params.useLcbForSelection = cfg.getBool("useLcbForSelection"+idxStr);
     else if(cfg.contains("useLcbForSelection"))   params.useLcbForSelection = cfg.getBool("useLcbForSelection");
     else                                          params.useLcbForSelection = true;
+
+    if(cfg.contains("useLcbForSelfplayMove"+idxStr)) params.useLcbForSelfplayMove = cfg.getBool("useLcbForSelfplayMove"+idxStr);
+    else if(cfg.contains("useLcbForSelfplayMove"))   params.useLcbForSelfplayMove = cfg.getBool("useLcbForSelfplayMove");
+    else                                             params.useLcbForSelfplayMove = false;
+
     if(cfg.contains("lcbStdevs"+idxStr)) params.lcbStdevs = cfg.getDouble("lcbStdevs"+idxStr, 1.0, 12.0);
     else if(cfg.contains("lcbStdevs"))   params.lcbStdevs = cfg.getDouble("lcbStdevs",        1.0, 12.0);
     else                                 params.lcbStdevs = 5.0;

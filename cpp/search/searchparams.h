@@ -100,6 +100,7 @@ struct SearchParams {
   double chosenMovePrune; //Outright prune moves that have fewer than this many visits
 
   bool useLcbForSelection; //Using LCB for move selection?
+  bool useLcbForSelfplayMove; //Use LCB to make moves during self-play?
   double lcbStdevs; //How many stdevs a move needs to be better than another for LCB selection
   double minVisitPropForLCB; //Only use LCB override when a move has this proportion of visits as the top move
   bool useNonBuggyLcb; //LCB was very minorly buggy as of pre-v1.8. Set to true to fix.

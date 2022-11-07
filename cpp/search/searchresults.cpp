@@ -1804,6 +1804,8 @@ bool Search::getAnalysisJson(
     moveInfo["move"] = Location::toString(data.move, board);
     moveInfo["visits"] = data.numVisits;
     moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
+    moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+    moveInfo["scoreUtility"] = roundDynamic(data.scoreUtility,OUTPUT_PRECISION);
     moveInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
     moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
     moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);

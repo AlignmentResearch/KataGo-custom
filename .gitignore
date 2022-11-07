@@ -57,6 +57,10 @@ out.txt
 # For vscode
 .vscode
 
+# For vim
+.*.swp
+.*.swo
+
 # For cmake
 CMakeCache.txt
 CMakeFiles/

@@ -466,6 +466,20 @@ const SearchNode* Search::getChildForMove(const SearchNode* node, Loc moveLoc) c
 Loc Search::getChosenMoveLoc() {
   if(rootNode == NULL)
     return Board::NULL_LOC;
+  if (searchParams.forceWinningPass
+      && rootHistory.isLegal(rootBoard, Board::PASS_LOC, rootPla)
+      && rootHistory.passWouldEndGame(rootBoard, rootPla)) {
+    Board boardCopy(rootBoard);
+    BoardHistory historyCopy(rootHistory);
+
+    historyCopy.makeBoardMoveAssumeLegal(boardCopy, Board::PASS_LOC, rootPla, nullptr);
+    historyCopy.endAndScoreGameNow(boardCopy);
+    const float whiteScoreMargin = historyCopy.finalWhiteMinusBlackScore;
+    if ((whiteScoreMargin > 0 && rootPla == P_WHITE)
+        || (whiteScoreMargin < 0 && rootPla == P_BLACK)) {
+      return Board::PASS_LOC;
+    }
+  }
 
   vector<Loc> locs;
   vector<double> playSelectionValues;
@@ -573,7 +587,8 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     }
     // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
     // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
-    case SearchParams::PassingBehavior::LastResort: {
+    case SearchParams::PassingBehavior::LastResort:
+    case SearchParams::PassingBehavior::Standard: {
       const double extreme = 0.95;
 
       for(int i = 0; i < childrenCapacity; i++) {
@@ -1067,6 +1082,8 @@ void Search::getAnalysisData(
   );
 
   vector<MoreNodeStats> statsBuf(numChildren);
+  double valueSum = std::accumulate(playSelectionValues.begin(), playSelectionValues.end(), 0.0);
+
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];
     double policyProb = policyProbs[getPos(child->prevMoveLoc)];
@@ -1074,7 +1091,7 @@ void Search::getAnalysisData(
       child, scratchLocs, scratchValues, child->prevMoveLoc, policyProb, fpuValue, parentUtility, parentWinLossValue,
       parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
     );
-    data.playSelectionValue = playSelectionValues[i];
+    data.playSelectionValue = playSelectionValues[i] / valueSum;
     //Make sure data.lcb is from white's perspective, for consistency with everything else
     //In lcbBuf, it's from self perspective, unlike values at nodes.
     data.lcb = node.nextPla == P_BLACK ? -lcbBuf[i] : lcbBuf[i];
@@ -1770,37 +1787,44 @@ bool Search::getAnalysisJson(
   bool includeMovesOwnership,
   bool includeMovesOwnershipStdev,
   bool includePVVisits,
+  bool includeTree,
   json& ret
 ) const {
-  vector<AnalysisData> buf;
-  static constexpr int minMoves = 0;
   static constexpr int OUTPUT_PRECISION = 8;
 
   const Board& board = rootBoard;
   const BoardHistory& hist = rootHistory;
-  bool duplicateForSymmetries = true;
-  getAnalysisData(buf, minMoves, false, analysisPVLen, duplicateForSymmetries);
 
   // Stats for all the individual moves
-  json moveInfos = json::array();
-  for(int i = 0; i < buf.size(); i++) {
-    const AnalysisData& data = buf[i];
-    double winrate = 0.5 * (1.0 + data.winLossValue);
-    double utility = data.utility;
-    double lcb = PlayUtils::getHackedLCBForWinrate(this, data, rootPla);
-    double utilityLcb = data.lcb;
-    double scoreMean = data.scoreMean;
-    double lead = data.lead;
-    if(perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && rootPla == P_BLACK)) {
-      winrate = 1.0 - winrate;
-      lcb = 1.0 - lcb;
-      utility = -utility;
-      scoreMean = -scoreMean;
-      lead = -lead;
-      utilityLcb = -utilityLcb;
-    }
+  auto build = [&](const SearchNode* node, auto&& dfs) -> json {
+    static constexpr int minMoves = 0;
+
+    json moveInfos = json::array();
+    Player pla = node->nextPla;
+
+    vector<AnalysisData> buf;
+    bool duplicateForSymmetries = true;
+    getAnalysisData(*node, buf, minMoves, false, analysisPVLen, duplicateForSymmetries);
+
+    for(int i = 0; i < buf.size(); i++) {
+      const AnalysisData& data = buf[i];
+      double winrate = 0.5 * (1.0 + data.winLossValue);
+      double utility = data.utility;
+      double lcb = PlayUtils::getHackedLCBForWinrate(this, data, pla);
+      double utilityLcb = data.lcb;
+      double scoreMean = data.scoreMean;
+      double lead = data.lead;
+      if(perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && pla == P_BLACK)) {
+        winrate = 1.0 - winrate;
+        lcb = 1.0 - lcb;
+        utility = -utility;
+        scoreMean = -scoreMean;
+        lead = -lead;
+        utilityLcb = -utilityLcb;
+      }
 
     json moveInfo;
+    // This only depends on the size of the board, which is invariant, so it's fine to use the root board here
     moveInfo["move"] = Location::toString(data.move, board);
     moveInfo["visits"] = data.numVisits;
     moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
@@ -1818,37 +1842,43 @@ bool Search::getAnalysisJson(
     if(data.isSymmetryOf != Board::NULL_LOC)
       moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 
-    json pv = json::array();
-    int pvLen =
-      (preventEncore && data.pvContainsPass()) ? data.getPVLenUpToPhaseEnd(board, hist, rootPla) : (int)data.pv.size();
-    for(int j = 0; j < pvLen; j++)
-      pv.push_back(Location::toString(data.pv[j], board));
-    moveInfo["pv"] = pv;
-
-    if(includePVVisits) {
-      assert(data.pvVisits.size() >= pvLen);
-      json pvVisits = json::array();
+      json pv = json::array();
+      int pvLen =
+        (preventEncore && data.pvContainsPass() && node == rootNode) ? data.getPVLenUpToPhaseEnd(board, hist, pla) : (int)data.pv.size();
       for(int j = 0; j < pvLen; j++)
-        pvVisits.push_back(data.pvVisits[j]);
-      moveInfo["pvVisits"] = pvVisits;
-    }
+        pv.push_back(Location::toString(data.pv[j], board));
+      moveInfo["pv"] = pv;
 
-    if(includeMovesOwnership && includeMovesOwnershipStdev) {
-      std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
-      moveInfo["ownership"] = ownershipAndStdev.first;
-      moveInfo["ownershipStdev"] = ownershipAndStdev.second;
-    }
-    else if(includeMovesOwnershipStdev) {
-      std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
-      moveInfo["ownershipStdev"] = ownershipAndStdev.second;
-    }
-    else if(includeMovesOwnership) {
-      moveInfo["ownership"] = getJsonOwnershipMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
-    }
+      if(includePVVisits) {
+        assert(data.pvVisits.size() >= pvLen);
+        json pvVisits = json::array();
+        for(int j = 0; j < pvLen; j++)
+          pvVisits.push_back(data.pvVisits[j]);
+        moveInfo["pvVisits"] = pvVisits;
+      }
 
-    moveInfos.push_back(moveInfo);
-  }
-  ret["moveInfos"] = moveInfos;
+      if(node == rootNode) {
+        if(includeMovesOwnership && includeMovesOwnershipStdev) {
+          std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(pla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
+          moveInfo["ownership"] = ownershipAndStdev.first;
+          moveInfo["ownershipStdev"] = ownershipAndStdev.second;
+        }
+        else if(includeMovesOwnershipStdev) {
+          std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(pla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
+          moveInfo["ownershipStdev"] = ownershipAndStdev.second;
+        }
+        else if(includeMovesOwnership) {
+          moveInfo["ownership"] = getJsonOwnershipMap(pla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
+        }
+      }
+      if(includeTree)
+        moveInfo["children"] = dfs(data.node, dfs);
+
+      moveInfos.push_back(moveInfo);
+    }
+    return moveInfos;
+  };
+  ret["moveInfos"] = build(rootNode, build);
 
   // Stats for root position
   {

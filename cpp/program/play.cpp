@@ -1193,7 +1193,7 @@ static Loc runBotWithLimits(
 
   //HACK - Disable LCB for making the move (it will still affect the policy target gen)
   bool lcb = toMoveBot->searchParams.useLcbForSelection;
-  if(playSettings.forSelfPlay) {
+  if(playSettings.forSelfPlay && !toMoveBot->searchParams.useLcbForSelfplayMove) {
     toMoveBot->searchParams.useLcbForSelection = false;
   }
 

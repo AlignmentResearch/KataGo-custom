@@ -5,6 +5,7 @@
 #include "../game/board.h"
 
 struct SearchParams {
+  // Modifications of pass suppression behavior.
   enum class PassingBehavior {
     // Essentially use vanilla MCTS to determine when passing makes sense
     Standard,
@@ -24,6 +25,8 @@ struct SearchParams {
   static PassingBehavior strToPassingBehavior(const std::string& behaviorStr);
   static std::string passingBehaviorToStr(PassingBehavior behavior);
   PassingBehavior passingBehavior;
+  // If enabled, then we will definitely pass if it wins us the game.
+  bool forceWinningPass;
 
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };
@@ -97,6 +100,7 @@ struct SearchParams {
   double chosenMovePrune; //Outright prune moves that have fewer than this many visits
 
   bool useLcbForSelection; //Using LCB for move selection?
+  bool useLcbForSelfplayMove; //Use LCB to make moves during self-play?
   double lcbStdevs; //How many stdevs a move needs to be better than another for LCB selection
   double minVisitPropForLCB; //Only use LCB override when a move has this proportion of visits as the top move
   bool useNonBuggyLcb; //LCB was very minorly buggy as of pre-v1.8. Set to true to fix.

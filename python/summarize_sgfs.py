@@ -6,7 +6,7 @@ import os
 
 from dataclasses import dataclass
 from sgfmill import sgf
-from typing import List, Dict, Tuple, Set, Sequence
+from typing import List, Dict, Optional, Tuple, Set, Sequence
 
 @dataclass
 class Record:
@@ -37,6 +37,7 @@ class GameResultSummary:
       self,
       elo_prior_games: float,
       estimate_first_player_advantage: bool,
+      board_size: Optional[float],
   ):
     self.results = {}  # dict of { (black_player_name, white_player_name) : Record }
 
@@ -46,6 +47,7 @@ class GameResultSummary:
     self._elo_prior_games = elo_prior_games # number of games for bayesian prior around Elo 0
     self._estimate_first_player_advantage = estimate_first_player_advantage
     self._elo_info = None
+    self.board_size = board_size
 
   def add_games(self, input_file_or_dir: str, recursive=False):
     """Add sgfs found in input_file_or_dir into the results. Repeated paths to the same file will be ignored."""
@@ -179,6 +181,10 @@ class GameResultSummary:
     except ValueError:
       print ('\033[91m'+f"A sgf string is damaged in {debug_source}, and its record has been skipped!"+ '\x1b[0m')
       return
+    if self.board_size:
+      board_size = game.get_size()
+      if board_size != self.board_size:
+        return
     pla_black = game.get_player_name('b')
     pla_white = game.get_player_name('w')
     if (game.get_handicap() is not None) or game.get_komi() < 5.5 or game.get_komi() > 7.5:
@@ -316,6 +322,12 @@ if __name__ == "__main__":
     required=False,
     action="store_true",
   )
+  parser.add_argument(
+    "-board-size",
+    help="Only look at games of this board size",
+    required=False,
+    type=float,
+  )
   args = vars(parser.parse_args())
   print(args)
 
@@ -323,10 +335,12 @@ if __name__ == "__main__":
   recursive = args["recursive"]
   elo_prior_games = args["elo_prior_games"]
   estimate_first_player_advantage = args["estimate_first_player_advantage"]
+  board_size = args["board_size"]
 
   game_result_summary = GameResultSummary(
     elo_prior_games=elo_prior_games,
     estimate_first_player_advantage=estimate_first_player_advantage,
+    board_size=board_size,
   )
   for input_file_or_dir in input_files_or_dirs:
     game_result_summary.add_games(input_file_or_dir, recursive=recursive)

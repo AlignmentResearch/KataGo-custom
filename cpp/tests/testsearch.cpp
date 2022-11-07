@@ -3451,9 +3451,23 @@ xx......x
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = false;
+
+    // Test with includeTree = false
+    bool includeTree = false;
     bool suc = search->getAnalysisJson(
       perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
+      json
+    );
+    testAssert(suc);
+    cout << json << endl;
+
+    // Test with includeTree = true
+    includeTree = true;
+    json = nlohmann::json();
+    suc = search->getAnalysisJson(
+      perspective, analysisPVLen, ownershipMinVisits, preventEncore,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
       json
     );
     testAssert(suc);
@@ -3528,9 +3542,10 @@ xx......x
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = false;
+    bool includeTree = false;
     bool suc = search->getAnalysisJson(
       perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
       json
     );
     testAssert(suc);
@@ -3605,9 +3620,10 @@ xx......x
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = false;
+    bool includeTree = false;
     bool suc = search->getAnalysisJson(
       perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
       json
     );
     testAssert(suc);
@@ -3925,9 +3941,10 @@ o.oo.oo
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = true;
+    bool includeTree = false;
     bool suc = search->getAnalysisJson(
       perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
       json
     );
     testAssert(suc);
@@ -3978,9 +3995,10 @@ xxxxxxxxx
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = false;
+    bool includeTree = false;
     bool suc = search->getAnalysisJson(
       perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
       json
     );
     testAssert(suc);
@@ -4050,9 +4068,10 @@ xxxxxxxxx
       bool includeMovesOwnership = false;
       bool includeMovesOwnershipStdev = false;
       bool includePVVisits = true;
+      bool includeTree = false;
       suc = search->getAnalysisJson(
         perspective, analysisPVLen, ownershipMinVisits, preventEncore,
-        includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits,
+        includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
         json
       );
       cout << "getAnalysisJson success: " << suc << endl;

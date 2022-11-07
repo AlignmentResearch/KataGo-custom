@@ -1,5 +1,5 @@
 #!/bin/bash -eu
-if [[ $# -lt 1 || $# -gt 3 ]]
+if [[ $# -lt 1 || $# -gt 2 ]]
 then
     echo "Usage: $0 BASE_DIR [PREDICTOR_DIR]"
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."

@@ -1823,24 +1823,25 @@ bool Search::getAnalysisJson(
         utilityLcb = -utilityLcb;
       }
 
-    json moveInfo;
-    // This only depends on the size of the board, which is invariant, so it's fine to use the root board here
-    moveInfo["move"] = Location::toString(data.move, board);
-    moveInfo["visits"] = data.numVisits;
-    moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
-    moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
-    moveInfo["scoreUtility"] = roundDynamic(data.scoreUtility,OUTPUT_PRECISION);
-    moveInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
-    moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
-    moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
-    moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
-    moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
-    moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
-    moveInfo["lcb"] = roundDynamic(lcb,OUTPUT_PRECISION);
-    moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
-    moveInfo["order"] = data.order;
-    if(data.isSymmetryOf != Board::NULL_LOC)
-      moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
+      json moveInfo;
+      moveInfo["lcb"] = roundDynamic(lcb,OUTPUT_PRECISION);
+      // This only depends on the size of the board, which is invariant, so it's fine to use the root board here
+      moveInfo["move"] = Location::toString(data.move, board);
+      moveInfo["order"] = data.order;
+      moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
+      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
+      moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
+      moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
+      moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
+      moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
+      moveInfo["scoreUtility"] = roundDynamic(data.scoreUtility,OUTPUT_PRECISION);
+      moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
+      moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
+      moveInfo["visits"] = data.numVisits;
+      moveInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
+      if(data.isSymmetryOf != Board::NULL_LOC)
+        moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 
       json pv = json::array();
       int pvLen =

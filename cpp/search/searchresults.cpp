@@ -1082,12 +1082,12 @@ void Search::getAnalysisData(
   );
 
   vector<MoreNodeStats> statsBuf(numChildren);
-  double selectionProbs[Board::MAX_ARR_SIZE];
+  std::vector<double> selectionProbs(playSelectionValues.size());
 
   double temp = interpolateEarly(
     searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
   );
-  temperatureScaleProbs(playSelectionValues.data(), numChildren, temp, selectionProbs);
+  temperatureScaleProbs(playSelectionValues.data(), playSelectionValues.size(), temp, selectionProbs.data());
 
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];

@@ -1082,7 +1082,12 @@ void Search::getAnalysisData(
   );
 
   vector<MoreNodeStats> statsBuf(numChildren);
-  double valueSum = std::accumulate(playSelectionValues.begin(), playSelectionValues.end(), 0.0);
+  double selectionProbs[Board::MAX_ARR_SIZE];
+
+  double temp = interpolateEarly(
+    searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
+  );
+  temperatureScaleProbs(playSelectionValues.data(), numChildren, temp, selectionProbs);
 
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];
@@ -1091,7 +1096,9 @@ void Search::getAnalysisData(
       child, scratchLocs, scratchValues, child->prevMoveLoc, policyProb, fpuValue, parentUtility, parentWinLossValue,
       parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
     );
-    data.playSelectionValue = playSelectionValues[i] / valueSum;
+    data.playSelectionValue = playSelectionValues[i];
+    data.selectionProb = selectionProbs[i];
+
     //Make sure data.lcb is from white's perspective, for consistency with everything else
     //In lcbBuf, it's from self perspective, unlike values at nodes.
     data.lcb = node.nextPla == P_BLACK ? -lcbBuf[i] : lcbBuf[i];
@@ -1830,6 +1837,7 @@ bool Search::getAnalysisJson(
       moveInfo["order"] = data.order;
       moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
       moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+      moveInfo["selectionProb"] = roundDynamic(data.selectionProb,OUTPUT_PRECISION);
       moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
       moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
       moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);

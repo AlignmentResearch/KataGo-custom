@@ -994,13 +994,6 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
   double processedRelProbs[Board::MAX_ARR_SIZE];
 
-  double maxValue = 0.0;
-  for(int i = 0; i<numRelativeProbs; i++) {
-    if(relativeProbs[i] > maxValue)
-      maxValue = relativeProbs[i];
-  }
-  assert(maxValue > 0.0);
-
   //Temperature so close to 0 that we just calculate the max directly
   if(temperature <= 1.0e-4) {
     double bestProb = relativeProbs[0];
@@ -1015,16 +1008,34 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   }
   //Actual temperature
   else {
-    double logMaxValue = log(maxValue);
-    double sum = 0.0;
-    for(int i = 0; i<numRelativeProbs; i++) {
-      //Numerically stable way to raise to power and normalize
-      processedRelProbs[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
-      sum += processedRelProbs[i];
-    }
-    assert(sum > 0.0);
-    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs);
+    temperatureScaleProbs(relativeProbs, numRelativeProbs, temperature, processedRelProbs, false);
+    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs); // This normalizes the probs for us
     return idxChosen;
+  }
+}
+
+void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize) {
+  assert(numRelativeProbs > 0);
+  assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
+
+  double maxValue = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    if(relativeProbs[i] > maxValue)
+      maxValue = relativeProbs[i];
+  }
+  assert(maxValue > 0.0);
+
+  double logMaxValue = log(maxValue);
+  double sum = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    //Numerically stable way to raise to power and normalize
+    buf[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
+    sum += buf[i];
+  }
+  assert(sum > 0.0);
+  if(normalize) {
+    for(int i = 0; i<numRelativeProbs; i++)
+      buf[i] /= sum;
   }
 }
 

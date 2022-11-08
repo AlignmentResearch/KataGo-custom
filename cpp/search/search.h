@@ -485,6 +485,7 @@ struct Search {
 
   //Useful utility function exposed for outside use
   static uint32_t chooseIndexWithTemperature(Rand& rand, const double* relativeProbs, int numRelativeProbs, double temperature);
+  static void temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize = true);
   static void computeDirichletAlphaDistribution(int policySize, const float* policyProbs, double* alphaDistr);
   static void addDirichletNoise(const SearchParams& searchParams, Rand& rand, int policySize, float* policyProbs);
 

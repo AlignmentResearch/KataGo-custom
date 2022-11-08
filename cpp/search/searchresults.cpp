@@ -1829,11 +1829,13 @@ bool Search::getAnalysisJson(
       moveInfo["move"] = Location::toString(data.move, board);
       moveInfo["order"] = data.order;
       moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
+      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
       moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
       moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
       moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
       moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
-      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
+      moveInfo["scoreUtility"] = roundDynamic(data.scoreUtility,OUTPUT_PRECISION);
       moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
       moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["visits"] = data.numVisits;

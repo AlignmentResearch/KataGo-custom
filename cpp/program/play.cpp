@@ -1538,6 +1538,11 @@ FinishedGameData* Play::runGame(
     extractValueTargets(whiteValueTargets, toMoveBot, toMoveBot->rootNode);
     gameData->whiteValueTargetsByTurn.push_back(whiteValueTargets);
 
+    if(toMoveBot->searchParams.queryMoveLoc != Board::NULL_LOC) {
+      gameData->queryMoveLoc = toMoveBot->searchParams.queryMoveLoc;
+      gameData->selectionProbHistoryByTurn.push_back(toMoveBot->selectionProbHistory);
+    }
+
     if(!recordFullData) {
       //Go ahead and record this anyways with just the visits, as a bit of a hack so that the sgf output can also write the number of visits.
       int64_t unreducedNumVisits = toMoveBot->getRootVisits();

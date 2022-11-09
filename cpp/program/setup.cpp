@@ -367,6 +367,10 @@ vector<SearchParams> Setup::loadParams(
 
     string idxStr = Global::intToString(i);
 
+    if(cfg.contains("trackPassProb"+idxStr)) params.queryMoveLoc = cfg.getBool("trackPassProb"+idxStr) ? Board::PASS_LOC : Board::NULL_LOC;
+    else if (cfg.contains("trackPassProb"))  params.queryMoveLoc = cfg.getBool("trackPassProb") ? Board::PASS_LOC : Board::NULL_LOC;
+    else params.queryMoveLoc = Board::NULL_LOC;
+
     if(cfg.contains("passingBehavior"+idxStr)) params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"+idxStr));
     else if (cfg.contains("passingBehavior"))  params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"));
     if(cfg.contains("forceWinningPass"+idxStr)) params.forceWinningPass = cfg.getBool("forceWinningPass"+idxStr);

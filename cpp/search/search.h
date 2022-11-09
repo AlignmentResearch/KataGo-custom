@@ -317,6 +317,7 @@ struct Search {
 
   //Mutable---------------------------------------------------------------
   SearchNode* rootNode;
+  std::vector<double> selectionProbHistory; // History of selection probs for the query move during the search
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;

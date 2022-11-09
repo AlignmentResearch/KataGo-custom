@@ -89,6 +89,9 @@ struct FinishedGameData {
   std::vector<PolicyTarget> policyTargetsByTurn;
   std::vector<ValueTargets> whiteValueTargetsByTurn; //Except this one, we may have some of
   std::vector<NNRawStats> nnRawStatsByTurn;
+
+  Loc queryMoveLoc;
+  std::vector<std::vector<double>> selectionProbHistoryByTurn;
   Color* finalFullArea;
   Color* finalOwnership;
   bool* finalSekiAreas;

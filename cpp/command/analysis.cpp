@@ -904,6 +904,19 @@ int MainCmds::analysis(const vector<string>& args) {
           continue;
         rbase.reportDuringSearch = true;
       }
+      if(input.find("queryMoves") != input.end()) {
+        std::vector<Loc> queryMoves;
+        bool suc = parseBoardLocs(input, "queryMoves", queryMoves, true);
+        if(!suc)
+          continue;
+        
+        // TODO: Maybe support this in the future? Either that, or change queryMoves to be a single move and not an array
+        if(queryMoves.size() > 1) {
+          reportErrorForId(rbase.id, "queryMoves", "Only one query move at a time is supported currently");
+          continue;
+        }
+        rbase.params.queryMoveLoc = queryMoves.size() > 0 ? queryMoves[0] : Board::NULL_LOC;
+      }
       if(input.find("priority") != input.end()) {
         if(input.find("priorities") != input.end()) {
           reportErrorForId(rbase.id, "priority", "Cannot specify both priority and priorities");

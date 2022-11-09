@@ -27,6 +27,7 @@ struct SearchParams {
   PassingBehavior passingBehavior;
   // If enabled, then we will definitely pass if it wins us the game.
   bool forceWinningPass;
+  Loc queryMoveLoc; // Move whose selection prob history we're logging; NULL_LOC if none
 
   // Algorithm to use for search
   enum class SearchAlgorithm { MCTS, EMCTS1 };

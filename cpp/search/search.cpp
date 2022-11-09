@@ -474,6 +474,7 @@ Search::Search(
    normToTApproxZ(0.0),
    normToTApproxTable(),
    rootNode(NULL),
+   selectionProbHistory(),
    mutexPool(NULL),
    nnEvaluator(nnEval),
    nnXLen(),
@@ -833,6 +834,8 @@ void Search::clearSearch() {
   rootNode = NULL;
   clearOldNNOutputs();
   searchNodeAge = 0;
+
+  selectionProbHistory.clear();
 }
 
 bool Search::isLegalTolerant(Loc moveLoc, Player movePla) const {
@@ -1348,6 +1351,32 @@ void Search::runWholeSearch(
         if (numNodesAdded > 0) {
           numPlayouts = numPlayoutsShared.fetch_add((int64_t)numNodesAdded, std::memory_order_relaxed);
           numPlayouts += numNodesAdded;
+
+          // If we're logging the selection prob history, do that now
+          if (searchParams.queryMoveLoc != Board::NULL_LOC) {
+            vector<Loc> locs;
+            vector<double> playSelectionValues;
+            bool suc = getPlaySelectionValues(locs,playSelectionValues,0.0);
+            assert(suc);
+
+            // Check if we're considering the query move at all; if so, add its selection prob to the history
+            auto result = std::find(locs.begin(), locs.end(), searchParams.queryMoveLoc);
+            if (result != locs.end()) {
+              std::vector<double> selectionProbs(playSelectionValues.size());
+              
+              double temp = interpolateEarly(
+                searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
+              );
+              temperatureScaleProbs(playSelectionValues.data(), playSelectionValues.size(), temp, selectionProbs.data());
+
+              int queryIdx = result - locs.begin();
+              selectionProbHistory.push_back(selectionProbs[queryIdx]);
+            }
+            // If we're not considering the query move, its selection prob is 0
+            else {
+              selectionProbHistory.push_back(0.0);
+            }
+          }
         }
         else {
           //In the case that we didn't finish a playout, give other threads a chance to run before we try again

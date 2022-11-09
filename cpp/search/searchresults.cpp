@@ -1889,6 +1889,16 @@ bool Search::getAnalysisJson(
   };
   ret["moveInfos"] = build(rootNode, build);
 
+  // Selection prob history for query move
+  if(searchParams.queryMoveLoc != Board::NULL_LOC) {
+    json probHistory = json::array();
+    for(double prob : selectionProbHistory)
+      probHistory.push_back(roundDynamic(prob,OUTPUT_PRECISION));
+
+    ret["queryMove"] = Location::toString(searchParams.queryMoveLoc, board);
+    ret["selectionProbHistory"] = probHistory;
+  }
+
   // Stats for root position
   {
     ReportedSearchValues rootVals;

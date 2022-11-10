@@ -84,7 +84,7 @@ FinishedGameData::FinishedGameData()
    nnRawStatsByTurn(),
 
    queryMoveLoc(Board::NULL_LOC),
-   selectionProbHistoryByTurn(),
+   playoutHistoriesByTurn(),
 
    finalFullArea(NULL),
    finalOwnership(NULL),

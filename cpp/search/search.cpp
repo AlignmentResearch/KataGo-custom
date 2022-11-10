@@ -112,6 +112,21 @@ MoreNodeStats::MoreNodeStats()
 MoreNodeStats::~MoreNodeStats()
 {}
 
+std::ostream& operator<<(std::ostream& out, const SearchPlayoutRecord& record) {
+  // Currently we're not including playoutIdx in the description because
+  // over in WriteSgf we always write all the playouts in order. If we
+  // decide to change that, we should include playoutIdx here.
+  out << "{" << record.queryMoveSelectionProb << ", (";
+
+  for(int i = 0; i < record.visitedMoves.size(); i++) {
+    if(i > 0)
+      out << ", ";
+    out << Location::toString(record.visitedMoves[i], record.boardXSize, record.boardYSize);
+  }
+  out << ")}";
+  return out;
+}
+
 double Search::getResultUtility(double winLossValue, double noResultValue) const {
   return (
     winLossValue * searchParams.winLossUtilityFactor +
@@ -474,7 +489,6 @@ Search::Search(
    normToTApproxZ(0.0),
    normToTApproxTable(),
    rootNode(NULL),
-   selectionProbHistory(),
    mutexPool(NULL),
    nnEvaluator(nnEval),
    nnXLen(),
@@ -835,7 +849,7 @@ void Search::clearSearch() {
   clearOldNNOutputs();
   searchNodeAge = 0;
 
-  selectionProbHistory.clear();
+  playoutHistory.clear();
 }
 
 bool Search::isLegalTolerant(Loc moveLoc, Player movePla) const {
@@ -1359,6 +1373,19 @@ void Search::runWholeSearch(
             bool suc = getPlaySelectionValues(locs,playSelectionValues,0.0);
             assert(suc);
 
+            // Collect the move sequence we just explored into playoutMoves in reverse order,
+            // starting from the last visited node
+            std::vector<Loc> playoutMoves;
+            SearchNode *curNode = stbuf->lastVisitedNode;
+            while(curNode != rootNode && curNode != NULL) {
+              playoutMoves.push_back(curNode->prevMoveLoc);
+              curNode = curNode->parent;
+            }
+            // assert(playoutMoves.size() > 0);
+
+            // Reverse playoutMoves so that it's in temporal/topological order
+            std::reverse(playoutMoves.begin(), playoutMoves.end());
+
             // Check if we're considering the query move at all; if so, add its selection prob to the history
             auto result = std::find(locs.begin(), locs.end(), searchParams.queryMoveLoc);
             if (result != locs.end()) {
@@ -1370,11 +1397,15 @@ void Search::runWholeSearch(
               temperatureScaleProbs(playSelectionValues.data(), playSelectionValues.size(), temp, selectionProbs.data());
 
               int queryIdx = result - locs.begin();
-              selectionProbHistory.push_back(selectionProbs[queryIdx]);
+              playoutHistory.push_back(
+                SearchPlayoutRecord{numPlayouts, selectionProbs[queryIdx], playoutMoves, rootBoard.x_size, rootBoard.y_size}
+              );
             }
             // If we're not considering the query move, its selection prob is 0
             else {
-              selectionProbHistory.push_back(0.0);
+              playoutHistory.push_back(
+                SearchPlayoutRecord{numPlayouts, 0.0, playoutMoves, rootBoard.x_size, rootBoard.y_size}
+              );
             }
           }
         }

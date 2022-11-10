@@ -1724,6 +1724,20 @@ static double roundDynamic(double x, int precision) {
   return roundStatic(x, inverseScale);
 }
 
+static constexpr int JSON_PRECISION = 8;
+
+json SearchPlayoutRecord::toJson() const {
+  json dict;
+  json moves = json::array();
+  for (auto move : visitedMoves)
+    moves.push_back(Location::toString(move, boardXSize, boardYSize));
+
+  dict["querySelectionProb"] = roundDynamic(queryMoveSelectionProb, JSON_PRECISION);
+  dict["visitedMoves"] = moves;
+  dict["playoutIdx"] = playoutIdx;
+  return dict;
+}
+
 
 json Search::getJsonOwnershipMap(
   const Player pla, const Player perspective, const Board& board, const SearchNode* node, double ownershipMinWeight, int symmetry
@@ -1797,8 +1811,6 @@ bool Search::getAnalysisJson(
   bool includeTree,
   json& ret
 ) const {
-  static constexpr int OUTPUT_PRECISION = 8;
-
   const Board& board = rootBoard;
   const BoardHistory& hist = rootHistory;
 
@@ -1831,23 +1843,23 @@ bool Search::getAnalysisJson(
       }
 
       json moveInfo;
-      moveInfo["lcb"] = roundDynamic(lcb,OUTPUT_PRECISION);
+      moveInfo["lcb"] = roundDynamic(lcb,JSON_PRECISION);
       // This only depends on the size of the board, which is invariant, so it's fine to use the root board here
       moveInfo["move"] = Location::toString(data.move, board);
       moveInfo["order"] = data.order;
-      moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
-      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,OUTPUT_PRECISION);
-      moveInfo["selectionProb"] = roundDynamic(data.selectionProb,OUTPUT_PRECISION);
-      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
-      moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
-      moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
-      moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
-      moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
-      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
-      moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
-      moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
+      moveInfo["prior"] = roundDynamic(data.policyPrior,JSON_PRECISION);
+      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,JSON_PRECISION);
+      moveInfo["selectionProb"] = roundDynamic(data.selectionProb,JSON_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,JSON_PRECISION);
+      moveInfo["scoreLead"] = roundDynamic(lead,JSON_PRECISION);
+      moveInfo["scoreMean"] = roundDynamic(lead,JSON_PRECISION);
+      moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,JSON_PRECISION);
+      moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,JSON_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,JSON_PRECISION);
+      moveInfo["utility"] = roundDynamic(utility,JSON_PRECISION);
+      moveInfo["utilityLcb"] = roundDynamic(utilityLcb,JSON_PRECISION);
       moveInfo["visits"] = data.numVisits;
-      moveInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
+      moveInfo["winrate"] = roundDynamic(winrate,JSON_PRECISION);
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 
@@ -1891,12 +1903,12 @@ bool Search::getAnalysisJson(
 
   // Selection prob history for query move
   if(searchParams.queryMoveLoc != Board::NULL_LOC) {
-    json probHistory = json::array();
-    for(double prob : selectionProbHistory)
-      probHistory.push_back(roundDynamic(prob,OUTPUT_PRECISION));
+    json playouts = json::array();
+    for(auto playout : playoutHistory)
+      playouts.push_back(playout.toJson());
 
     ret["queryMove"] = Location::toString(searchParams.queryMoveLoc, board);
-    ret["selectionProbHistory"] = probHistory;
+    ret["queryPlayoutHistory"] = playouts;
   }
 
   // Stats for root position
@@ -1920,11 +1932,11 @@ bool Search::getAnalysisJson(
 
     json rootInfo;
     rootInfo["visits"] = rootVals.visits;
-    rootInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
-    rootInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
-    rootInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
-    rootInfo["scoreStdev"] = roundDynamic(rootVals.expectedScoreStdev,OUTPUT_PRECISION);
-    rootInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
+    rootInfo["winrate"] = roundDynamic(winrate,JSON_PRECISION);
+    rootInfo["scoreSelfplay"] = roundDynamic(scoreMean,JSON_PRECISION);
+    rootInfo["scoreLead"] = roundDynamic(lead,JSON_PRECISION);
+    rootInfo["scoreStdev"] = roundDynamic(rootVals.expectedScoreStdev,JSON_PRECISION);
+    rootInfo["utility"] = roundDynamic(utility,JSON_PRECISION);
 
     Hash128 thisHash;
     Hash128 symHash;
@@ -1957,12 +1969,12 @@ bool Search::getAnalysisJson(
     for(int y = 0; y < board.y_size; y++) {
       for(int x = 0; x < board.x_size; x++) {
         int pos = NNPos::xyToPos(x, y, nnXLen);
-        policy.push_back(roundDynamic(policyProbs[pos],OUTPUT_PRECISION));
+        policy.push_back(roundDynamic(policyProbs[pos],JSON_PRECISION));
       }
     }
 
     int passPos = NNPos::locToPos(Board::PASS_LOC, board.x_size, nnXLen, nnYLen);
-    policy.push_back(roundDynamic(policyProbs[passPos],OUTPUT_PRECISION));
+    policy.push_back(roundDynamic(policyProbs[passPos],JSON_PRECISION));
     ret["policy"] = policy;
   }
 

@@ -1540,7 +1540,7 @@ FinishedGameData* Play::runGame(
 
     if(toMoveBot->searchParams.queryMoveLoc != Board::NULL_LOC) {
       gameData->queryMoveLoc = toMoveBot->searchParams.queryMoveLoc;
-      gameData->selectionProbHistoryByTurn.push_back(toMoveBot->selectionProbHistory);
+      gameData->playoutHistoriesByTurn.push_back(toMoveBot->playoutHistory);
     }
 
     if(!recordFullData) {

@@ -1671,8 +1671,8 @@ void WriteSgf::writeSgf(
         comment += "weight=";
         comment += weightBuf;
       }
-      if(turnAfterStart < gameData->selectionProbHistoryByTurn.size()) {
-        auto history = gameData->selectionProbHistoryByTurn[turnAfterStart];
+      if(turnAfterStart < gameData->playoutHistoriesByTurn.size()) {
+        std::vector<SearchPlayoutRecord> history = gameData->playoutHistoriesByTurn[turnAfterStart];
         if(comment.length() > 0)
           comment += " ";
         comment += "prob_" + Location::toString(gameData->queryMoveLoc, board) + "_hist" + "=";

@@ -130,6 +130,21 @@ public:
   bool storeIfNull(SearchNode* node);
 };
 
+// Records info about a playout; used when queryMoveLoc != Board::NULL_LOC
+struct SearchPlayoutRecord {
+  long playoutIdx;
+  double queryMoveSelectionProb;
+  std::vector<Loc> visitedMoves;
+
+  // Sort of silly but we need to pass these to Location::toString inside
+  // of operator<< below
+  int boardXSize;
+  int boardYSize;
+
+  friend std::ostream& operator<<(std::ostream& out, const SearchPlayoutRecord& record);
+  nlohmann::json toJson() const;
+};
+
 struct SearchNode {
   //Locks------------------------------------------------------------------------------
   mutable std::atomic_flag statsLock = ATOMIC_FLAG_INIT;
@@ -317,7 +332,7 @@ struct Search {
 
   //Mutable---------------------------------------------------------------
   SearchNode* rootNode;
-  std::vector<double> selectionProbHistory; // History of selection probs for the query move during the search
+  std::vector<SearchPlayoutRecord> playoutHistory;
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;

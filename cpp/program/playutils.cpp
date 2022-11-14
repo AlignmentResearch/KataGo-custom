@@ -460,9 +460,9 @@ static double getNaiveEvenKomiHelper(
     //Shift by the predicted lead
     double shift = -lead;
     //Under no situations should the shift be bigger in absolute value than the last shift
-    if(i > 0 && abs(shift) > abs(lastShift)) {
-      if(shift < 0) shift = -abs(lastShift);
-      else if(shift > 0) shift = abs(lastShift);
+    if(i > 0 && std::fabs(shift) > std::fabs(lastShift)) {
+      if(shift < 0) shift = -std::fabs(lastShift);
+      else if(shift > 0) shift = std::fabs(lastShift);
     }
     lastShift = shift;
 
@@ -475,7 +475,7 @@ static double getNaiveEvenKomiHelper(
     hist.setKomi(fairKomi);
 
     //After a small shift, break out to the binary search.
-    if(abs(shift) < 16.0)
+    if(std::fabs(shift) < 16.0)
       break;
   }
 
@@ -1099,6 +1099,9 @@ Loc PlayUtils::maybeFriendlyPass(
   const Board board = bot->getRootBoard();
   const BoardHistory hist = bot->getRootHist();
   assert(oldPla == pla);
+
+  if(!hist.isLegal(board,moveLoc,pla))
+    throw StringError("PlayUtils::maybeFriendlyPass called on illegal move " + Location::toString(moveLoc,board));
 
   vector<double> ownerships;
   vector<bool> isAlive = computeAnticipatedStatusesWithOwnership(bot, board, hist, pla, numVisits, ownerships);

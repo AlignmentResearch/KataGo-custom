@@ -210,8 +210,15 @@ int MainCmds::match(const vector<string>& args) {
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
+
+  std::mutex statsMutex;
+  int64_t gameCount = 0;
+  std::map<string,double> timeUsedByBotMap;
+  std::map<string,double> movesByBotMap;
+
   auto runMatchLoop = [
-    &gameRunner,&matchPairer,&predictorEval,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables
+    &gameRunner,&matchPairer,&predictorEval,&sgfOutputDir,&logger,&gameSeedBase,&patternBonusTables,
+    &statsMutex, &gameCount, &timeUsedByBotMap, &movesByBotMap
   ](
     uint64_t threadHash
   ) {
@@ -263,6 +270,28 @@ int MainCmds::match(const vector<string>& args) {
           WriteSgf::writeSgf(*sgfOut,gameData->bName,gameData->wName,gameData->endHist,gameData,false,true);
           (*sgfOut) << endl;
         }
+
+        {
+          std::lock_guard<std::mutex> lock(statsMutex);
+          gameCount += 1;
+          timeUsedByBotMap[gameData->bName] += gameData->bTimeUsed;
+          timeUsedByBotMap[gameData->wName] += gameData->wTimeUsed;
+          movesByBotMap[gameData->bName] += (double)gameData->bMoveCount;
+          movesByBotMap[gameData->wName] += (double)gameData->wMoveCount;
+
+          int64_t x = gameCount;
+          while(x % 2 == 0 && x > 1) x /= 2;
+          if(x == 1 || x == 3 || x == 5) {
+            for(auto& pair : timeUsedByBotMap) {
+              logger.write(
+                "Avg move time used by " + pair.first + " " +
+                Global::doubleToString(pair.second / movesByBotMap[pair.first]) + " " +
+                Global::doubleToString(movesByBotMap[pair.first]) + " moves"
+              );
+            }
+          }
+        }
+
         delete gameData;
       }
 

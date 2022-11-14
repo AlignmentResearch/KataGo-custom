@@ -3,6 +3,7 @@
 #include "../core/datetime.h"
 #include "../core/global.h"
 #include "../core/fileutils.h"
+#include "../core/timer.h"
 #include "../program/playutils.h"
 #include "../program/setup.h"
 #include "../search/asyncbot.h"
@@ -981,30 +982,30 @@ static void recordTreePositionsRec(
       continue;
 
     const SearchNode* child = children[i].getIfAllocated();
-    if(child->prevMoveLoc == excludeLoc0 || child->prevMoveLoc == excludeLoc1)
+    Loc moveLoc = children[i].getMoveLoc();
+    if(moveLoc == excludeLoc0 || moveLoc == excludeLoc1)
       continue;
 
-    while(child->statsLock.test_and_set(std::memory_order_acquire));
-    int64_t numVisits = child->stats.visits;
-    child->statsLock.clear(std::memory_order_release);
-
+    int64_t numVisits = child->stats.visits.load(std::memory_order_acquire);
     if(numVisits < minVisitsAtNode)
       continue;
 
-    Board copy = board;
-    BoardHistory histCopy = hist;
-    histCopy.makeBoardMoveAssumeLegal(copy, child->prevMoveLoc, pla, NULL);
-    Player nextPla = getOpp(pla);
-    recordTreePositionsRec(
-      gameData,
-      copy,histCopy,nextPla,
-      toMoveBot,
-      child,depth+1,maxDepth,newPlaAlwaysBest,newOppAlwaysBest,
-      minVisitsAtNode,recordTreeTargetWeight,
-      numNeuralNetChangesSoFar,
-      locsBuf,playSelectionValuesBuf,
-      Board::NULL_LOC,Board::NULL_LOC
-    );
+    if(hist.isLegal(board, moveLoc, pla)) {
+      Board copy = board;
+      BoardHistory histCopy = hist;
+      histCopy.makeBoardMoveAssumeLegal(copy, moveLoc, pla, NULL);
+      Player nextPla = getOpp(pla);
+      recordTreePositionsRec(
+        gameData,
+        copy,histCopy,nextPla,
+        toMoveBot,
+        child,depth+1,maxDepth,newPlaAlwaysBest,newOppAlwaysBest,
+        minVisitsAtNode,recordTreeTargetWeight,
+        numNeuralNetChangesSoFar,
+        locsBuf,playSelectionValuesBuf,
+        Board::NULL_LOC,Board::NULL_LOC
+      );
+    }
   }
 }
 
@@ -1511,6 +1512,8 @@ FinishedGameData* Play::runGame(
   vector<double> policySurpriseByTurn;
   vector<ReportedSearchValues> rawNNValues;
 
+  ClockTimer timer;
+
   //Main play loop
   for(int i = 0; i<maxMovesPerGame; i++) {
     if(doEndGameIfAllPassAlive)
@@ -1525,7 +1528,24 @@ FinishedGameData* Play::runGame(
     SearchLimitsThisMove limits = getSearchLimitsThisMove(
       toMoveBot, pla, playSettings, gameRand, historicalMctsWinLossValues, clearBotBeforeSearch, otherGameProps
     );
-    Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
+    Loc loc;
+    if(playSettings.recordTimePerMove) {
+      double t0 = timer.getSeconds();
+      loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
+      double t1 = timer.getSeconds();
+      if(pla == P_BLACK)
+        gameData->bTimeUsed += t1-t0;
+      else
+        gameData->wTimeUsed += t1-t0;
+    }
+    else {
+      loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
+    }
+
+    if(pla == P_BLACK)
+      gameData->bMoveCount += 1;
+    else
+      gameData->wMoveCount += 1;
 
     if(loc == Board::NULL_LOC || !toMoveBot->isLegalStrict(loc,pla))
       failIllegalMove(toMoveBot,logger,board,loc);

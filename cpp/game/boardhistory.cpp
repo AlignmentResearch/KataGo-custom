@@ -27,7 +27,9 @@ static Hash128 getKoHashAfterMoveNonEncore(const Rules& rules, Hash128 posHashAf
 BoardHistory::BoardHistory()
   :rules(),
    someoneHasPassed(false),
-   moveHistory(),koHashHistory(),
+   moveHistory(),
+   preventEncoreHistory(),
+   koHashHistory(),
    firstTurnIdxWithKoHistory(0),
    initialBoard(),
    initialPla(P_BLACK),
@@ -62,7 +64,9 @@ BoardHistory::~BoardHistory()
 BoardHistory::BoardHistory(const Board& board, Player pla, const Rules& r, int ePhase)
   :rules(r),
    someoneHasPassed(false),
-   moveHistory(),koHashHistory(),
+   moveHistory(),
+   preventEncoreHistory(),
+   koHashHistory(),
    firstTurnIdxWithKoHistory(0),
    initialBoard(),
    initialPla(),
@@ -96,7 +100,9 @@ BoardHistory::BoardHistory(const Board& board, Player pla, const Rules& r, int e
 BoardHistory::BoardHistory(const BoardHistory& other)
   :rules(other.rules),
    someoneHasPassed(other.someoneHasPassed),
-   moveHistory(other.moveHistory),koHashHistory(other.koHashHistory),
+   moveHistory(other.moveHistory),
+   preventEncoreHistory(other.preventEncoreHistory),
+   koHashHistory(other.koHashHistory),
    firstTurnIdxWithKoHistory(other.firstTurnIdxWithKoHistory),
    initialBoard(other.initialBoard),
    initialPla(other.initialPla),
@@ -134,6 +140,7 @@ BoardHistory& BoardHistory::operator=(const BoardHistory& other)
   rules = other.rules;
   someoneHasPassed = other.someoneHasPassed;
   moveHistory = other.moveHistory;
+  preventEncoreHistory = other.preventEncoreHistory;
   koHashHistory = other.koHashHistory;
   firstTurnIdxWithKoHistory = other.firstTurnIdxWithKoHistory;
   initialBoard = other.initialBoard;
@@ -173,7 +180,9 @@ BoardHistory& BoardHistory::operator=(const BoardHistory& other)
 BoardHistory::BoardHistory(BoardHistory&& other) noexcept
  :rules(other.rules),
   someoneHasPassed(other.someoneHasPassed),
-  moveHistory(std::move(other.moveHistory)),koHashHistory(std::move(other.koHashHistory)),
+  moveHistory(std::move(other.moveHistory)),
+  preventEncoreHistory(std::move(other.preventEncoreHistory)),
+  koHashHistory(std::move(other.koHashHistory)),
   firstTurnIdxWithKoHistory(other.firstTurnIdxWithKoHistory),
   initialBoard(other.initialBoard),
   initialPla(other.initialPla),
@@ -208,6 +217,7 @@ BoardHistory& BoardHistory::operator=(BoardHistory&& other) noexcept
   rules = other.rules;
   someoneHasPassed = other.someoneHasPassed;
   moveHistory = std::move(other.moveHistory);
+  preventEncoreHistory = std::move(other.preventEncoreHistory);
   koHashHistory = std::move(other.koHashHistory);
   firstTurnIdxWithKoHistory = other.firstTurnIdxWithKoHistory;
   initialBoard = other.initialBoard;
@@ -248,6 +258,7 @@ void BoardHistory::clear(const Board& board, Player pla, const Rules& r, int ePh
   rules = r;
   someoneHasPassed = false;
   moveHistory.clear();
+  preventEncoreHistory.clear();
   koHashHistory.clear();
   firstTurnIdxWithKoHistory = 0;
 
@@ -323,6 +334,13 @@ void BoardHistory::clear(const Board& board, Player pla, const Rules& r, int ePh
     whiteBonusScore -= (float)netWhiteCaptures;
   }
   whiteHandicapBonusScore = computeWhiteHandicapBonus();
+}
+
+BoardHistory BoardHistory::copyToInitial() const {
+  BoardHistory hist(initialBoard, initialPla, rules, initialEncorePhase);
+  hist.setInitialTurnNumber(initialTurnNumber);
+  hist.setAssumeMultipleStartingBlackMovesAreHandicap(assumeMultipleStartingBlackMovesAreHandicap);
+  return hist;
 }
 
 void BoardHistory::setInitialTurnNumber(int n) {
@@ -990,6 +1008,7 @@ void BoardHistory::makeBoardMoveAssumeLegal(Board& board, Loc moveLoc, Player mo
   Hash128 koHashAfterThisMove = getKoHash(rules,board,getOpp(movePla),encorePhase,koRecapBlockHash);
   koHashHistory.push_back(koHashAfterThisMove);
   moveHistory.push_back(Move(moveLoc,movePla));
+  preventEncoreHistory.push_back(preventEncore);
   numTurnsThisPhase += 1;
   presumedNextMovePla = getOpp(movePla);
 

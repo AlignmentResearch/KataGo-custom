@@ -18,6 +18,8 @@ struct BoardHistory {
 
   //Chronological history of moves
   std::vector<Move> moveHistory;
+  //Chronological history of preventEncore, for ability to replay a board history
+  std::vector<bool> preventEncoreHistory;
   //Chronological history of hashes, including the latest board's hash.
   //Theses are the hashes that determine whether a board is the "same" or not given the rules
   //(e.g. they include the player if situational superko, and not if positional)
@@ -107,12 +109,16 @@ struct BoardHistory {
 
   //Clears all history and status and bonus points, sets encore phase and rules
   void clear(const Board& board, Player pla, const Rules& rules, int encorePhase);
-  //Set only the komi field of the rules, does not clear history, but does clear game-over conditions,
+  //Set only the komi field of the rules, does not clear history, does recompute game score if game is over.
   void setKomi(float newKomi);
   //Set the initial turn number. Affects nothing else.
   void setInitialTurnNumber(int n);
   //Set assumeMultipleStartingBlackMovesAreHandicap and update bonus points accordingly
   void setAssumeMultipleStartingBlackMovesAreHandicap(bool b);
+
+  //Returns a copy of this board history rewound to the initial board, pla, etc, with other fields
+  //(such as setInitialTurnNumber, setAssumeMultipleStartingBlackMovesAreHandicap) set identically.
+  BoardHistory copyToInitial() const;
 
   float whiteKomiAdjustmentForDraws(double drawEquivalentWinsForWhite) const;
   float currentSelfKomi(Player pla, double drawEquivalentWinsForWhite) const;

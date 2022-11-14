@@ -78,6 +78,12 @@ struct SearchParams {
   double uncertaintyExponent; //Visits weight scales inversely with this power of the uncertainty
   double uncertaintyMaxWeight; //Add minimum uncertainty so that the most weight a node can have is this
 
+  //Graph search
+  bool useGraphSearch; //Enable graph search instead of tree search?
+  int graphSearchRepBound; //Rep bound to use for graph search transposition safety. Higher will reduce transpositions but be more safe.
+  double graphSearchCatchUpLeakProb; //Chance to perform a visit to deepen a branch anyways despite being behind on visit count.
+  //double graphSearchCatchUpProp; //When sufficiently far behind on visits on a transposition, catch up extra by adding up to this fraction of parents visits at once.
+
   //Root parameters
   bool rootNoiseEnabled;
   double rootDirichletNoiseTotalConcentration; //Same as alpha * board size, to match alphazero this might be 0.03 * 361, total number of balls in the urn
@@ -127,7 +133,7 @@ struct SearchParams {
   double subtreeValueBiasWeightExponent; //When computing empiricial bias, weight subtree results by childvisits to this power.
 
   //Threading-related
-  uint32_t mutexPoolSize; //Size of mutex pool for synchronizing access to all search nodes
+  int nodeTableShardsPowerOfTwo; //Controls number of shards of node table for graph search transposition lookup
   double numVirtualLossesPerThread; //Number of virtual losses for one thread to add
 
   //Asyncbot

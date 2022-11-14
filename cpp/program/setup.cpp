@@ -494,6 +494,18 @@ vector<SearchParams> Setup::loadParams(
     else if(cfg.contains("uncertaintyMaxWeight"))   params.uncertaintyMaxWeight = cfg.getDouble("uncertaintyMaxWeight", 1.0, 100.0);
     else                                            params.uncertaintyMaxWeight = 8.0;
 
+    if(cfg.contains("useGraphSearch"+idxStr)) params.useGraphSearch = cfg.getBool("useGraphSearch"+idxStr);
+    else if(cfg.contains("useGraphSearch"))   params.useGraphSearch = cfg.getBool("useGraphSearch");
+    else                                      params.useGraphSearch = false;
+    if(cfg.contains("graphSearchRepBound"+idxStr)) params.graphSearchRepBound = cfg.getInt("graphSearchRepBound"+idxStr, 3, 50);
+    else if(cfg.contains("graphSearchRepBound"))   params.graphSearchRepBound = cfg.getInt("graphSearchRepBound",        3, 50);
+    else                                           params.graphSearchRepBound = 11;
+    if(cfg.contains("graphSearchCatchUpLeakProb"+idxStr)) params.graphSearchCatchUpLeakProb = cfg.getDouble("graphSearchCatchUpLeakProb"+idxStr, 0.0, 1.0);
+    else if(cfg.contains("graphSearchCatchUpLeakProb"))   params.graphSearchCatchUpLeakProb = cfg.getDouble("graphSearchCatchUpLeakProb", 0.0, 1.0);
+    else                                                  params.graphSearchCatchUpLeakProb = 0.0;
+    // if(cfg.contains("graphSearchCatchUpProp"+idxStr)) params.graphSearchCatchUpProp = cfg.getDouble("graphSearchCatchUpProp"+idxStr, 0.0, 1.0);
+    // else if(cfg.contains("graphSearchCatchUpProp"))   params.graphSearchCatchUpProp = cfg.getDouble("graphSearchCatchUpProp", 0.0, 1.0);
+    // else                                              params.graphSearchCatchUpProp = 0.0;
 
     if(cfg.contains("rootNoiseEnabled"+idxStr)) params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled"+idxStr);
     else if(cfg.contains("rootNoiseEnabled"))   params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled");
@@ -623,9 +635,9 @@ vector<SearchParams> Setup::loadParams(
     else if(cfg.contains("subtreeValueBiasWeightExponent")) params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent", 0.0, 1.0);
     else params.subtreeValueBiasWeightExponent = 0.8;
 
-    if(cfg.contains("mutexPoolSize"+idxStr)) params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize"+idxStr, 1, 1 << 24);
-    else if(cfg.contains("mutexPoolSize"))   params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize",        1, 1 << 24);
-    else                                     params.mutexPoolSize = 16384;
+    if(cfg.contains("nodeTableShardsPowerOfTwo"+idxStr)) params.nodeTableShardsPowerOfTwo = cfg.getInt("nodeTableShardsPowerOfTwo"+idxStr, 8, 24);
+    else if(cfg.contains("nodeTableShardsPowerOfTwo"))   params.nodeTableShardsPowerOfTwo = cfg.getInt("nodeTableShardsPowerOfTwo",        8, 24);
+    else                                                 params.nodeTableShardsPowerOfTwo = 16;
     if(cfg.contains("numVirtualLossesPerThread"+idxStr)) params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread"+idxStr, 0.01, 1000.0);
     else if(cfg.contains("numVirtualLossesPerThread"))   params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread",        0.01, 1000.0);
     else                                                 params.numVirtualLossesPerThread = 1.0;

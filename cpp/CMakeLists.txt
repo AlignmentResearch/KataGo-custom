@@ -167,6 +167,7 @@ add_executable(katago
   game/board.cpp
   game/rules.cpp
   game/boardhistory.cpp
+  game/graphhash.cpp
   dataio/sgf.cpp
   dataio/numpywrite.cpp
   dataio/trainingwrite.cpp
@@ -188,6 +189,7 @@ add_executable(katago
   search/asyncbot.cpp
   search/distributiontable.cpp
   search/localpattern.cpp
+  search/searchnodetable.cpp
   search/subtreevaluebiastable.cpp
   search/patternbonustable.cpp
   search/analysisdata.cpp
@@ -210,7 +212,12 @@ add_executable(katago
   tests/testsymmetries.cpp
   tests/testnninputs.cpp
   tests/testownership.cpp
+  tests/testsearchcommon.cpp
+  tests/testsearchnonn.cpp
   tests/testsearch.cpp
+  tests/testsearchv3.cpp
+  tests/testsearchv8.cpp
+  tests/testsearchmisc.cpp
   tests/testtime.cpp
   tests/testtrainingwrite.cpp
   tests/testnn.cpp

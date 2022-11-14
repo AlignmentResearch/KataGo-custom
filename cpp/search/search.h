@@ -2,6 +2,7 @@
 #define SEARCH_SEARCH_H_
 
 #include <memory>
+#include <unordered_set>
 
 #include "../core/global.h"
 #include "../core/hash.h"
@@ -17,6 +18,7 @@
 #include "../search/mutexpool.h"
 #include "../search/patternbonustable.h"
 #include "../search/subtreevaluebiastable.h"
+#include "../search/searchnodetable.h"
 #include "../search/searchparams.h"
 #include "../search/searchprint.h"
 #include "../search/timecontrols.h"
@@ -27,7 +29,6 @@ struct SearchNode;
 struct SearchThread;
 struct Search;
 struct DistributionTable;
-struct PolicySortEntry;
 
 struct ReportedSearchValues {
   double winValue;
@@ -71,9 +72,9 @@ struct NodeStatsAtomic {
   std::atomic<double> weightSqSum;
 
   NodeStatsAtomic();
+  explicit NodeStatsAtomic(const NodeStatsAtomic& other);
   ~NodeStatsAtomic();
 
-  NodeStatsAtomic(const NodeStatsAtomic&) = delete;
   NodeStatsAtomic& operator=(const NodeStatsAtomic&) = delete;
   NodeStatsAtomic(NodeStatsAtomic&& other) = delete;
   NodeStatsAtomic& operator=(NodeStatsAtomic&& other) = delete;
@@ -92,7 +93,7 @@ struct NodeStats {
   double weightSqSum;
 
   NodeStats();
-  NodeStats(const NodeStatsAtomic& other);
+  explicit NodeStats(const NodeStatsAtomic& other);
   ~NodeStats();
 
   NodeStats(const NodeStats&) = default;
@@ -120,14 +121,36 @@ struct MoreNodeStats {
 struct SearchChildPointer {
 private:
   std::atomic<SearchNode*> data;
+  std::atomic<int64_t> edgeVisits;
+  std::atomic<Loc> moveLoc; // Generally this will be always guarded under release semantics of data or of the array itself.
 public:
   SearchChildPointer();
+
+  SearchChildPointer(const SearchChildPointer&) = delete;
+  SearchChildPointer& operator=(const SearchChildPointer&) = delete;
+  SearchChildPointer(SearchChildPointer&& other) = delete;
+  SearchChildPointer& operator=(SearchChildPointer&& other) = delete;
+
+  void storeAll(const SearchChildPointer& other);
+
   SearchNode* getIfAllocated();
   const SearchNode* getIfAllocated() const;
   SearchNode* getIfAllocatedRelaxed();
   void store(SearchNode* node);
   void storeRelaxed(SearchNode* node);
   bool storeIfNull(SearchNode* node);
+
+  int64_t getEdgeVisits() const;
+  int64_t getEdgeVisitsRelaxed() const;
+  void setEdgeVisits(int64_t x);
+  void setEdgeVisitsRelaxed(int64_t x);
+  void addEdgeVisits(int64_t delta);
+  bool compexweakEdgeVisits(int64_t& expected, int64_t desired);
+
+  Loc getMoveLoc() const;
+  Loc getMoveLocRelaxed() const;
+  void setMoveLoc(Loc loc);
+  void setMoveLocRelaxed(Loc loc);
 };
 
 struct SearchNode {
@@ -135,10 +158,10 @@ struct SearchNode {
   mutable std::atomic_flag statsLock = ATOMIC_FLAG_INIT;
 
   //Constant during search--------------------------------------------------------------
-  Player nextPla;
-  Loc prevMoveLoc;
-  SearchNode* parent;
+  const Player nextPla;
+  const bool forceNonTerminal;
   Hash128 patternBonusHash;
+  const uint32_t mutexIdx; // For lookup into mutex pool
 
   //Mutable---------------------------------------------------------------------------
   //During search, only ever transitions forward.
@@ -161,10 +184,10 @@ struct SearchNode {
   //During search, for updating nnOutput when it needs recomputation at the root if it wasn't updated yet.
   //During various other events - for coordinating recursive updates of the tree or subtree value bias cleanup
   std::atomic<uint32_t> nodeAge;
-  std::atomic<uint32_t> nodeAge2;
 
   //During search, each will only ever transition from NULL -> non-NULL.
   //We get progressive resizing of children array simply by moving on to a later array.
+  //Mutex pool guards insertion of children at a node. Reading of children is always fine.
   SearchChildPointer* children0; //Guaranteed to be non-NULL once state >= STATE_EXPANDED0
   SearchChildPointer* children1; //Guaranteed to be non-NULL once state >= STATE_EXPANDED1
   SearchChildPointer* children2; //Guaranteed to be non-NULL once state >= STATE_EXPANDED2
@@ -194,10 +217,10 @@ struct SearchNode {
   std::optional<std::vector<double>> oppPlaySelectionValues;
 
   //--------------------------------------------------------------------------------
-  SearchNode(Player prevPla, Loc prevMoveLoc, SearchNode* parent);
+  SearchNode(Player prevPla, bool forceNonTerminal, uint32_t mutexIdx);
+  SearchNode(const SearchNode&, bool forceNonTerminal, bool copySubtreeValueBias);
   ~SearchNode();
 
-  SearchNode(const SearchNode&) = delete;
   SearchNode& operator=(const SearchNode&) = delete;
   SearchNode(SearchNode&& other) = delete;
   SearchNode& operator=(SearchNode&& other) = delete;
@@ -239,11 +262,13 @@ struct SearchThread {
   Player pla;
   Board board;
   BoardHistory history;
+  Hash128 graphHash;
+  //The path we trace down the graph as we do a playout
+  std::unordered_set<SearchNode*> graphPath;
 
   Rand rand;
 
   NNResultBuf nnResultBuf;
-
   std::vector<MoreNodeStats> statsBuf;
 
   double upperBoundVisitsLeft;
@@ -256,6 +281,8 @@ struct SearchThread {
   // For EMCTS1 support
   // SearchThread does not own this pointer.
   SearchNode* lastVisitedNode;
+  //Just controls some debug output
+  std::set<Hash128> illegalMoveHashes;
 
   SearchThread(int threadIdx, const Search& search);
   ~SearchThread();
@@ -269,6 +296,7 @@ struct Search {
   Player rootPla;
   Board rootBoard;
   BoardHistory rootHistory;
+  Hash128 rootGraphHash;
   Loc rootHintLoc;
 
   //External user-specified moves that are illegal or that should be nontrivially searched, and the number of turns for which they should
@@ -317,6 +345,7 @@ struct Search {
 
   //Mutable---------------------------------------------------------------
   SearchNode* rootNode;
+  SearchNodeTable* nodeTable;
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;
@@ -591,9 +620,11 @@ private:
   int numAdditionalThreadsToUseForTasks() const;
   void performTaskWithThreads(std::function<void(int)>* task);
 
+  uint32_t createMutexIdxForNode(SearchThread& thread) const;
+  SearchNode* allocateOrFindNode(SearchThread& thread, Player nextPla, Loc bestChildMoveLoc, bool forceNonTerminal, Hash128 graphHash);
+
   void clearOldNNOutputs();
   void transferOldNNOutputs(SearchThread& thread);
-  int findTopNPolicy(const SearchNode* node, int n, PolicySortEntry* sortedPolicyBuf) const;
 
   std::shared_ptr<NNOutput>* maybeAddPolicyNoiseAndTemp(SearchThread& thread, bool isRoot, NNOutput* oldNNOutput) const;
   public: bool isAllowedRootMove(Loc moveLoc) const; private:
@@ -616,8 +647,7 @@ private:
 
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
 
-  //Parent must be locked
-  double getEndingWhiteScoreBonus(const SearchNode& parent, const SearchNode* child) const;
+  double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const;
 
   void downweightBadChildrenAndNormalizeWeight(
     int numChildren,
@@ -628,8 +658,7 @@ private:
     std::vector<MoreNodeStats>& statsBuf
   ) const;
 
-  //Parent must be locked
-  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const; private:
+  void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, int64_t edgeVisits, Loc moveLoc, double& lcbBuf, double& radiusBuf) const;
 
   double getExploreSelectionValue(
     double nnPolicyProb, double totalChildWeight, double childWeight,
@@ -648,10 +677,10 @@ private:
     double lcbBuf[NNPos::MAX_NN_POLICY_SIZE], double radiusBuf[NNPos::MAX_NN_POLICY_SIZE]
   ) const;
 
-  //Parent must be locked
   double getExploreSelectionValue(
     const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
-    double totalChildWeight, double fpuValue,
+    Loc moveLoc,
+    double totalChildWeight, int64_t childEdgeVisits, double fpuValue,
     double parentUtility, double parentWeightPerVisit, double parentUtilityStdevFactor,
     bool isDuringSearch, bool antiMirror, double maxChildWeight, SearchThread* thread
   ) const;
@@ -662,11 +691,12 @@ private:
     double maxChildWeight, SearchThread* thread
   ) const; private:
 
-  //Parent must be locked
-  public: double getReducedPlaySelectionWeight(
+  double getReducedPlaySelectionWeight(
     const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
-    double totalChildWeight, double parentUtilityStdevFactor, double bestChildExploreSelectionValue
-  ) const; private:
+    Loc moveLoc,
+    double totalChildWeight, int64_t childEdgeVisits,
+    double parentUtilityStdevFactor, double bestChildExploreSelectionValue
+  ) const;
 
   public: double getFpuValueForChildrenAssumeVisited(
     const SearchNode& node, Player pla, bool isRoot, double policyProbMassVisited,
@@ -679,11 +709,18 @@ private:
   void recomputeNodeStats(SearchNode& node, SearchThread& thread, int32_t numVisitsToAdd, bool isRoot);
   void recursivelyRecomputeStats(SearchNode& node);
 
-  void recursivelyDelete(SearchNode* node);
-  void recursivelyRemoveSubtreeValueBiasAndDelete(const std::vector<SearchNode*>& nodes);
-  void applyRecursivelyPostOrderMulithreaded(const std::vector<SearchNode*>& nodes, std::function<void(SearchNode*,int,bool)>* f);
-  void applyRecursivelyPostOrderSinglethreadedHelper(SearchNode* node, int threadIdx, std::function<void(SearchNode*,int,bool)>* f);
-  int applyRecursivelyPostOrderMulithreadedHelper(SearchNode* node, int threadIdx, PCG32* rand, std::function<void(SearchNode*,int,bool)>* f);
+  void applyRecursivelyPostOrderMulithreaded(const std::vector<SearchNode*>& nodes, std::function<void(SearchNode*,int)>* f);
+  void applyRecursivelyPostOrderMulithreadedHelper(
+    SearchNode* node, int threadIdx, PCG32* rand, std::unordered_set<SearchNode*>& nodeBuf, std::vector<int>& randBuf, std::function<void(SearchNode*,int)>* f
+  );
+
+  void applyRecursivelyAnyOrderMulithreaded(const std::vector<SearchNode*>& nodes, std::function<void(SearchNode*,int)>* f);
+  void applyRecursivelyAnyOrderMulithreadedHelper(
+    SearchNode* node, int threadIdx, PCG32* rand, std::unordered_set<SearchNode*>& nodeBuf, std::vector<int>& randBuf, std::function<void(SearchNode*,int)>* f
+  );
+  void removeSubtreeValueBias(SearchNode* node);
+  void deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded(bool old);
+  void deleteAllTableNodesMulithreaded();
 
   void maybeRecomputeNormToTApproxTable();
   double getNormToTApproxForLCB(int64_t numVisits) const;
@@ -722,10 +759,12 @@ private:
     bool isRoot
   );
 
+  bool maybeCatchUpEdgeVisits(SearchThread& thread, SearchNode& node, SearchNode* child, const int& nodeState, const int bestChildIdx);
+
   bool shouldSuppressPass(const SearchNode* n) const;
 
   AnalysisData getAnalysisDataOfSingleChild(
-    const SearchNode* child, std::vector<Loc>& scratchLocs, std::vector<double>& scratchValues,
+    const SearchNode* child, int64_t edgeVisits, std::vector<Loc>& scratchLocs, std::vector<double>& scratchValues,
     Loc move, double policyProb, double fpuValue, double parentUtility, double parentWinLossValue,
     double parentScoreMean, double parentScoreStdev, double parentLead, int maxPVDepth
   ) const;

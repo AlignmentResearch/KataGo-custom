@@ -5,7 +5,7 @@
 
 #include "../search/search.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "../core/fancymath.h"
 #include "../program/playutils.h"
@@ -78,10 +78,13 @@ bool Search::getPlaySelectionValues(
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
-    Loc moveLoc = child->prevMoveLoc;
+    Loc moveLoc = children[i].getMoveLocRelaxed();
 
+    int64_t edgeVisits = children[i].getEdgeVisits();
     int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
-    double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
+
+    double childWeight = rawChildWeight * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
 
     locs.push_back(moveLoc);
     totalChildWeight += childWeight;
@@ -95,7 +98,7 @@ bool Search::getPlaySelectionValues(
     else {
       playSelectionValues.push_back((double)childWeight);
       if(retVisitCounts != NULL)
-        (*retVisitCounts).push_back((double)childVisits);
+        (*retVisitCounts).push_back((double)edgeVisits);
     }
   }
 
@@ -116,6 +119,8 @@ bool Search::getPlaySelectionValues(
   if(&node == rootNode && numChildren > 0) {
 
     const SearchNode* bestChild = children[mostWeightedIdx].getIfAllocated();
+    int64_t bestChildEdgeVisits = children[mostWeightedIdx].getEdgeVisits();
+    Loc bestMoveLoc = children[mostWeightedIdx].getMoveLocRelaxed();
     assert(bestChild != NULL);
     const bool isRoot = true;
     const double policyProbMassVisited = 1.0; //doesn't matter, since fpu value computed from it isn't used here
@@ -133,21 +138,27 @@ bool Search::getPlaySelectionValues(
     assert(nnOutput != NULL);
     const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
     double bestChildExploreSelectionValue = getExploreSelectionValue(
-      node,policyProbs,bestChild,totalChildWeight,fpuValue,
+      node,policyProbs,bestChild,
+      bestMoveLoc,
+      totalChildWeight,bestChildEdgeVisits,fpuValue,
       parentUtility,parentWeightPerVisit,parentUtilityStdevFactor,
       isDuringSearch,false,maxChildWeight,NULL
     );
 
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
-      if(suppressPass && child->prevMoveLoc == Board::PASS_LOC) {
+      Loc moveLoc = children[i].getMoveLocRelaxed();
+      if(suppressPass && moveLoc == Board::PASS_LOC) {
         playSelectionValues[i] = 0;
         continue;
       }
       if(i != mostWeightedIdx) {
+        int64_t edgeVisits = children[i].getEdgeVisits();
         double reduced = getReducedPlaySelectionWeight(
           node, policyProbs, child,
-          totalChildWeight, parentUtilityStdevFactor, bestChildExploreSelectionValue
+          moveLoc,
+          totalChildWeight, edgeVisits,
+          parentUtilityStdevFactor, bestChildExploreSelectionValue
         );
         playSelectionValues[i] = (int64_t)ceil(reduced);
       }
@@ -160,7 +171,9 @@ bool Search::getPlaySelectionValues(
     int bestLcbIndex = -1;
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
-      getSelfUtilityLCBAndRadius(node,child,lcbBuf[i],radiusBuf[i]);
+      int64_t edgeVisits = children[i].getEdgeVisits();
+      Loc moveLoc = children[i].getMoveLocRelaxed();
+      getSelfUtilityLCBAndRadius(node,child,edgeVisits,moveLoc,lcbBuf[i],radiusBuf[i]);
       //Check if this node is eligible to be considered for best LCB
       double weight = playSelectionValues[i];
       if(weight >= MIN_VISITS_FOR_LCB && weight >= searchParams.minVisitPropForLCB * mostWeightedChildWeight) {
@@ -308,18 +321,21 @@ double Search::getNormToTApproxForLCB(int64_t numVisits) const {
   return normToTApproxTable[idx];
 }
 
-//Parent must be locked
-void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, double& lcbBuf, double& radiusBuf) const {
-  double weightSum = child->stats.weightSum.load(std::memory_order_acquire);
-  double weightSqSum = child->stats.weightSqSum.load(std::memory_order_acquire);
+void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, int64_t edgeVisits, Loc moveLoc, double& lcbBuf, double& radiusBuf) const {
+  int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+  double rawWeightSum = child->stats.weightSum.load(std::memory_order_acquire);
+  double rawWeightSqSum = child->stats.weightSqSum.load(std::memory_order_acquire);
   double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
   double scoreMeanSqAvg = child->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
   double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
   double utilitySqAvg = child->stats.utilitySqAvg.load(std::memory_order_acquire);
 
+  double weightSum = rawWeightSum * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
+  double weightSqSum = rawWeightSqSum * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
+
   radiusBuf = 2.0 * (searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor);
   lcbBuf = -radiusBuf;
-  if(weightSum <= 0.0 || weightSqSum <= 0.0)
+  if(childVisits <= 0 || weightSum <= 0.0 || weightSqSum <= 0.0)
     return;
 
   double ess = weightSum * weightSum / weightSqSum;
@@ -328,7 +344,7 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
     return;
 
   double utilityNoBonus = utilityAvg;
-  double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
+  double endingScoreBonus = getEndingWhiteScoreBonus(parent,moveLoc);
   double utilityDiff = getScoreUtilityDiff(scoreMeanAvg, scoreMeanSqAvg, endingScoreBonus);
   double utilityWithBonus = utilityNoBonus + utilityDiff;
   double selfUtility = parent.nextPla == P_WHITE ? utilityWithBonus : -utilityWithBonus;
@@ -457,7 +473,8 @@ const SearchNode* Search::getChildForMove(const SearchNode* node, Loc moveLoc) c
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
-    if(moveLoc == child->prevMoveLoc)
+    Loc childMoveLoc = children[i].getMoveLocRelaxed();
+    if(moveLoc == childMoveLoc)
       return child;
   }
   return NULL;
@@ -524,6 +541,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
 
   //Find the pass move
   const SearchNode* passNode = NULL;
+  int64_t passEdgeVisits = 0;
 
   int childrenCapacity;
   const SearchChildPointer* children = node.getChildren(childrenCapacity);
@@ -531,9 +549,10 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
-    Loc moveLoc = child->prevMoveLoc;
+    Loc moveLoc = children[i].getMoveLocRelaxed();
     if(moveLoc == Board::PASS_LOC) {
       passNode = child;
+      passEdgeVisits = children[i].getEdgeVisits();
       break;
     }
   }
@@ -545,13 +564,15 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
   double passScoreMean;
   double passLead;
   {
-    int64_t numVisits = node.stats.visits.load(std::memory_order_acquire);
-    double weightSum = node.stats.weightSum.load(std::memory_order_acquire);
-    double scoreMeanAvg = node.stats.scoreMeanAvg.load(std::memory_order_acquire);
-    double leadAvg = node.stats.leadAvg.load(std::memory_order_acquire);
-    double utilityAvg = node.stats.utilityAvg.load(std::memory_order_acquire);
+    int64_t childVisits = passNode->stats.visits.load(std::memory_order_acquire);
+    double rawWeightSum = passNode->stats.weightSum.load(std::memory_order_acquire);
+    double scoreMeanAvg = passNode->stats.scoreMeanAvg.load(std::memory_order_acquire);
+    double leadAvg = passNode->stats.leadAvg.load(std::memory_order_acquire);
+    double utilityAvg = passNode->stats.utilityAvg.load(std::memory_order_acquire);
 
-    if(numVisits <= 0 || weightSum <= 1e-10)
+    double weightSum = rawWeightSum * ((double)passEdgeVisits / (double)std::max(childVisits,(int64_t)1));
+
+    if(childVisits <= 0 || weightSum <= 1e-10)
       return false;
     passWeight = weightSum;
     passUtility = utilityAvg;
@@ -591,20 +612,20 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     case SearchParams::PassingBehavior::Standard: {
       const double extreme = 0.95;
 
-      for(int i = 0; i < childrenCapacity; i++) {
+      for(int i = 0; i<childrenCapacity; i++) {
         const SearchNode* child = children[i].getIfAllocated();
         if(child == NULL)
           break;
-        Loc moveLoc = child->prevMoveLoc;
+        Loc moveLoc = children[i].getMoveLocRelaxed();
         if(moveLoc == Board::PASS_LOC)
           continue;
-        int pos = NNPos::locToPos(moveLoc, rootBoard.x_size, nnXLen, nnYLen);
+        int pos = NNPos::locToPos(moveLoc,rootBoard.x_size,nnXLen,nnYLen);
         double plaOwnership = rootPla == P_WHITE ? whiteOwnerMap[pos] : -whiteOwnerMap[pos];
         bool oppOwned = plaOwnership < -extreme;
         bool adjToPlaOwned = false;
-        for(int j = 0; j < 4; j++) {
+        for(int j = 0; j<4; j++) {
           Loc adj = moveLoc + rootBoard.adj_offsets[j];
-          int adjPos = NNPos::locToPos(adj, rootBoard.x_size, nnXLen, nnYLen);
+          int adjPos = NNPos::locToPos(adj,rootBoard.x_size,nnXLen,nnYLen);
           double adjPlaOwnership = rootPla == P_WHITE ? whiteOwnerMap[adjPos] : -whiteOwnerMap[adjPos];
           if(adjPlaOwnership > extreme) {
             adjToPlaOwned = true;
@@ -614,14 +635,18 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
         if(oppOwned && !adjToPlaOwned)
           continue;
 
-        int64_t numVisits = child->stats.visits.load(std::memory_order_acquire);
-        double weightSum = child->stats.weightSum.load(std::memory_order_acquire);
+        int64_t edgeVisits = children[i].getEdgeVisits();
+
+        int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+        double rawWeightSum = child->stats.weightSum.load(std::memory_order_acquire);
         double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
         double leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
         double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
 
-        // Too few visits - reject move
-        if((numVisits <= 500 && weightSum <= 2 * sqrt(passWeight)) || weightSum <= 1e-10)
+        double weightSum = rawWeightSum * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
+
+        //Too few visits - reject move
+        if((edgeVisits <= 500 && weightSum <= 2 * sqrt(passWeight)) || weightSum <= 1e-10)
           continue;
 
         double utility = utilityAvg;
@@ -824,19 +849,21 @@ void Search::printRootEndingScoreValueBonus(ostream& out) const {
     if(child == NULL)
       break;
 
+    int64_t edgeVisits = children[i].getEdgeVisits();
+    Loc moveLoc = children[i].getMoveLocRelaxed();
     int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
     double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
     double scoreMeanSqAvg = child->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
     double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
 
     double utilityNoBonus = utilityAvg;
-    double endingScoreBonus = getEndingWhiteScoreBonus(*rootNode,child);
+    double endingScoreBonus = getEndingWhiteScoreBonus(*rootNode,moveLoc);
     double utilityDiff = getScoreUtilityDiff(scoreMeanAvg, scoreMeanSqAvg, endingScoreBonus);
     double utilityWithBonus = utilityNoBonus + utilityDiff;
 
-    out << Location::toString(child->prevMoveLoc,rootBoard) << " " << Global::strprintf(
-      "visits %d utilityNoBonus %.2fc utilityWithBonus %.2fc endingScoreBonus %.2f",
-      childVisits, utilityNoBonus*100, utilityWithBonus*100, endingScoreBonus
+    out << Location::toString(moveLoc,rootBoard) << " " << Global::strprintf(
+      "visits %d edgeVisits %d utilityNoBonus %.2fc utilityWithBonus %.2fc endingScoreBonus %.2f",
+      childVisits, edgeVisits, utilityNoBonus*100, utilityWithBonus*100, endingScoreBonus
     );
     out << endl;
   }
@@ -891,9 +918,7 @@ void Search::appendPVForMove(vector<Loc>& buf, vector<int64_t>& visitsBuf, vecto
     assert(child != NULL);
     node = child;
 
-    while(node->statsLock.test_and_set(std::memory_order_acquire));
-    int64_t visits = node->stats.visits;
-    node->statsLock.clear(std::memory_order_release);
+    int64_t visits = node->stats.visits.load(std::memory_order_acquire);
 
     buf.push_back(bestChildMoveLoc);
     visitsBuf.push_back(visits);
@@ -924,36 +949,41 @@ void Search::printPV(ostream& out, const vector<Loc>& buf) const {
 
 //Child should NOT be locked.
 AnalysisData Search::getAnalysisDataOfSingleChild(
-  const SearchNode* child, vector<Loc>& scratchLocs, vector<double>& scratchValues,
+  const SearchNode* child, int64_t edgeVisits, vector<Loc>& scratchLocs, vector<double>& scratchValues,
   Loc move, double policyProb, double fpuValue, double parentUtility, double parentWinLossValue,
   double parentScoreMean, double parentScoreStdev, double parentLead, int maxPVDepth
 ) const {
-  int64_t numVisits = 0;
+  int64_t childVisits = 0;
   double winLossValueAvg = 0.0;
   double noResultValueAvg = 0.0;
   double scoreMeanAvg = 0.0;
   double scoreMeanSqAvg = 0.0;
   double leadAvg = 0.0;
   double utilityAvg = 0.0;
+  double utilitySqAvg = 0.0;
   double weightSum = 0.0;
   double weightSqSum = 0.0;
 
   if(child != NULL) {
-    numVisits = child->stats.visits.load(std::memory_order_acquire);
-    weightSum = child->stats.weightSum.load(std::memory_order_acquire);
-    weightSqSum = child->stats.weightSqSum.load(std::memory_order_acquire);
+    childVisits = child->stats.visits.load(std::memory_order_acquire);
+    double rawWeightSum = child->stats.weightSum.load(std::memory_order_acquire);
+    double rawWeightSqSum = child->stats.weightSqSum.load(std::memory_order_acquire);
     winLossValueAvg = child->stats.winLossValueAvg.load(std::memory_order_acquire);
     noResultValueAvg = child->stats.noResultValueAvg.load(std::memory_order_acquire);
     scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
     scoreMeanSqAvg = child->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
     leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
     utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
+    utilitySqAvg = child->stats.utilitySqAvg.load(std::memory_order_acquire);
+
+    weightSum = rawWeightSum * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
+    weightSqSum = rawWeightSqSum * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
   }
 
   AnalysisData data;
   data.move = move;
-  data.numVisits = numVisits;
-  if(numVisits <= 0 || weightSum <= 1e-30 || weightSqSum <= 1e-60) {
+  data.numVisits = edgeVisits;
+  if(childVisits <= 0 || weightSum <= 1e-30 || weightSqSum <= 1e-60) {
     data.utility = fpuValue;
     data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev);
     data.resultUtility = fpuValue - data.scoreUtility;
@@ -967,6 +997,10 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
     data.scoreStdev = parentScoreStdev;
     data.lead = parentLead;
     data.ess = 0.0;
+    data.weightSum = 0.0;
+    data.weightSqSum = 0.0;
+    data.utilitySqAvg = data.utility * data.utility;
+    data.scoreMeanSqAvg = parentScoreMean * parentScoreMean + parentScoreStdev * parentScoreStdev;
   }
   else {
     data.utility = utilityAvg;
@@ -977,6 +1011,10 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
     data.scoreStdev = getScoreStdev(scoreMeanAvg,scoreMeanSqAvg);
     data.lead = leadAvg;
     data.ess = weightSum * weightSum / weightSqSum;
+    data.weightSum = weightSum;
+    data.weightSqSum = weightSqSum;
+    data.utilitySqAvg = utilitySqAvg;
+    data.scoreMeanSqAvg = scoreMeanSqAvg;
   }
 
   data.policyPrior = policyProb;
@@ -985,7 +1023,7 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   data.pv.clear();
   data.pv.push_back(move);
   data.pvVisits.clear();
-  data.pvVisits.push_back(numVisits);
+  data.pvVisits.push_back(childVisits);
   appendPV(data.pv, data.pvVisits, scratchLocs, scratchValues, child, maxPVDepth);
 
   data.node = child;
@@ -1007,7 +1045,11 @@ void Search::getAnalysisData(
 ) const {
   buf.clear();
   vector<const SearchNode*> children;
+  vector<int64_t> childrenEdgeVisits;
+  vector<Loc> childrenMoveLocs;
   children.reserve(rootBoard.x_size * rootBoard.y_size + 1);
+  childrenEdgeVisits.reserve(rootBoard.x_size * rootBoard.y_size + 1);
+  childrenMoveLocs.reserve(rootBoard.x_size * rootBoard.y_size + 1);
 
   int numChildren;
   vector<Loc> scratchLocs;
@@ -1023,6 +1065,8 @@ void Search::getAnalysisData(
       if(child == NULL)
         break;
       children.push_back(child);
+      childrenEdgeVisits.push_back(childrenArr[i].getEdgeVisits());
+      childrenMoveLocs.push_back(childrenArr[i].getMoveLocRelaxed());
     }
     numChildren = children.size();
 
@@ -1047,8 +1091,7 @@ void Search::getAnalysisData(
   double policyProbMassVisited = 0.0;
   {
     for(int i = 0; i<numChildren; i++) {
-      const SearchNode* child = children[i];
-      policyProbMassVisited += policyProbs[getPos(child->prevMoveLoc)];
+      policyProbMassVisited += policyProbs[getPos(childrenMoveLocs[i])];
     }
     //Probability mass should not sum to more than 1, giving a generous allowance
     //for floating point error.
@@ -1086,9 +1129,11 @@ void Search::getAnalysisData(
 
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];
-    double policyProb = policyProbs[getPos(child->prevMoveLoc)];
+    int64_t edgeVisits = childrenEdgeVisits[i];
+    Loc moveLoc = childrenMoveLocs[i];
+    double policyProb = policyProbs[getPos(moveLoc)];
     AnalysisData data = getAnalysisDataOfSingleChild(
-      child, scratchLocs, scratchValues, child->prevMoveLoc, policyProb, fpuValue, parentUtility, parentWinLossValue,
+      child, edgeVisits, scratchLocs, scratchValues, moveLoc, policyProb, fpuValue, parentUtility, parentWinLossValue,
       parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
     );
     data.playSelectionValue = playSelectionValues[i] / valueSum;
@@ -1098,13 +1143,13 @@ void Search::getAnalysisData(
     data.radius = radiusBuf[i];
     buf.push_back(data);
 
-    MoreNodeStats& stats = statsBuf[i];
-    while(child->statsLock.test_and_set(std::memory_order_acquire));
-    stats.stats = child->stats;
-    child->statsLock.clear(std::memory_order_release);
-    stats.selfUtility = node.nextPla == P_WHITE ? data.utility : -data.utility;
-    stats.weightAdjusted = stats.stats.weightSum;
-    stats.prevMoveLoc = child->prevMoveLoc;
+    if(includeWeightFactors) {
+      MoreNodeStats& stats = statsBuf[i];
+      stats.stats = NodeStats(child->stats);
+      stats.selfUtility = node.nextPla == P_WHITE ? data.utility : -data.utility;
+      stats.weightAdjusted = stats.stats.weightSum * ((double)edgeVisits / (double)std::max(stats.stats.visits,(int64_t)1));
+      stats.prevMoveLoc = moveLoc;
+    }
   }
 
   //Find all children and compute weighting of the children based on their values
@@ -1157,7 +1202,7 @@ void Search::getAnalysisData(
 
       Loc bestMove = NNPos::posToLoc(bestPos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
       AnalysisData data = getAnalysisDataOfSingleChild(
-        NULL, scratchLocs, scratchValues, bestMove, bestPolicy, fpuValue, parentUtility, parentWinLossValue,
+        NULL, 0, scratchLocs, scratchValues, bestMove, bestPolicy, fpuValue, parentUtility, parentWinLossValue,
         parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
       );
       buf.push_back(data);
@@ -1226,9 +1271,11 @@ void Search::printTree(ostream& out, const SearchNode* node, PrintTreeOptions op
     double parentScoreMean = 0;
     double parentScoreStdev = 0;
     double parentLead = 0;
+    //Since we don't have an edge from another parent we are following, we just use the visits on the node itself as the edge visits.
+    int64_t edgeVisits = node->stats.visits.load(std::memory_order_acquire);
     data = getAnalysisDataOfSingleChild(
-      node, scratchLocs, scratchValues,
-      (node == rootNode ? Board::NULL_LOC : node->prevMoveLoc), policyProb, fpuValue, parentUtility, parentWinLossValue,
+      node, edgeVisits, scratchLocs, scratchValues,
+      Board::NULL_LOC, policyProb, fpuValue, parentUtility, parentWinLossValue,
       parentScoreMean, parentScoreStdev, parentLead, options.maxPVDepth_
     );
     data.weightFactor = NAN;
@@ -1311,11 +1358,7 @@ void Search::printTreeHelper(
     }
 
     if(options.printSqs_) {
-      double weightSum = node.stats.weightSum.load(std::memory_order_acquire);
-      double weightSqSum = node.stats.weightSqSum.load(std::memory_order_acquire);
-      double scoreMeanSqAvg = node.stats.scoreMeanSqAvg.load(std::memory_order_acquire);
-      double utilitySqAvg = node.stats.utilitySqAvg.load(std::memory_order_acquire);
-      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f ", scoreMeanSqAvg, utilitySqAvg, weightSum, weightSqSum);
+      sprintf(buf,"SMSQ %5.1f USQ %7.5f W %6.2f WSQ %8.2f ", data.scoreMeanSqAvg, data.utilitySqAvg, data.weightSum, data.weightSqSum);
       out << buf;
     }
 
@@ -1375,7 +1418,7 @@ void Search::printTreeHelper(
 
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = analysisData[i].node;
-    Loc moveLoc = child->prevMoveLoc;
+    Loc moveLoc = analysisData[i].move;
 
     if((depth >= options.branch_.size() && i < numChildrenToRecurseOn) ||
        (depth < options.branch_.size() && moveLoc == options.branch_[depth]))
@@ -1395,6 +1438,7 @@ void Search::printTreeHelper(
     }
   }
 }
+
 
 std::pair<double,double> Search::getAverageShorttermWLAndScoreError(const SearchNode* node) const {
   if(node == NULL)
@@ -1436,7 +1480,10 @@ std::pair<double,double> Search::getAverageShorttermWLAndScoreErrorHelper(const 
   for(int i = numChildren-1; i>=0; i--) {
     const SearchNode* child = children[i].getIfAllocated();
     assert(child != NULL);
-    double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    int64_t edgeVisits = children[i].getEdgeVisits();
+    int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+    double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    double childWeight = rawChildWeight * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
     std::pair<double,double> result = getAverageShorttermWLAndScoreErrorHelper(child);
     wlErrorSum += result.first * childWeight;
     scoreErrorSum += result.second * childWeight;
@@ -1484,8 +1531,9 @@ bool Search::getSharpScore(const SearchNode* node, double& ret) const {
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
+    int64_t edgeVisits = children[i].getEdgeVisits();
     NodeStats stats = NodeStats(child->stats);
-    if(stats.visits <= 0 || stats.weightSum <= 0.0)
+    if(stats.visits <= 0 || stats.weightSum <= 0.0 || edgeVisits <= 0)
       continue;
     double weight = playSelectionValues[i];
     double sharpWeight = weight * weight * weight;
@@ -1527,13 +1575,13 @@ double Search::getSharpScoreHelper(const SearchNode* node, double policyProbsBuf
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
+    int64_t edgeVisits = children[i].getEdgeVisits();
+    Loc moveLoc = children[i].getMoveLocRelaxed();
     MoreNodeStats stats;
-    while(child->statsLock.test_and_set(std::memory_order_acquire));
-    stats.stats = child->stats;
-    child->statsLock.clear(std::memory_order_release);
+    stats.stats = NodeStats(child->stats);
     stats.selfUtility = node->nextPla == P_WHITE ? stats.stats.utilityAvg : -stats.stats.utilityAvg;
-    stats.weightAdjusted = stats.stats.weightSum;
-    stats.prevMoveLoc = child->prevMoveLoc;
+    stats.weightAdjusted = stats.stats.weightSum * ((double)edgeVisits / (double)std::max(stats.stats.visits,(int64_t)1));
+    stats.prevMoveLoc = moveLoc;
     statsBuf.push_back(stats);
   }
   int numChildren = (int)statsBuf.size();
@@ -1562,7 +1610,7 @@ double Search::getSharpScoreHelper(const SearchNode* node, double policyProbsBuf
   double scoreWeightSum = 0.0;
   double childWeightSum = 0.0;
   for(int i = 0; i<numChildren; i++) {
-    if(statsBuf[i].stats.visits <= 0 || statsBuf[i].stats.weightSum <= 0.0)
+    if(statsBuf[i].stats.visits <= 0 || statsBuf[i].stats.weightSum <= 0.0 || statsBuf[i].weightAdjusted <= 0.0)
       continue;
     double weight = statsBuf[i].weightAdjusted;
     double sharpWeight = weight * weight * weight;
@@ -1670,7 +1718,10 @@ double Search::traverseTreeWithOwnershipAndSelfWeightHelper(
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
-    double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    int64_t edgeVisits = children[i].getEdgeVisits();
+    int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+    double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    double childWeight = rawChildWeight * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
     childWeightBuf[i] = childWeight;
     numChildren += 1;
   }
@@ -1706,7 +1757,7 @@ static double roundStatic(double x, double inverseScale) {
   return round(x * inverseScale) / inverseScale;
 }
 static double roundDynamic(double x, int precision) {
-  double absx = abs(x);
+  double absx = std::fabs(x);
   if(absx <= 1e-60)
     return x;
   int orderOfMagnitude = (int)floor(log10(absx));
@@ -2007,9 +2058,10 @@ bool Search::getPrunedNodeValues(const SearchNode* nodePtr, ReportedSearchValues
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
+    int64_t edgeVisits = children[i].getEdgeVisits();
     NodeStats stats = NodeStats(child->stats);
 
-    if(stats.visits <= 0 || stats.weightSum <= 0.0)
+    if(stats.visits <= 0 || stats.weightSum <= 0.0 || edgeVisits <= 0)
       continue;
     double weight = playSelectionValues[i];
     winLossValueSum += weight * stats.winLossValueAvg;

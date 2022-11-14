@@ -10,6 +10,7 @@
 
 #include "../core/fancymath.h"
 #include "../core/timer.h"
+#include "../game/graphhash.h"
 #include "../search/distributiontable.h"
 
 using namespace std;
@@ -45,7 +46,7 @@ ReportedSearchValues::ReportedSearchValues(
   if(winLossValue < -1.0) winLossValue = -1.0;
   if(winLossValue > 1.0) winLossValue = 1.0;
   if(noResultValue < 0.0) noResultValue = 0.0;
-  if(noResultValue > 1.0-abs(winLossValue)) noResultValue = 1.0-abs(winLossValue);
+  if(noResultValue > 1.0-std::fabs(winLossValue)) noResultValue = 1.0-std::fabs(winLossValue);
 
   winValue = 0.5 * (winLossValue + (1.0 - noResultValue));
   lossValue = 0.5 * (-winLossValue + (1.0 - noResultValue));
@@ -72,6 +73,18 @@ NodeStatsAtomic::NodeStatsAtomic()
    utilitySqAvg(0.0),
    weightSum(0.0),
    weightSqSum(0.0)
+{}
+NodeStatsAtomic::NodeStatsAtomic(const NodeStatsAtomic& other)
+  :visits(other.visits.load(std::memory_order_acquire)),
+   winLossValueAvg(other.winLossValueAvg.load(std::memory_order_acquire)),
+   noResultValueAvg(other.noResultValueAvg.load(std::memory_order_acquire)),
+   scoreMeanAvg(other.scoreMeanAvg.load(std::memory_order_acquire)),
+   scoreMeanSqAvg(other.scoreMeanSqAvg.load(std::memory_order_acquire)),
+   leadAvg(other.leadAvg.load(std::memory_order_acquire)),
+   utilityAvg(other.utilityAvg.load(std::memory_order_acquire)),
+   utilitySqAvg(other.utilitySqAvg.load(std::memory_order_acquire)),
+   weightSum(other.weightSum.load(std::memory_order_acquire)),
+   weightSqSum(other.weightSqSum.load(std::memory_order_acquire))
 {}
 NodeStatsAtomic::~NodeStatsAtomic()
 {}
@@ -156,8 +169,19 @@ string Search::getRankStr() const {
 //-----------------------------------------------------------------------------------------
 
 SearchChildPointer::SearchChildPointer():
-  data(NULL)
+  data(NULL),
+  edgeVisits(0.0),
+  moveLoc(Board::NULL_LOC)
 {}
+
+void SearchChildPointer::storeAll(const SearchChildPointer& other) {
+  SearchNode* d = other.data.load(std::memory_order_acquire);
+  int64_t e = other.edgeVisits.load(std::memory_order_acquire);
+  Loc m = other.moveLoc.load(std::memory_order_acquire);
+  moveLoc.store(m,std::memory_order_release);
+  edgeVisits.store(e,std::memory_order_release);
+  data.store(d,std::memory_order_release);
+}
 
 SearchNode* SearchChildPointer::getIfAllocated() {
   return data.load(std::memory_order_acquire);
@@ -184,27 +208,104 @@ bool SearchChildPointer::storeIfNull(SearchNode* node) {
   return data.compare_exchange_strong(expected, node, std::memory_order_acq_rel);
 }
 
+int64_t SearchChildPointer::getEdgeVisits() const {
+  return edgeVisits.load(std::memory_order_acquire);
+}
+int64_t SearchChildPointer::getEdgeVisitsRelaxed() const {
+  return edgeVisits.load(std::memory_order_relaxed);
+}
+void SearchChildPointer::setEdgeVisits(int64_t x) {
+  edgeVisits.store(x, std::memory_order_release);
+}
+void SearchChildPointer::setEdgeVisitsRelaxed(int64_t x) {
+  edgeVisits.store(x, std::memory_order_relaxed);
+}
+void SearchChildPointer::addEdgeVisits(int64_t delta) {
+  edgeVisits.fetch_add(delta, std::memory_order_acq_rel);
+}
+bool SearchChildPointer::compexweakEdgeVisits(int64_t& expected, int64_t desired) {
+  return edgeVisits.compare_exchange_weak(expected, desired, std::memory_order_acq_rel);
+}
+
+
+Loc SearchChildPointer::getMoveLoc() const {
+  return moveLoc.load(std::memory_order_acquire);
+}
+Loc SearchChildPointer::getMoveLocRelaxed() const {
+  return moveLoc.load(std::memory_order_relaxed);
+}
+void SearchChildPointer::setMoveLoc(Loc loc) {
+  moveLoc.store(loc, std::memory_order_release);
+}
+void SearchChildPointer::setMoveLocRelaxed(Loc loc) {
+  moveLoc.store(loc, std::memory_order_relaxed);
+}
+
+
 //-----------------------------------------------------------------------------------------
 
 //Makes a search node resulting from prevPla playing prevLoc
-SearchNode::SearchNode(Player prevPla, Loc prevLoc, SearchNode* p)
-  :nextPla(getOpp(prevPla)),
-   prevMoveLoc(prevLoc),
-   parent(p),
+SearchNode::SearchNode(Player pla, bool fnt, uint32_t mIdx)
+  :nextPla(pla),
+   forceNonTerminal(fnt),
    patternBonusHash(),
+   mutexIdx(mIdx),
    state(SearchNode::STATE_UNEVALUATED),
    nnOutput(),
    nodeAge(0),
-   nodeAge2(0),
    children0(NULL),
    children1(NULL),
    children2(NULL),
    stats(),
    virtualLosses(0),
-   lastSubtreeValueBiasDeltaSum(0.0),lastSubtreeValueBiasWeight(0.0),
+   lastSubtreeValueBiasDeltaSum(0.0),
+   lastSubtreeValueBiasWeight(0.0),
    subtreeValueBiasTableEntry(),
    dirtyCounter(0)
 {
+}
+
+SearchNode::SearchNode(const SearchNode& other, bool fnt, bool copySubtreeValueBias)
+  :nextPla(other.nextPla),
+   forceNonTerminal(fnt),
+   patternBonusHash(other.patternBonusHash),
+   mutexIdx(other.mutexIdx),
+   state(other.state.load(std::memory_order_acquire)),
+   nnOutput(new std::shared_ptr<NNOutput>(*(other.nnOutput.load(std::memory_order_acquire)))),
+   nodeAge(other.nodeAge.load(std::memory_order_acquire)),
+   children0(NULL),
+   children1(NULL),
+   children2(NULL),
+   stats(other.stats),
+   virtualLosses(other.virtualLosses.load(std::memory_order_acquire)),
+   lastSubtreeValueBiasDeltaSum(0.0),
+   lastSubtreeValueBiasWeight(0.0),
+   subtreeValueBiasTableEntry(),
+   dirtyCounter(other.dirtyCounter.load(std::memory_order_acquire))
+{
+  if(other.children0 != NULL) {
+    children0 = new SearchChildPointer[CHILDREN0SIZE];
+    for(int i = 0; i<CHILDREN0SIZE; i++)
+      children0[i].storeAll(other.children0[i]);
+  }
+  if(other.children1 != NULL) {
+    children1 = new SearchChildPointer[CHILDREN1SIZE];
+    for(int i = 0; i<CHILDREN1SIZE; i++)
+      children1[i].storeAll(other.children1[i]);
+  }
+  if(other.children2 != NULL) {
+    children2 = new SearchChildPointer[CHILDREN2SIZE];
+    for(int i = 0; i<CHILDREN2SIZE; i++)
+      children2[i].storeAll(other.children2[i]);
+  }
+  if(copySubtreeValueBias) {
+    //Currently NOT implemented. If we ever want this, think very carefully about copying subtree value bias since
+    //if we later delete this node we risk double-counting removal of the subtree value bias!
+    assert(false);
+    //lastSubtreeValueBiasDeltaSum = other.lastSubtreeValueBiasDeltaSum;
+    //lastSubtreeValueBiasWeight = other.lastSubtreeValueBiasWeight;
+    //subtreeValueBiasTableEntry = other.subtreeValueBiasTableEntry;
+  }
 }
 
 SearchChildPointer* SearchNode::getChildren(int& childrenCapacity) {
@@ -283,6 +384,12 @@ bool SearchNode::tryExpandingChildrenCapacityAssumeFull(int& stateValue) {
       //Storing relaxed is fine since the array is not visible to other threads yet. The entire array will
       //be released shortly and that will ensure consumers see these childs, with an acquire on the whole array.
       children[i].storeRelaxed(child);
+      //Getting edge visits relaxed on old children might get slightly out of date if other threads are searching
+      //children while we expand, but those should self-correct rapidly with more playouts
+      children[i].setEdgeVisitsRelaxed(oldChildren[i].getEdgeVisitsRelaxed());
+      //Setting and loading move relaxed is fine because our acquire observation of all the children nodes
+      //ensures all the move locs are released to us, and we're storing this new array with release semantics.
+      children[i].setMoveLocRelaxed(oldChildren[i].getMoveLocRelaxed());
     }
     assert(children1 == NULL);
     children1 = children;
@@ -308,6 +415,12 @@ bool SearchNode::tryExpandingChildrenCapacityAssumeFull(int& stateValue) {
       //Storing relaxed is fine since the array is not visible to other threads yet. The entire array will
       //be released shortly and that will ensure consumers see these childs, with an acquire on the whole array.
       children[i].storeRelaxed(child);
+      //Getting weight relaxed on old children might get slightly out of date weights if other threads are searching
+      //children while we expand, but those should self-correct rapidly with more playouts
+      children[i].setEdgeVisitsRelaxed(oldChildren[i].getEdgeVisitsRelaxed());
+      //Setting and loading move relaxed is fine because our acquire observation of all the children nodes
+      //ensures all the move locs are released to us, and we're storing this new array with release semantics.
+      children[i].setMoveLocRelaxed(oldChildren[i].getMoveLocRelaxed());
     }
     assert(children2 == NULL);
     children2 = children;
@@ -382,24 +495,13 @@ bool SearchNode::storeNNOutputIfNull(std::shared_ptr<NNOutput>* newNNOutput) {
 }
 
 SearchNode::~SearchNode() {
-  int childrenCapacity;
-  SearchChildPointer* children = getChildren(state.load(),childrenCapacity);
-  int i = 0;
-  for(; i<childrenCapacity; i++) {
-    SearchNode* child = children[i].getIfAllocated();
-    if(child != NULL)
-      delete child;
-    else
-      break;
-  }
-
+  //Do NOT recursively delete children
   if(children2 != NULL)
     delete[] children2;
   if(children1 != NULL)
     delete[] children1;
   if(children0 != NULL)
     delete[] children0;
-
   if(nnOutput != NULL)
     delete nnOutput;
 }
@@ -424,13 +526,17 @@ SearchThread::SearchThread(int tIdx, const Search& search)
   :threadIdx(tIdx),
    pla(search.rootPla),board(search.rootBoard),
    history(search.rootHistory),
+   graphHash(search.rootGraphHash),
+   graphPath(),
    rand(makeSeed(search,tIdx)),
    nnResultBuf(),
    statsBuf(),
    upperBoundVisitsLeft(1e30),
-   oldNNOutputsToCleanUp()
+   oldNNOutputsToCleanUp(),
+   illegalMoveHashes()
 {
   statsBuf.resize(NNPos::MAX_NN_POLICY_SIZE);
+  graphPath.reserve(256);
 
   //Reserving even this many is almost certainly overkill but should guarantee that we never have hit allocation here.
   oldNNOutputsToCleanUp.reserve(8);
@@ -454,7 +560,10 @@ Search::Search(
   NNEvaluator* oppNNEval
 )
   :rootPla(P_BLACK),
-   rootBoard(),rootHistory(),rootHintLoc(Board::NULL_LOC),
+   rootBoard(),
+   rootHistory(),
+   rootGraphHash(),
+   rootHintLoc(Board::NULL_LOC),
    avoidMoveUntilByLocBlack(),avoidMoveUntilByLocWhite(),
    rootSymmetries(),
    rootPruneOnlySymmetries(),
@@ -474,6 +583,7 @@ Search::Search(
    normToTApproxZ(0.0),
    normToTApproxTable(),
    rootNode(NULL),
+   nodeTable(NULL),
    mutexPool(NULL),
    nnEvaluator(nnEval),
    nnXLen(),
@@ -528,18 +638,21 @@ Search::Search(
   );
 
   rootNode = NULL;
-  mutexPool = new MutexPool(params.mutexPoolSize);
+  nodeTable = new SearchNodeTable(params.nodeTableShardsPowerOfTwo);
+  mutexPool = new MutexPool(nodeTable->mutexPool->getNumMutexes());
 
   rootHistory.clear(rootBoard,rootPla,Rules(),0);
   rootKoHashTable->recompute(rootHistory);
 }
 
 Search::~Search() {
-  clearOldNNOutputs();
+  clearSearch();
+
   delete[] rootSafeArea;
   delete rootKoHashTable;
   delete valueWeightDistribution;
-  delete rootNode;
+
+  delete nodeTable;
   delete mutexPool;
   delete subtreeValueBiasTable;
   delete patternBonusTable;
@@ -829,8 +942,12 @@ void Search::setNNEval(NNEvaluator* nnEval) {
 
 void Search::clearSearch() {
   effectiveSearchTimeCarriedOver = 0.0;
-  recursivelyDelete(rootNode);
-  rootNode = NULL;
+  deleteAllTableNodesMulithreaded();
+  //Root is not stored in node table
+  if(rootNode != NULL) {
+    delete rootNode;
+    rootNode = NULL;
+  }
   clearOldNNOutputs();
   searchNodeAge = 0;
 }
@@ -878,7 +995,7 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
       if(child == NULL)
         break;
       numChildren++;
-      if(!foundChild && child->prevMoveLoc == moveLoc) {
+      if(!foundChild && children[i].getMoveLocRelaxed() == moveLoc) {
         foundChild = true;
         foundChildIdx = i;
       }
@@ -903,19 +1020,21 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
       {
         int64_t rootVisits = rootNode->stats.visits.load(std::memory_order_acquire);
         int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
-        effectiveSearchTimeCarriedOver = effectiveSearchTimeCarriedOver * (double)childVisits / (double)rootVisits * searchParams.treeReuseCarryOverTimeFactor;
+        double visitProportion = (double)childVisits / (double)rootVisits;
+        if(visitProportion > 1)
+          visitProportion = 1;
+        effectiveSearchTimeCarriedOver = effectiveSearchTimeCarriedOver * visitProportion * searchParams.treeReuseCarryOverTimeFactor;
       }
 
-      child->parent = NULL;
-
-      //Eliminate child entry in the array to prevent its deletion along with the root
-      children[foundChildIdx].store(NULL);
-      //But do a bit of hackery to ensure that children remain contiguously allocated - swap the last one into place.
-      children[foundChildIdx].store(children[numChildren-1].getIfAllocated());
-      children[numChildren-1].store(NULL);
-      //Delete the root and replace it with the child
-      recursivelyRemoveSubtreeValueBiasAndDelete({rootNode});
-      rootNode = child;
+      //Okay, this is now our new root! Create a copy so as to keep the root out of the node table.
+      const bool copySubtreeValueBias = false;
+      const bool forceNonTerminal = true;
+      rootNode = new SearchNode(*child, forceNonTerminal, copySubtreeValueBias);
+      //Sweep over the new root marking it as good (calling NULL function), and then delete anything unmarked.
+      //This will include the old root node and the old copy of the child that we promoted to root.
+      applyRecursivelyAnyOrderMulithreaded({rootNode}, NULL);
+      bool old = true;
+      deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded(old);
     }
     else {
       clearSearch();
@@ -929,19 +1048,24 @@ bool Search::makeMove(Loc moveLoc, Player movePla, bool preventEncore) {
   rootHistory.makeBoardMoveAssumeLegal(rootBoard,moveLoc,rootPla,rootKoHashTable,preventEncore);
   rootPla = getOpp(rootPla);
   rootKoHashTable->recompute(rootHistory);
+
+  //Explicitly clear avoid move arrays when we play a move - user needs to respecify them if they want them.
   avoidMoveUntilByLocBlack.clear();
   avoidMoveUntilByLocWhite.clear();
 
+  //If we're newly inferring some moves as handicap that we weren't before, clear since score will be wrong.
   if(rootHistory.whiteHandicapBonusScore != oldWhiteHandicapBonusScore)
     clearSearch();
 
   //In the case that we are conservativePass and a pass would end the game, need to clear the search.
   //This is because deeper in the tree, such a node would have been explored as ending the game, but now that
   //it's a root pass, it needs to be treated as if it no longer ends the game.
+  if(searchParams.conservativePass && rootHistory.passWouldEndGame(rootBoard,rootPla))
+    clearSearch();
+
   //In the case that we're preventing encore, and the phase would have ended, we also need to clear the search
   //since the search was conducted on the assumption that we're going into encore now.
-  if((searchParams.conservativePass && rootHistory.passWouldEndGame(rootBoard,rootPla)) ||
-     (preventEncore && rootHistory.passWouldEndPhase(rootBoard,rootPla)))
+  if(preventEncore && rootHistory.passWouldEndPhase(rootBoard,rootPla))
     clearSearch();
 
   return true;
@@ -1443,32 +1567,42 @@ void Search::beginSearch(bool pondering) {
   SearchThread dummyThread(-1, *this);
 
   if(rootNode == NULL) {
-    Loc prevMoveLoc = rootHistory.moveHistory.size() <= 0 ? Board::NULL_LOC : rootHistory.moveHistory[rootHistory.moveHistory.size()-1].loc;
-    rootNode = new SearchNode(getOpp(rootPla), prevMoveLoc, NULL);
+    //Avoid storing the root node in the nodeTable, guarantee that it never is part of a cycle, allocate it directly.
+    //Also force that it is non-terminal.
+    const bool forceNonTerminal = true;
+    rootNode = new SearchNode(rootPla, forceNonTerminal, createMutexIdxForNode(dummyThread));
   }
   else {
     //If the root node has any existing children, then prune things down if there are moves that should not be allowed at the root.
     SearchNode& node = *rootNode;
     int childrenCapacity;
     SearchChildPointer* children = node.getChildren(childrenCapacity);
+    bool anyFiltered = false;
     if(childrenCapacity > 0 && children != NULL) {
 
       //This filtering, by deleting children, doesn't conform to the normal invariants that hold during search.
       //However nothing else should be running at this time and the search hasn't actually started yet, so this is okay.
+      //Also we can't be affecting the tree since the root node isn't in the table and can't be transposed to.
       int numGoodChildren = 0;
-      bool anyFiltered = false;
       vector<SearchNode*> filteredNodes;
       {
         int i = 0;
         for(; i<childrenCapacity; i++) {
           SearchNode* child = children[i].getIfAllocated();
+          int64_t edgeVisits = children[i].getEdgeVisits();
+          Loc moveLoc = children[i].getMoveLoc();
           if(child == NULL)
             break;
           //Remove the child from its current spot
           children[i].store(NULL);
-          //Maybe add it back
-          if(isAllowedRootMove(child->prevMoveLoc)) {
+          children[i].setEdgeVisits(0);
+          children[i].setMoveLoc(Board::NULL_LOC);
+          //Maybe add it back. Specifically check for legality just in case weird graph interaction in the
+          //tree gives wrong legality - ensure that once we are the root, we are strict on legality.
+          if(rootHistory.isLegal(rootBoard,moveLoc,rootPla) && isAllowedRootMove(moveLoc)) {
             children[numGoodChildren].store(child);
+            children[numGoodChildren].setEdgeVisits(edgeVisits);
+            children[numGoodChildren].setMoveLoc(moveLoc);
             numGoodChildren++;
           }
           else {
@@ -1484,16 +1618,14 @@ void Search::beginSearch(bool pondering) {
       }
 
       if(anyFiltered) {
-        recursivelyRemoveSubtreeValueBiasAndDelete(filteredNodes);
-
         //Fix up the number of visits of the root node after doing this filtering
         int64_t newNumVisits = 0;
         for(int i = 0; i<childrenCapacity; i++) {
           const SearchNode* child = children[i].getIfAllocated();
           if(child == NULL)
             break;
-          int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
-          newNumVisits += childVisits;
+          int64_t edgeVisits = children[i].getEdgeVisits();
+          newNumVisits += edgeVisits;
         }
 
         //Just for cleanliness after filtering - delete the smaller children arrays.
@@ -1532,6 +1664,19 @@ void Search::beginSearch(bool pondering) {
     //And also to clear out lastResponseBiasDeltaSum and lastResponseBiasWeight
     if(searchParams.dynamicScoreUtilityFactor != 0 || searchParams.subtreeValueBiasFactor != 0 || patternBonusTable != NULL) {
       recursivelyRecomputeStats(node);
+      if(anyFiltered) {
+        //Recursive stats recomputation resulted in us marking all nodes we have. Anything filtered is old now, delete it.
+        bool old = true;
+        deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded(old);
+      }
+    }
+    else {
+      if(anyFiltered) {
+        //Sweep over the entire child marking it as good (calling NULL function), and then delete anything unmarked.
+        applyRecursivelyAnyOrderMulithreaded({rootNode}, NULL);
+        bool old = true;
+        deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded(old);
+      }
     }
   }
 
@@ -1543,13 +1688,94 @@ void Search::beginSearch(bool pondering) {
   searchNodeAge++;
 }
 
+uint32_t Search::createMutexIdxForNode(SearchThread& thread) const {
+  return thread.rand.nextUInt() & (mutexPool->getNumMutexes()-1);
+}
+
+//Based on sha256 of "search.cpp FORCE_NON_TERMINAL_HASH"
+static const Hash128 FORCE_NON_TERMINAL_HASH = Hash128(0xd4c31800cb8809e2ULL,0xf75f9d2083f2ffcaULL);
+
+//Must be called AFTER making the bestChildMoveLoc in the thread board and hist.
+SearchNode* Search::allocateOrFindNode(SearchThread& thread, Player nextPla, Loc bestChildMoveLoc, bool forceNonTerminal, Hash128 graphHash) {
+  //Hash to use as a unique id for this node in the table, for transposition detection.
+  //If this collides, we will be sad, but it should be astronomically rare since our hash is 128 bits.
+  Hash128 childHash;
+  if(searchParams.useGraphSearch) {
+    childHash = graphHash;
+    if(forceNonTerminal)
+      childHash ^= FORCE_NON_TERMINAL_HASH;
+  }
+  else {
+    childHash = thread.board.pos_hash ^ Hash128(thread.rand.nextUInt64(),thread.rand.nextUInt64());
+  }
+
+  uint32_t nodeTableIdx = nodeTable->getIndex(childHash.hash0);
+  std::mutex& mutex = nodeTable->mutexPool->getMutex(nodeTableIdx);
+  std::lock_guard<std::mutex> lock(mutex);
+
+  SearchNode* child = NULL;
+  std::map<Hash128,SearchNode*>& nodeMap = nodeTable->entries[nodeTableIdx];
+
+  while(true) {
+    auto insertLoc = nodeMap.lower_bound(childHash);
+
+    if(insertLoc != nodeMap.end() && insertLoc->first == childHash) {
+      //Attempt to transpose to invalid node - rerandomize hash and just store this node somewhere arbitrary.
+      if(insertLoc->second->nextPla != nextPla) {
+        childHash = thread.board.pos_hash ^ Hash128(thread.rand.nextUInt64(),thread.rand.nextUInt64());
+        continue;
+      }
+      child = insertLoc->second;
+    }
+    else {
+      child = new SearchNode(nextPla, forceNonTerminal, createMutexIdxForNode(thread));
+
+      //Also perform subtree value bias and pattern bonus handling under the mutex. These parameters are no atomic, so
+      //if the node is accessed concurrently by other nodes through the table, we need to make sure these parameters are fully
+      //fully-formed before we make the node accessible to anyone.
+
+      if(searchParams.subtreeValueBiasFactor != 0 && subtreeValueBiasTable != NULL) {
+        //TODO can we make subtree value bias not depend on prev move loc?
+        if(thread.history.moveHistory.size() >= 2) {
+          Loc prevMoveLoc = thread.history.moveHistory[thread.history.moveHistory.size()-2].loc;
+          if(prevMoveLoc != Board::NULL_LOC) {
+            child->subtreeValueBiasTableEntry = subtreeValueBiasTable->get(getOpp(thread.pla), prevMoveLoc, bestChildMoveLoc, thread.history.getRecentBoard(1));
+          }
+        }
+      }
+
+      if(patternBonusTable != NULL)
+        child->patternBonusHash = patternBonusTable->getHash(getOpp(thread.pla), bestChildMoveLoc, thread.history.getRecentBoard(1));
+
+      //Insert into map! Use insertLoc as hint.
+      nodeMap.insert(insertLoc, std::make_pair(childHash,child));
+    }
+    break;
+  }
+  return child;
+}
+
+static void maybeAppendShuffledIntRange(int cap, PCG32* rand, std::vector<int>& randBuf) {
+  if(rand != NULL) {
+    size_t randBufStart = randBuf.size();
+    for(int i = 0; i<cap; i++)
+      randBuf.push_back(i);
+    for(int i = 1; i<cap; i++) {
+      int r = (int)(rand->nextUInt() % (uint32_t)(i+1));
+      int tmp = randBuf[randBufStart+i];
+      randBuf[randBufStart+i] = randBuf[randBufStart+r];
+      randBuf[randBufStart+r] = tmp;
+    }
+  }
+}
+
+
 //Walk over all nodes and their children recursively and call f, children first.
 //Assumes that only other instances of this function are running - in particular, the tree
 //is not being mutated by something else. It's okay if f mutates nodes, so long as it only mutates
 //nodes that will no longer be iterated over (namely, only stuff at the node or within its subtree).
-//Also, we use visits of a node to heuristically determine when to stop parallelization and limit threading overhead,
-//so f is NOT allowed to modify visits.
-void Search::applyRecursivelyPostOrderMulithreaded(const vector<SearchNode*>& nodes, std::function<void(SearchNode*,int,bool)>* f) {
+//As a side effect, nodeAge == searchNodeAge will be true only for the nodes walked over.
+void Search::applyRecursivelyPostOrderMulithreaded(const vector<SearchNode*>& nodes, std::function<void(SearchNode*,int)>* f) {
   //We invalidate all node ages so we can use them as a marker for what's done.
   searchNodeAge += 1;
 
@@ -1563,68 +1789,31 @@ void Search::applyRecursivelyPostOrderMulithreaded(const vector<SearchNode*>& no
   std::function<void(int)> g = [&](int threadIdx) {
     assert(threadIdx >= 0 && threadIdx < rands.size());
     PCG32* rand = rands[threadIdx];
-    if(threadIdx == 0) {
-      for(int i = 0; i<numChildren; i++)
-        applyRecursivelyPostOrderMulithreadedHelper(nodes[i],threadIdx,rand,f);
+    std::unordered_set<SearchNode*> nodeBuf;
+    std::vector<int> randBuf;
+
+    size_t randBufStart = randBuf.size();
+    maybeAppendShuffledIntRange(numChildren, rand, randBuf);
+    for(int i = 0; i<numChildren; i++) {
+      int childIdx = rand != NULL ? randBuf[randBufStart+i] : i;
+      applyRecursivelyPostOrderMulithreadedHelper(nodes[childIdx],threadIdx,rand,nodeBuf,randBuf,f);
     }
-    else {
-      int offset = (int)((rand->nextUInt() + (uint32_t)threadIdx) % numChildren);
-      for(int i = offset; i<numChildren; i++)
-        applyRecursivelyPostOrderMulithreadedHelper(nodes[i],threadIdx,rand,f);
-      for(int i = 0; i<offset; i++)
-        applyRecursivelyPostOrderMulithreadedHelper(nodes[i],threadIdx,rand,f);
-    }
+    randBuf.resize(randBufStart);
   };
   performTaskWithThreads(&g);
   for(int threadIdx = 1; threadIdx<numAdditionalThreads+1; threadIdx++)
     delete rands[threadIdx];
 }
 
-void Search::applyRecursivelyPostOrderSinglethreadedHelper(SearchNode* node, int threadIdx, std::function<void(SearchNode*,int,bool)>* f) {
-  int childrenCapacity;
-  SearchChildPointer* children = node->getChildren(childrenCapacity);
-  for(int i = 0; i<childrenCapacity; i++) {
-    SearchNode* child = children[i].getIfAllocated();
-    if(child == NULL)
-      break;
-    applyRecursivelyPostOrderSinglethreadedHelper(child, threadIdx, f);
-  }
-  (*f)(node,threadIdx,true);
-}
-
-//Does NOT handle graphs, only trees.
-int Search::applyRecursivelyPostOrderMulithreadedHelper(SearchNode* node, int threadIdx, PCG32* rand, std::function<void(SearchNode*,int,bool)>* f) {
-  //This node and everything beneath it are done, and we were the one who finished it
-  static constexpr int DONE_BY_US = 2;
-  //This node is done, but someone else did it
-  static constexpr int DONE_BY_OTHER = 1;
-  //There is nothing further to do in subtree but node itself is not done.
-  static constexpr int NOT_DONE_BUT_NO_WORK = 0;
-
-  //nodeAge2 == searchNodeAge means that the node is fully done.
-  //nodeAge == searchNodeAge means that the node is not fully done, but there is no work for new threads entering this node to do.
-  //Sequentially consistent load makes sure that there is a last child whose nodeAge2 is set. The thread that sets it is guaranteed
-  //to then see all other nodeAge2s of the children are set. So at least one thread will see all children done, and proceed to handle the parent.
-  //We will never thread 1 sees node A done but not B and thread 2 sees B done but not A, and both leave and the parent is dropped on the floor.
-  if(node->nodeAge2.load(std::memory_order_seq_cst) == searchNodeAge)
-    return DONE_BY_OTHER;
+void Search::applyRecursivelyPostOrderMulithreadedHelper(
+  SearchNode* node, int threadIdx, PCG32* rand, std::unordered_set<SearchNode*>& nodeBuf, std::vector<int>& randBuf, std::function<void(SearchNode*,int)>* f
+) {
+  //nodeAge == searchNodeAge means that the node is done.
   if(node->nodeAge.load(std::memory_order_acquire) == searchNodeAge)
-    return NOT_DONE_BUT_NO_WORK;
-
-  //Relaxed load is okay since we're assuming this value is constant through the recursion.
-  int64_t visits = node->stats.visits.load(std::memory_order_relaxed);
-
-  //Fall down to singlethreaded at low enough visits to minimize overall threading and sync overhead.
-  static constexpr int64_t NO_MULTIHREAD_VISITS_THRESHOLD = 1024;
-  if(visits <= NO_MULTIHREAD_VISITS_THRESHOLD) {
-    //The thread that is first to update it wins and does the action.
-    uint32_t oldAge = node->nodeAge.exchange(searchNodeAge,std::memory_order_acq_rel);
-    if(oldAge == searchNodeAge)
-      return NOT_DONE_BUT_NO_WORK;
-    applyRecursivelyPostOrderSinglethreadedHelper(node,threadIdx,f);
-    node->nodeAge2.store(searchNodeAge,std::memory_order_seq_cst);
-    return DONE_BY_US;
-  }
+    return;
+  //Cycle! Just consider this node "done" and return.
+  if(nodeBuf.find(node) != nodeBuf.end())
+    return;
 
   //Recurse on all children
   int childrenCapacity;
@@ -1632,127 +1821,155 @@ int Search::applyRecursivelyPostOrderMulithreadedHelper(SearchNode* node, int th
   int numChildren = SearchNode::iterateAndCountChildrenInArray(children,childrenCapacity);
 
   if(numChildren > 0) {
-    int offset = threadIdx == 0 ? 0 : (int)((rand->nextUInt() + (uint32_t)threadIdx) % numChildren);
-    bool anyNotDone = false;
-    bool anyNotDoneAfterUs = false;
-    int lastDeltaDoneByUs = -1;
-    for(int delta = 0; delta<numChildren; delta++) {
-      int i = (delta + offset) % numChildren;
-      int result = applyRecursivelyPostOrderMulithreadedHelper(children[i].getIfAllocated(), threadIdx, rand, f);
-      if(result == DONE_BY_US) {
-        lastDeltaDoneByUs = delta;
-        anyNotDoneAfterUs = false;
-      }
-      else if(result == DONE_BY_OTHER) {
-      }
-      else {
-        anyNotDone = true;
-        anyNotDoneAfterUs = true;
-      }
-    }
+    size_t randBufStart = randBuf.size();
+    maybeAppendShuffledIntRange(numChildren, rand, randBuf);
 
-    //If we didn't even do any of the work, it was all other threads, then it's the responsibility of one of those threads
-    //to finish up this node.
-    if(lastDeltaDoneByUs <= -1)
-      return NOT_DONE_BUT_NO_WORK;
-    //If after the latest node we finished, we found nodes that weren't finished that other threads were still working on,
-    //then there is nothing for us to do, we leave it up to one of those threads to finish this node too.
-    if(anyNotDoneAfterUs)
-      return NOT_DONE_BUT_NO_WORK;
-    //If *before* the latest node we finished, we found nodes that weren't finished, go check if they're done now.
-    if(anyNotDone) {
-      anyNotDone = false;
-      for(int delta = 0; delta<numChildren; delta++) {
-        int i = (delta + offset) % numChildren;
-        SearchNode* child = children[i].getIfAllocated();
-        if(child->nodeAge2.load(std::memory_order_seq_cst) != searchNodeAge) {
-          anyNotDone = true;
-          break;
-        }
-      }
-      //Still not done? Then it's on those threads to finish up here when they're done.
-      if(anyNotDone)
-        return NOT_DONE_BUT_NO_WORK;
+    nodeBuf.insert(node);
+    for(int i = 0; i<numChildren; i++) {
+      int childIdx = rand != NULL ? randBuf[randBufStart+i] : i;
+      applyRecursivelyPostOrderMulithreadedHelper(children[childIdx].getIfAllocated(), threadIdx, rand, nodeBuf, randBuf, f);
     }
+    randBuf.resize(randBufStart);
+    nodeBuf.erase(node);
+  }
 
-    //If we reach here, then we finished at least one child, and every other child is done too.
-    //At least one thread must reach here, since due to sequential consistency, all threads will agree on the setting order of
-    //child->nodeAge2, and there must be a last child whose nodeAge2 was set. The thread that sets the last one will see all
-    //other things done at that point, and will reach here.
+  //Now call postorder function, protected by lock
+  std::lock_guard<std::mutex> lock(mutexPool->getMutex(node->mutexIdx));
+  //Make sure another node didn't get there first.
+  if(node->nodeAge.load(std::memory_order_acquire) == searchNodeAge)
+    return;
+  if(f != NULL)
+    (*f)(node,threadIdx);
+  node->nodeAge.store(searchNodeAge,std::memory_order_release);
+}
+
+
+//Walk over all nodes and their children recursively and call f. No order guarantee, but does guarantee that f is called only once per node.
+//Assumes that only other instances of this function are running - in particular, the tree
+//is not being mutated by something else. It's okay if f mutates nodes.
+//As a side effect, nodeAge == searchNodeAge will be true only for the nodes walked over.
+void Search::applyRecursivelyAnyOrderMulithreaded(const vector<SearchNode*>& nodes, std::function<void(SearchNode*,int)>* f) {
+  //We invalidate all node ages so we can use them as a marker for what's done.
+  searchNodeAge += 1;
+
+  //Simple cheap RNGs so that we can get the different threads into different parts of the tree and not clash.
+  int numAdditionalThreads = numAdditionalThreadsToUseForTasks();
+  std::vector<PCG32*> rands(numAdditionalThreads+1, NULL);
+  for(int threadIdx = 1; threadIdx<numAdditionalThreads+1; threadIdx++)
+    rands[threadIdx] = new PCG32(nonSearchRand.nextUInt64());
+
+  int numChildren = (int)nodes.size();
+  std::function<void(int)> g = [&](int threadIdx) {
+    assert(threadIdx >= 0 && threadIdx < rands.size());
+    PCG32* rand = rands[threadIdx];
+    std::unordered_set<SearchNode*> nodeBuf;
+    std::vector<int> randBuf;
+
+    size_t randBufStart = randBuf.size();
+    maybeAppendShuffledIntRange(numChildren, rand, randBuf);
+    for(int i = 0; i<numChildren; i++) {
+      int childIdx = rand != NULL ? randBuf[randBufStart+i] : i;
+      applyRecursivelyAnyOrderMulithreadedHelper(nodes[childIdx],threadIdx,rand,nodeBuf,randBuf,f);
+    }
+    randBuf.resize(randBufStart);
+  };
+  performTaskWithThreads(&g);
+  for(int threadIdx = 1; threadIdx<numAdditionalThreads+1; threadIdx++)
+    delete rands[threadIdx];
+}
+
+void Search::applyRecursivelyAnyOrderMulithreadedHelper(
+  SearchNode* node, int threadIdx, PCG32* rand, std::unordered_set<SearchNode*>& nodeBuf, std::vector<int>& randBuf, std::function<void(SearchNode*,int)>* f
+) {
+  //nodeAge == searchNodeAge means that the node is done.
+  if(node->nodeAge.load(std::memory_order_acquire) == searchNodeAge)
+    return;
+  //Cycle! Just consider this node "done" and return.
+  if(nodeBuf.find(node) != nodeBuf.end())
+    return;
+
+  //Recurse on all children
+  int childrenCapacity;
+  SearchChildPointer* children = node->getChildren(childrenCapacity);
+  int numChildren = SearchNode::iterateAndCountChildrenInArray(children,childrenCapacity);
+
+  if(numChildren > 0) {
+    size_t randBufStart = randBuf.size();
+    maybeAppendShuffledIntRange(numChildren, rand, randBuf);
+
+    nodeBuf.insert(node);
+    for(int i = 0; i<numChildren; i++) {
+      int childIdx = rand != NULL ? randBuf[randBufStart+i] : i;
+      applyRecursivelyAnyOrderMulithreadedHelper(children[childIdx].getIfAllocated(), threadIdx, rand, nodeBuf, randBuf, f);
+    }
+    randBuf.resize(randBufStart);
+    nodeBuf.erase(node);
   }
 
   //The thread that is first to update it wins and does the action.
   uint32_t oldAge = node->nodeAge.exchange(searchNodeAge,std::memory_order_acq_rel);
   if(oldAge == searchNodeAge)
-    return NOT_DONE_BUT_NO_WORK;
-  (*f)(node,threadIdx,false);
-  node->nodeAge2.store(searchNodeAge,std::memory_order_seq_cst);
-  return DONE_BY_US;
-}
-
-//For huge search trees, this should be faster than just calling "delete", although maybe it could vary with the
-//malloc implementation.
-void Search::recursivelyDelete(SearchNode* n) {
-  if(n == NULL)
     return;
-  std::function<void(SearchNode*,int,bool)> f = [&](SearchNode* node, int threadIdx, bool isSingleThreadedSubtree) {
-    (void)threadIdx;
-    if(isSingleThreadedSubtree) {
-      int childrenCapacity;
-      SearchChildPointer* children = node->getChildren(node->state.load(std::memory_order_acquire),childrenCapacity);
-      int i = 0;
-      for(; i<childrenCapacity; i++) {
-        SearchNode* child = children[i].getIfAllocated();
-        if(child != NULL) {
-          children[i].store(NULL);
-          delete child;
-        }
-        else
-          break;
-      }
-    }
-  };
-
-  applyRecursivelyPostOrderMulithreaded({n},&f);
-  delete n;
+  if(f != NULL)
+    (*f)(node,threadIdx);
 }
 
-//Recursively walk over part of the tree that we are about to delete and remove its contribution to the value bias in the table
-//Assumes that this is the only function running concurrently on the search tree
-void Search::recursivelyRemoveSubtreeValueBiasAndDelete(const vector<SearchNode*>& nodes) {
-  std::function<void(SearchNode*,int,bool)> f = [&](SearchNode* node, int threadIdx, bool isSingleThreadedSubtree) {
-    (void)threadIdx;
-    if(node->subtreeValueBiasTableEntry != nullptr) {
-      double deltaUtilitySumToSubtract = node->lastSubtreeValueBiasDeltaSum * searchParams.subtreeValueBiasFreeProp;
-      double weightSumToSubtract = node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
+void Search::removeSubtreeValueBias(SearchNode* node) {
+  if(node->subtreeValueBiasTableEntry != nullptr) {
+    double deltaUtilitySumToSubtract = node->lastSubtreeValueBiasDeltaSum * searchParams.subtreeValueBiasFreeProp;
+    double weightSumToSubtract = node->lastSubtreeValueBiasWeight * searchParams.subtreeValueBiasFreeProp;
 
-      SubtreeValueBiasEntry& entry = *(node->subtreeValueBiasTableEntry);
-      while(entry.entryLock.test_and_set(std::memory_order_acquire));
-      entry.deltaUtilitySum -= deltaUtilitySumToSubtract;
-      entry.weightSum -= weightSumToSubtract;
-      entry.entryLock.clear(std::memory_order_release);
-    }
+    SubtreeValueBiasEntry& entry = *(node->subtreeValueBiasTableEntry);
+    while(entry.entryLock.test_and_set(std::memory_order_acquire));
+    entry.deltaUtilitySum -= deltaUtilitySumToSubtract;
+    entry.weightSum -= weightSumToSubtract;
+    entry.entryLock.clear(std::memory_order_release);
+    node->subtreeValueBiasTableEntry = nullptr;
+  }
+}
 
-    //If we're in a subtree that only one thread is ever visiting, then it becomes safe for us to delete stuff below.
-    if(isSingleThreadedSubtree) {
-      int childrenCapacity;
-      SearchChildPointer* children = node->getChildren(node->state.load(std::memory_order_acquire),childrenCapacity);
-      int i = 0;
-      for(; i<childrenCapacity; i++) {
-        SearchNode* child = children[i].getIfAllocated();
-        if(child != NULL) {
-          children[i].store(NULL);
-          delete child;
+//Delete ALL nodes where nodeAge < searchNodeAge if old is true, else all nodes where nodeAge >= searchNodeAge
+//Also clears subtreevaluebias for deleted nodes.
+void Search::deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded(bool old) {
+  int numAdditionalThreads = numAdditionalThreadsToUseForTasks();
+  assert(numAdditionalThreads >= 0);
+  std::function<void(int)> g = [&](int threadIdx) {
+    size_t idx0 = (size_t)((uint64_t)(threadIdx) * nodeTable->entries.size() / (numAdditionalThreads+1));
+    size_t idx1 = (size_t)((uint64_t)(threadIdx+1) * nodeTable->entries.size() / (numAdditionalThreads+1));
+    for(size_t i = idx0; i<idx1; i++) {
+      std::map<Hash128,SearchNode*>& nodeMap = nodeTable->entries[i];
+      for(auto it = nodeMap.cbegin(); it != nodeMap.cend();) {
+        SearchNode* node = it->second;
+        if(old == (node->nodeAge.load(std::memory_order_acquire) < searchNodeAge)) {
+          removeSubtreeValueBias(node);
+          delete node;
+          it = nodeMap.erase(it);
         }
         else
-          break;
+          ++it;
       }
     }
   };
+  performTaskWithThreads(&g);
+}
 
-  applyRecursivelyPostOrderMulithreaded(nodes,&f);
-  for(size_t i = 0; i<nodes.size(); i++)
-    delete nodes[i];
+//Delete ALL nodes. More efficient than deleteAllOldOrAllNewTableNodesAndSubtreeValueBiasMulithreaded if deleting everything.
+//Doesn't clear subtree value bias.
+void Search::deleteAllTableNodesMulithreaded() {
+  int numAdditionalThreads = numAdditionalThreadsToUseForTasks();
+  assert(numAdditionalThreads >= 0);
+  std::function<void(int)> g = [&](int threadIdx) {
+    size_t idx0 = (size_t)((uint64_t)(threadIdx) * nodeTable->entries.size() / (numAdditionalThreads+1));
+    size_t idx1 = (size_t)((uint64_t)(threadIdx+1) * nodeTable->entries.size() / (numAdditionalThreads+1));
+    for(size_t i = idx0; i<idx1; i++) {
+      std::map<Hash128,SearchNode*>& nodeMap = nodeTable->entries[i];
+      for(auto it = nodeMap.cbegin(); it != nodeMap.cend(); ++it) {
+        delete it->second;
+      }
+      nodeMap.clear();
+    }
+  };
+  performTaskWithThreads(&g);
 }
 
 //This function should NOT ever be called concurrently with any other threads modifying the search tree.
@@ -1764,8 +1981,7 @@ void Search::recursivelyRecomputeStats(SearchNode& n) {
   for(int threadIdx = 0; threadIdx<numAdditionalThreads+1; threadIdx++)
     dummyThreads[threadIdx] = new SearchThread(threadIdx, *this);
 
-  std::function<void(SearchNode*,int,bool)> f = [&](SearchNode* node, int threadIdx, bool isSingleThreadedSubtree) {
-    (void)isSingleThreadedSubtree;
+  std::function<void(SearchNode*,int)> f = [&](SearchNode* node, int threadIdx) {
     assert(threadIdx >= 0 && threadIdx < dummyThreads.size());
     SearchThread& thread = *(dummyThreads[threadIdx]);
 
@@ -1848,18 +2064,25 @@ void Search::recursivelyRecomputeStats(SearchNode& n) {
 
 //Mainly for testing
 std::vector<SearchNode*> Search::enumerateTreePostOrder() {
-  int64_t numVisits = rootNode->stats.visits.load();
-  std::vector<SearchNode*> nodes(numVisits,NULL);
-  std::atomic<int64_t> indexCounter(0);
-  std::function<void(SearchNode*,int,bool)> f = [&](SearchNode* node, int threadIdx, bool isSingleThreadedSubtree) {
+  std::atomic<int64_t> sizeCounter(0);
+  std::function<void(SearchNode*,int)> f = [&](SearchNode* node, int threadIdx) {
+    (void)node;
     (void)threadIdx;
-    (void)isSingleThreadedSubtree;
-    int64_t index = indexCounter.fetch_add(1,std::memory_order_relaxed);
-    assert(index >= 0 && index < numVisits);
-    nodes[index] = node;
+    sizeCounter.fetch_add(1,std::memory_order_relaxed);
   };
   applyRecursivelyPostOrderMulithreaded({rootNode},&f);
-  nodes.resize(indexCounter.load());
+
+  int64_t size = sizeCounter.load(std::memory_order_relaxed);
+  std::vector<SearchNode*> nodes(size,NULL);
+  std::atomic<int64_t> indexCounter(0);
+  std::function<void(SearchNode*,int)> g = [&](SearchNode* node, int threadIdx) {
+    (void)threadIdx;
+    int64_t index = indexCounter.fetch_add(1,std::memory_order_relaxed);
+    assert(index >= 0 && index < size);
+    nodes[index] = node;
+  };
+  applyRecursivelyPostOrderMulithreaded({rootNode},&g);
+  assert(indexCounter.load(std::memory_order_relaxed) == size);
   return nodes;
 }
 
@@ -1932,6 +2155,12 @@ void Search::computeRootValues() {
     if(recentScoreCenter < expectedScore - cap)
       recentScoreCenter = expectedScore - cap;
   }
+
+  //If we're using graph search, we recompute the graph hash from scratch at the start of search.
+  if(searchParams.useGraphSearch)
+    rootGraphHash = GraphHash::getGraphHashFromScratch(rootHistory, rootPla, searchParams.graphSearchRepBound, searchParams.drawEquivalentWinsForWhite);
+  else
+    rootGraphHash = Hash128();
 
   Player opponentWasMirroringPla = mirroringPla;
   mirroringPla = C_EMPTY;
@@ -2032,25 +2261,6 @@ struct PolicySortEntry {
     return policy == other.policy && pos == other.pos;
   }
 };
-
-//Finds the top n moves, or fewer if there are fewer than that many total legal moves.
-//Returns the number of legal moves found
-int Search::findTopNPolicy(const SearchNode* node, int n, PolicySortEntry* sortedPolicyBuf) const {
-  const std::shared_ptr<NNOutput>* nnOutput = node->nnOutput.load(std::memory_order_acquire);
-  if(nnOutput == NULL)
-    return 0;
-  const float* policyProbs = (*nnOutput)->policyProbs;
-
-  int numLegalMovesFound = 0;
-  for(int pos = 0; pos<policySize; pos++) {
-    if(policyProbs[pos] >= 0.0f) {
-      sortedPolicyBuf[numLegalMovesFound++] = PolicySortEntry(policyProbs[pos],pos);
-    }
-  }
-  int numMovesToReturn = std::min(n,numLegalMovesFound);
-  std::partial_sort(sortedPolicyBuf,sortedPolicyBuf+numMovesToReturn,sortedPolicyBuf+numLegalMovesFound);
-  return numMovesToReturn;
-}
 
 void Search::computeDirichletAlphaDistribution(int policySize, const float* policyProbs, double* alphaDistr) {
   int legalCount = 0;
@@ -2236,8 +2446,8 @@ bool Search::isAllowedRootMove(Loc moveLoc) const {
 
 void Search::downweightBadChildrenAndNormalizeWeight(
   int numChildren,
-  double currentTotalWeight,
-  double desiredTotalWeight,
+  double currentTotalWeight, //The current sum of statsBuf[i].weightAdjusted
+  double desiredTotalWeight, //What statsBuf[i].weightAdjusted should sum up to after this function is done.
   double amountToSubtract,
   double amountToPrune,
   vector<MoreNodeStats>& statsBuf
@@ -2382,8 +2592,8 @@ double Search::getExploreSelectionValueInverse(
 }
 
 
-double Search::getEndingWhiteScoreBonus(const SearchNode& parent, const SearchNode* child) const {
-  if(&parent != rootNode || child->prevMoveLoc == Board::NULL_LOC)
+double Search::getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const {
+  if(&parent != rootNode || moveLoc == Board::NULL_LOC)
     return 0.0;
 
   const NNOutput* nnOutput = parent.getNNOutput();
@@ -2395,7 +2605,6 @@ double Search::getEndingWhiteScoreBonus(const SearchNode& parent, const SearchNo
   assert(nnOutput->nnXLen == nnXLen);
   assert(nnOutput->nnYLen == nnYLen);
   float* whiteOwnerMap = nnOutput->whiteOwnerMap;
-  Loc moveLoc = child->prevMoveLoc;
 
   const double extreme = 0.95;
   const double tail = 0.05;
@@ -2469,7 +2678,7 @@ static void maybeApplyWideRootNoise(
   //For very large wideRootNoise, go ahead and also smooth out the policy
   nnPolicyProb = (float)pow(nnPolicyProb, 1.0 / (4.0*searchParams.wideRootNoise + 1.0));
   if(thread->rand.nextBool(0.5)) {
-    double bonus = searchParams.wideRootNoise * abs(thread->rand.nextGaussian());
+    double bonus = searchParams.wideRootNoise * std::fabs(thread->rand.nextGaussian());
     if(parent.nextPla == P_WHITE)
       childUtility += bonus;
     else
@@ -2658,14 +2867,17 @@ static void maybeApplyAntiMirrorForcedExplore(
     if(utilityLoss > 0 && utilityLoss * proportionToDump > 0.03)
       proportionToDump += 0.5 * (0.03 / utilityLoss - proportionToDump);
 
-    if(parent.prevMoveLoc != Board::NULL_LOC) {
-      int centerDistanceSquared = Location::euclideanDistanceSquared(centerLoc,parent.prevMoveLoc,xSize);
-      if(centerDistanceSquared <= 16)
-        proportionToDump *= 0.900;
-      if(centerDistanceSquared <= 5)
-        proportionToDump *= 0.825;
-      if(centerDistanceSquared <= 2)
-        proportionToDump *= 0.750;
+    if(thread->history.moveHistory.size() > 0) {
+      Loc prevLoc = thread->history.moveHistory[thread->history.moveHistory.size()-1].loc;
+      if(prevLoc != Board::NULL_LOC && prevLoc != Board::PASS_LOC) {
+        int centerDistanceSquared = Location::euclideanDistanceSquared(centerLoc,prevLoc,xSize);
+        if(centerDistanceSquared <= 16)
+          proportionToDump *= 0.900;
+        if(centerDistanceSquared <= 5)
+          proportionToDump *= 0.825;
+        if(centerDistanceSquared <= 2)
+          proportionToDump *= 0.750;
+      }
     }
 
     if(thisChildWeight < proportionToDump * totalChildWeight) {
@@ -2677,21 +2889,23 @@ static void maybeApplyAntiMirrorForcedExplore(
 
 double Search::getExploreSelectionValue(
   const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
-  double totalChildWeight, double fpuValue,
+  Loc moveLoc,
+  double totalChildWeight, int64_t childEdgeVisits, double fpuValue,
   double parentUtility, double parentWeightPerVisit, double parentUtilityStdevFactor,
   bool isDuringSearch, bool antiMirror, double maxChildWeight, SearchThread* thread
 ) const {
   (void)parentUtility;
-  Loc moveLoc = child->prevMoveLoc;
   int movePos = getPos(moveLoc);
   float nnPolicyProb = parentPolicyProbs[movePos];
 
   int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
-  double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+  double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
   double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
   double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
   double scoreMeanSqAvg = child->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
   int32_t childVirtualLosses = child->virtualLosses.load(std::memory_order_acquire);
+
+  double childWeight = rawChildWeight * ((double)childEdgeVisits / (double)std::max(childVisits,(int64_t)1));
 
   //It's possible that childVisits is actually 0 here with multithreading because we're visiting this node while a child has
   //been expanded but its thread not yet finished its first visit.
@@ -2704,7 +2918,7 @@ double Search::getExploreSelectionValue(
     childUtility = utilityAvg;
 
     //Tiny adjustment for passing
-    double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
+    double endingScoreBonus = getEndingWhiteScoreBonus(parent,moveLoc);
     if(endingScoreBonus != 0)
       childUtility += getScoreUtilityDiff(scoreMeanAvg, scoreMeanSqAvg, endingScoreBonus);
   }
@@ -2727,10 +2941,11 @@ double Search::getExploreSelectionValue(
   if(isDuringSearch && (&parent == rootNode)) {
     //Futile visits pruning - skip this move if the amount of time we have left to search is too small, assuming
     //its average weight per visit is maintained.
+    //We use childVisits rather than childEdgeVisits for the final estimate since when childEdgeVisits < childVisits, adding new visits is instant.
     if(searchParams.futileVisitsThreshold > 0) {
       double requiredWeight = searchParams.futileVisitsThreshold * maxChildWeight;
       //Avoid divide by 0 by adding a prior equal to the parent's weight per visit
-      double averageVisitsPerWeight = (childVisits + 1.0) / (childWeight + parentWeightPerVisit);
+      double averageVisitsPerWeight = (childEdgeVisits + 1.0) / (childWeight + parentWeightPerVisit);
       double estimatedRequiredVisits = requiredWeight * averageVisitsPerWeight;
       if(childVisits + thread->upperBoundVisitsLeft < estimatedRequiredVisits)
         return FUTILE_VISITS_PRUNE_VALUE;
@@ -2750,7 +2965,10 @@ double Search::getExploreSelectionValue(
         const SearchNode* c = children[i].getIfAllocated();
         if(c == NULL)
           break;
-        double cWeight = c->stats.weightSum.load(std::memory_order_acquire);
+        int64_t cEdgeVisits = children[i].getEdgeVisits();
+        int64_t cVisits = c->stats.visits.load(std::memory_order_acquire);
+        double rawCWeight = c->stats.weightSum.load(std::memory_order_acquire);
+        double cWeight = rawCWeight * ((double)cEdgeVisits / (double)std::max(cVisits,(int64_t)1));
         if(childWeight + averageWeightPerVisit < cWeight * 0.8)
           return 1e20;
       }
@@ -2795,18 +3013,21 @@ double Search::getNewExploreSelectionValue(
 
 double Search::getReducedPlaySelectionWeight(
   const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
-  double totalChildWeight, double parentUtilityStdevFactor, double bestChildExploreSelectionValue
+  Loc moveLoc,
+  double totalChildWeight, int64_t childEdgeVisits,
+  double parentUtilityStdevFactor, double bestChildExploreSelectionValue
 ) const {
   assert(&parent == rootNode);
-  Loc moveLoc = child->prevMoveLoc;
   int movePos = getPos(moveLoc);
   float nnPolicyProb = parentPolicyProbs[movePos];
 
   int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
-  double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+  double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
   double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
   double scoreMeanSqAvg = child->stats.scoreMeanSqAvg.load(std::memory_order_acquire);
   double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
+
+  double childWeight = rawChildWeight * ((double)childEdgeVisits / (double)std::max(childVisits,(int64_t)1));
 
   //Child visits may be 0 if this function is called in a multithreaded context, such as during live analysis
   //Child weight may also be 0 if it's out of sync.
@@ -2814,7 +3035,7 @@ double Search::getReducedPlaySelectionWeight(
     return 0;
 
   //Tiny adjustment for passing
-  double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
+  double endingScoreBonus = getEndingWhiteScoreBonus(parent,moveLoc);
   double childUtility = utilityAvg;
   if(endingScoreBonus != 0)
     childUtility += getScoreUtilityDiff(scoreMeanAvg, scoreMeanSqAvg, endingScoreBonus);
@@ -2907,12 +3128,16 @@ void Search::selectBestChildToDescend(
     const SearchNode* child = children[i].getIfAllocated();
     if(child == NULL)
       break;
-    Loc moveLoc = child->prevMoveLoc;
+    Loc moveLoc = children[i].getMoveLocRelaxed();
     int movePos = getPos(moveLoc);
     float nnPolicyProb = policyProbs[movePos];
     policyProbMassVisited += nnPolicyProb;
 
-    double childWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    int64_t edgeVisits = children[i].getEdgeVisits();
+    double rawChildWeight = child->stats.weightSum.load(std::memory_order_acquire);
+    int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+
+    double childWeight = rawChildWeight * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
 
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
@@ -2942,11 +3167,14 @@ void Search::selectBestChildToDescend(
     if(child == NULL)
       break;
     numChildrenFound++;
+    int64_t childEdgeVisits = children[i].getEdgeVisits();
 
-    Loc moveLoc = child->prevMoveLoc;
+    Loc moveLoc = children[i].getMoveLocRelaxed();
     bool isDuringSearch = true;
     double selectionValue = getExploreSelectionValue(
-      node,policyProbs,child,totalChildWeight,fpuValue,
+      node,policyProbs,child,
+      moveLoc,
+      totalChildWeight,childEdgeVisits,fpuValue,
       parentUtility,parentWeightPerVisit,parentUtilityStdevFactor,
       isDuringSearch,antiMirror,maxChildWeight,&thread
     );
@@ -3003,7 +3231,7 @@ void Search::selectBestChildToDescend(
     // Check if bestChildMoveLoc is an existing child node.
     bestChildIdx = numChildrenFound;
     for (int i = 0; i < numChildrenFound; i++) {
-      if (bestChildMoveLoc == children[i].getIfAllocated()->prevMoveLoc) {
+      if (bestChildMoveLoc == children[i].getMoveLoc()) {
         bestChildIdx = i;
         break;
       }
@@ -3062,6 +3290,7 @@ void Search::selectBestChildToDescend(
   }
 }
 
+//Returns the new sum of weightAdjusted
 double Search::pruneNoiseWeight(vector<MoreNodeStats>& statsBuf, int numChildren, double totalChildWeight, const double* policyProbsBuf) const {
   if(numChildren <= 1 || totalChildWeight <= 0.00001)
     return totalChildWeight;
@@ -3151,22 +3380,25 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       break;
     MoreNodeStats& stats = statsBuf[numGoodChildren];
 
+    Loc moveLoc = children[i].getMoveLocRelaxed();
+    int64_t edgeVisits = children[i].getEdgeVisits();
     stats.stats = NodeStats(child->stats);
 
-    if(stats.stats.visits <= 0 || stats.stats.weightSum <= 0.0)
+    if(stats.stats.visits <= 0 || stats.stats.weightSum <= 0.0 || edgeVisits <= 0)
       continue;
 
+    double childWeight = stats.stats.weightSum * ((double)edgeVisits / (double)stats.stats.visits);
     double childUtility = stats.stats.utilityAvg;
     stats.selfUtility = node.nextPla == P_WHITE ? childUtility : -childUtility;
-    stats.weightAdjusted = stats.stats.weightSum;
-    stats.prevMoveLoc = child->prevMoveLoc;
+    stats.weightAdjusted = childWeight;
+    stats.prevMoveLoc = moveLoc;
 
     origTotalChildWeight += stats.weightAdjusted;
     numGoodChildren++;
   }
 
+  //Always tracks the sum of statsBuf[i].weightAdjusted across the children.
   double currentTotalChildWeight = origTotalChildWeight;
-  double desiredTotalChildWeight = origTotalChildWeight;
 
   if(searchParams.useNoisePruning && numGoodChildren > 0 && !(searchParams.antiMirror && mirroringPla != C_EMPTY)) {
     double policyProbsBuf[NNPos::MAX_NN_POLICY_SIZE];
@@ -3178,25 +3410,26 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
         policyProbsBuf[i] = std::max(1e-30, (double)policyProbs[getPos(statsBuf[i].prevMoveLoc)]);
     }
     currentTotalChildWeight = pruneNoiseWeight(statsBuf, numGoodChildren, currentTotalChildWeight, policyProbsBuf);
-    desiredTotalChildWeight = currentTotalChildWeight;
   }
 
-  double amountToSubtract = 0.0;
-  double amountToPrune = 0.0;
-  if(isRoot && searchParams.rootNoiseEnabled && !searchParams.useNoisePruning) {
-    double maxChildWeight = 0.0;
-    for(int i = 0; i<numGoodChildren; i++) {
-      if(statsBuf[i].weightAdjusted > maxChildWeight)
-        maxChildWeight = statsBuf[i].weightAdjusted;
+  {
+    double amountToSubtract = 0.0;
+    double amountToPrune = 0.0;
+    if(isRoot && searchParams.rootNoiseEnabled && !searchParams.useNoisePruning) {
+      double maxChildWeight = 0.0;
+      for(int i = 0; i<numGoodChildren; i++) {
+        if(statsBuf[i].weightAdjusted > maxChildWeight)
+          maxChildWeight = statsBuf[i].weightAdjusted;
+      }
+      amountToSubtract = std::min(searchParams.chosenMoveSubtract, maxChildWeight/64.0);
+      amountToPrune = std::min(searchParams.chosenMovePrune, maxChildWeight/64.0);
     }
-    amountToSubtract = std::min(searchParams.chosenMoveSubtract, maxChildWeight/64.0);
-    amountToPrune = std::min(searchParams.chosenMovePrune, maxChildWeight/64.0);
-  }
 
-  downweightBadChildrenAndNormalizeWeight(
-    numGoodChildren, currentTotalChildWeight, desiredTotalChildWeight,
-    amountToSubtract, amountToPrune, statsBuf
-  );
+    downweightBadChildrenAndNormalizeWeight(
+      numGoodChildren, currentTotalChildWeight, currentTotalChildWeight,
+      amountToSubtract, amountToPrune, statsBuf
+    );
+  }
 
   double winLossValueSum = 0.0;
   double noResultValueSum = 0.0;
@@ -3206,7 +3439,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
   double utilitySum = 0.0;
   double utilitySqSum = 0.0;
   double weightSqSum = 0.0;
-  double weightSum = desiredTotalChildWeight;
+  double weightSum = currentTotalChildWeight;
   for(int i = 0; i<numGoodChildren; i++) {
     const NodeStats& stats = statsBuf[i].stats;
 
@@ -3243,8 +3476,8 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       double newEntryDeltaUtilitySum;
       double newEntryWeightSum;
 
-      if(desiredTotalChildWeight > 1e-10) {
-        double utilityChildren = utilitySum / desiredTotalChildWeight;
+      if(currentTotalChildWeight > 1e-10) {
+        double utilityChildren = utilitySum / currentTotalChildWeight;
         double subtreeValueBiasWeight = pow(origTotalChildWeight, searchParams.subtreeValueBiasWeightExponent);
         double subtreeValueBiasDeltaSum = (utilityChildren - utility) * subtreeValueBiasWeight;
 
@@ -3349,6 +3582,8 @@ int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) 
   thread.pla = rootPla;
   thread.board = rootBoard;
   thread.history = rootHistory;
+  thread.graphHash = rootGraphHash;
+  thread.graphPath.clear();
 
   if (!finishedPlayout) return 0;
   return numNodesAdded;
@@ -3621,19 +3856,14 @@ bool Search::playoutDescend(
   thread.lastVisitedNode = &node;
 
   //Hit terminal node, finish
-  //In the case where we're forcing the search to make another move at the root, don't terminate, actually run search for a move more.
-  //In the case where we're conservativePass and the game just ended due to a root pass, actually let it keep going.
-  //Note that in the second case with tree reuse we can end up with a weird situation where a terminal node becomes nonterminal due
-  //to now being a child of the root! This is okay - subsequent visits to the node will fall through to initNodeNNOutput, and we will
-  //have a weird leaf node with 2 visits worth of mixed terminal and nn values, but further visits will even hit recomputeNodeStats
-  //which should clean it all it.
-  if(!isRoot && thread.history.isGameFinished &&
-     !(searchParams.conservativePass &&
-       thread.history.moveHistory.size() == rootHistory.moveHistory.size() + 1 &&
-       node.prevMoveLoc == Board::PASS_LOC)
-  ) {
+  //forceNonTerminal marks special nodes where we cannot end the game. This includes the root, since if we are searching a position
+  //we presumably want to actually explore deeper and get a result. Also it includes the node following a pass from the root in
+  //the case where we are conservativePass.
+  //Note that we also carefully clear the search when a pass from the root would be terminal, so nodes should never need to switch
+  //status after tree reuse in the latter case.
+  if(thread.history.isGameFinished && !node.forceNonTerminal) {
     //Avoid running "too fast", by making sure that a leaf evaluation takes roughly the same time as a genuine nn eval
-    //This stops a thread from building a silly number of visits to distort MCTS statistics other threads are stuck on the GPU.
+    //This stops a thread from building a silly number of visits to distort MCTS statistics while other threads are stuck on the GPU.
     nnEvaluator->waitForNextNNEvalIfAny();
     if(thread.history.isNoResult) {
       double winLossValue = 0.0;
@@ -3701,6 +3931,8 @@ bool Search::playoutDescend(
     //The absurdly rare case that the move chosen is not legal
     //(this should only happen either on a bug or where the nnHash doesn't have full legality information or when there's an actual hash collision).
     //Regenerate the neural net call and continue
+    //Could also be true if we have an illegal move due to graph search and we had a cycle and superko interaction, or a true collision
+    //on an older path that results in bad transposition between positions that don't transpose.
     if(bestChildIdx >= 0 && !thread.history.isLegal(thread.board,bestChildMoveLoc,thread.pla)) {
       bool isReInit = true;
       initNodeNNOutput(thread,node,isRoot,true,isReInit);
@@ -3708,7 +3940,12 @@ bool Search::playoutDescend(
       {
         NNOutput* nnOutput = node.getNNOutput();
         assert(nnOutput != NULL);
-        logger->write("WARNING: Chosen move not legal so regenerated nn output, nnhash=" + nnOutput->nnHash.toString());
+        Hash128 nnHash = nnOutput->nnHash;
+        //In case of a cycle or bad transposition, this will fire a lot, so limit it to once per thread per search.
+        if(thread.illegalMoveHashes.find(nnHash) == thread.illegalMoveHashes.end()) {
+          thread.illegalMoveHashes.insert(nnHash);
+          logger->write("WARNING: Chosen move not legal so regenerated nn output, nnhash=" + nnHash.toString());
+        }
       }
 
       //As isReInit is true, we don't return, just keep going, since we didn't count this as a true visit in the node stats
@@ -3716,17 +3953,29 @@ bool Search::playoutDescend(
       selectBestChildToDescend(thread,node,nodeState,numChildrenFound,bestChildIdx,bestChildMoveLoc,posesWithChildBuf,isRoot);
 
       if(bestChildIdx >= 0) {
-        //In THEORY it might still be illegal this time! This would be the case if when we initialized the NN output, we raced
-        //against someone reInitializing the output to add dirichlet noise or something, who was doing so based on an older cached
-        //nnOutput that still had the illegal move. If so, then just fail this playout and try again.
-        if(!thread.history.isLegal(thread.board,bestChildMoveLoc,thread.pla))
-          return false;
+        //New child
+        if(bestChildIdx >= numChildrenFound) {
+          //In THEORY it might still be illegal this time! This would be the case if when we initialized the NN output, we raced
+          //against someone reInitializing the output to add dirichlet noise or something, who was doing so based on an older cached
+          //nnOutput that still had the illegal move. If so, then just fail this playout and try again.
+          if(!thread.history.isLegal(thread.board,bestChildMoveLoc,thread.pla))
+            return false;
+        }
+        //Existing child
+        else {
+          //An illegal move should make it into the tree only in case of cycle or bad transposition
+          //We want the search to continue as best it can, so we increment visits so other search branches will still make progress.
+          int childrenCapacity;
+          SearchChildPointer* children = node.getChildren(nodeState,childrenCapacity);
+          assert(childrenCapacity > bestChildIdx);
+          children[bestChildIdx].addEdgeVisits(1);
+          return true;
+        }
       }
     }
 
     if(bestChildIdx <= -1) {
-      //TODO add test case
-      //This might happen if all moves have been forbidden. The node will just get stuck at 1 visit forever then
+      //This might happen if all moves have been forbidden. The node will just get stuck counting visits without expanding
       //and we won't do any search.
       addCurrentNNOutputAsLeafValue(node,false);
       return true;
@@ -3747,26 +3996,45 @@ bool Search::playoutDescend(
       int childrenCapacity;
       SearchChildPointer* children = node.getChildren(nodeState,childrenCapacity);
       assert(childrenCapacity > bestChildIdx);
-      child = new SearchNode(thread.pla,bestChildMoveLoc,&node);
+
+      //Make the move! We need to make the move before we create the node so we can see the new state and get the right graphHash.
+      thread.history.makeBoardMoveAssumeLegal(thread.board,bestChildMoveLoc,thread.pla,rootKoHashTable);
+      thread.pla = getOpp(thread.pla);
+      if(searchParams.useGraphSearch)
+        thread.graphHash = GraphHash::getGraphHash(
+          thread.graphHash, thread.history, thread.pla, searchParams.graphSearchRepBound, searchParams.drawEquivalentWinsForWhite
+        );
+
+      //If conservative pass, passing from the root is always non-terminal
+      const bool forceNonTerminal = searchParams.conservativePass && (&node == rootNode) && bestChildMoveLoc == Board::PASS_LOC;
+      child = allocateOrFindNode(thread, thread.pla, bestChildMoveLoc, forceNonTerminal, thread.graphHash);
       child->virtualLosses.fetch_add(1,std::memory_order_release);
 
-      if(searchParams.subtreeValueBiasFactor != 0 && subtreeValueBiasTable != NULL) {
-        if(node.prevMoveLoc != Board::NULL_LOC) {
-          child->subtreeValueBiasTableEntry = subtreeValueBiasTable->get(thread.pla, node.prevMoveLoc, child->prevMoveLoc, thread.board);
+      {
+        //Lock mutex to store child and move loc in a synchronized way
+        std::lock_guard<std::mutex> lock(mutexPool->getMutex(node.mutexIdx));
+        SearchNode* existingChild = children[bestChildIdx].getIfAllocated();
+        if(existingChild == NULL) {
+          //Set relaxed *first*, then release this value via storing the child. Anyone who load-acquires the child
+          //is guaranteed by release semantics to see the move as well.
+          children[bestChildIdx].setMoveLocRelaxed(bestChildMoveLoc);
+          children[bestChildIdx].store(child);
+        }
+        else {
+          //Someone got there ahead of us. We already made a move so we can't just loop again. Instead just fail this playout and try again.
+          //Even if the node was newly allocated, no need to delete the node, it will get cleaned up next time we mark and sweep the node table later.
+          //Clean up virtual losses in case the node is a transposition and is being used.
+          child->virtualLosses.fetch_add(-1,std::memory_order_release);
+          return false;
         }
       }
 
-      if(patternBonusTable != NULL)
-        child->patternBonusHash = patternBonusTable->getHash(thread.pla, bestChildMoveLoc, thread.board);
-
-      suc = children[bestChildIdx].storeIfNull(child);
-      if(!suc) {
-        //Someone got there ahead of us. Delete and loop again trying to select the best child to explore.
-        delete child;
-        child = NULL;
-        std::this_thread::yield();
-        nodeState = node.state.load(std::memory_order_acquire);
-        continue;
+      //If edge visits is too much smaller than the child's visits, we can avoid descending.
+      //Instead just add edge visits and treat that as a visit.
+      if(maybeCatchUpEdgeVisits(thread, node, child, nodeState, bestChildIdx)) {
+        updateStatsAfterPlayout(node,thread,isRoot);
+        child->virtualLosses.fetch_add(-1,std::memory_order_release);
+        return true;
       }
     }
     //Searching an existing child
@@ -3777,21 +4045,86 @@ bool Search::playoutDescend(
       assert(child != NULL);
 
       child->virtualLosses.fetch_add(1,std::memory_order_release);
+
+      //If edge visits is too much smaller than the child's visits, we can avoid descending.
+      //Instead just add edge visits and treat that as a visit.
+      if(maybeCatchUpEdgeVisits(thread, node, child, nodeState, bestChildIdx)) {
+        updateStatsAfterPlayout(node,thread,isRoot);
+        child->virtualLosses.fetch_add(-1,std::memory_order_release);
+        return true;
+      }
+
+      //Make the move!
+      thread.history.makeBoardMoveAssumeLegal(thread.board,bestChildMoveLoc,thread.pla,rootKoHashTable);
+      thread.pla = getOpp(thread.pla);
     }
 
     break;
   }
 
-  //Make the move!
-  thread.history.makeBoardMoveAssumeLegal(thread.board,bestChildMoveLoc,thread.pla,rootKoHashTable);
-  thread.pla = getOpp(thread.pla);
+  //If somehow we find ourselves in a cycle, increment edge visits and terminate the playout.
+  //Basically if the search likes a cycle... just reinforce playing around the cycle and hope we return something
+  //reasonable in the end of the search.
+  {
+    std::pair<std::unordered_set<SearchNode*>::iterator,bool> result = thread.graphPath.insert(child);
+    //No insertion, child was already there
+    if(!result.second) {
+      int childrenCapacity;
+      SearchChildPointer* children = node.getChildren(nodeState,childrenCapacity);
+      children[bestChildIdx].addEdgeVisits(1);
+      updateStatsAfterPlayout(node,thread,isRoot);
+      child->virtualLosses.fetch_add(-1,std::memory_order_release);
+      return true;
+    }
+  }
 
   //Recurse!
   bool finishedPlayout = playoutDescend(thread,*child,posesWithChildBuf,false);
   //Update this node stats
-  if(finishedPlayout)
+  if(finishedPlayout) {
+    nodeState = node.state.load(std::memory_order_acquire);
+    int childrenCapacity;
+    SearchChildPointer* children = node.getChildren(nodeState,childrenCapacity);
+    children[bestChildIdx].addEdgeVisits(1);
     updateStatsAfterPlayout(node,thread,isRoot);
+  }
   child->virtualLosses.fetch_add(-1,std::memory_order_release);
 
   return finishedPlayout;
+}
+
+
+//If edge visits is too much smaller than the child's visits, we can avoid descending.
+//Instead just add edge visits and return immediately.
+bool Search::maybeCatchUpEdgeVisits(SearchThread& thread, SearchNode& node, SearchNode* child, const int& nodeState, const int bestChildIdx) {
+  //Don't need to do this since we already are pretty recent as of finding the best child.
+  //nodeState = node.state.load(std::memory_order_acquire);
+  int childrenCapacity;
+  SearchChildPointer* children = node.getChildren(nodeState,childrenCapacity);
+
+  // int64_t maxNumToAdd = 1;
+  // if(searchParams.graphSearchCatchUpProp > 0.0) {
+  //   int64_t parentVisits = node.stats.visits.load(std::memory_order_acquire);
+  //   //Truncate down
+  //   maxNumToAdd = 1 + (int64_t)(searchParams.graphSearchCatchUpProp * parentVisits);
+  // }
+  int64_t childVisits = child->stats.visits.load(std::memory_order_acquire);
+  int64_t edgeVisits = children[bestChildIdx].getEdgeVisits();
+
+  //If we want to leak through some of the time, then we keep searching the transposition node even if we'd be happy to stop here with
+  //how many visits it has
+  if(searchParams.graphSearchCatchUpLeakProb > 0.0 && edgeVisits < childVisits && thread.rand.nextBool(searchParams.graphSearchCatchUpLeakProb))
+    return false;
+
+  //If the edge visits exceeds the child then we need to search the child more, but as long as that's not the case,
+  //we can add more edge visits.
+  constexpr int64_t numToAdd = 1;
+  // int64_t numToAdd;
+  do {
+    if(edgeVisits >= childVisits)
+      return false;
+    // numToAdd = std::min((childVisits - edgeVisits + 3) / 4, maxNumToAdd);
+  } while(!children[bestChildIdx].compexweakEdgeVisits(edgeVisits, edgeVisits + numToAdd));
+
+  return true;
 }

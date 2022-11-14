@@ -98,6 +98,17 @@ static bool tryParseLoc(const string& s, const Board& b, Loc& loc) {
   return Location::tryOfString(s,b,loc);
 }
 
+//Filter out all double newlines, since double newline terminates GTP command responses
+static string filterDoubleNewlines(const string& s) {
+  string filtered;
+  for(int i = 0; i<s.length(); i++) {
+    if(i > 0 && s[i-1] == '\n' && s[i] == '\n')
+      continue;
+    filtered += s[i];
+  }
+  return filtered;
+}
+
 static bool timeIsValid(const double& time) {
   if(isnan(time) || time < 0.0 || time > TimeControls::MAX_USER_INPUT_TIME)
     return false;
@@ -195,7 +206,7 @@ static void updateDynamicPDAHelper(
     double pdaScalingStartPoints = getPointsThresholdForHandicapGame(boardSizeScaling);
     double initialBlackAdvantageInPoints = initialBlackAdvantage(hist);
     Player disadvantagedPla = initialBlackAdvantageInPoints >= 0 ? P_WHITE : P_BLACK;
-    double initialAdvantageInPoints = abs(initialBlackAdvantageInPoints);
+    double initialAdvantageInPoints = std::fabs(initialBlackAdvantageInPoints);
     if(initialAdvantageInPoints < pdaScalingStartPoints || board.x_size <= 7 || board.y_size <= 7) {
       desiredDynamicPDAForWhite = 0.0;
     }
@@ -2493,15 +2504,7 @@ int MainCmds::gtp(const vector<string>& args) {
     else if(command == "showboard") {
       ostringstream sout;
       engine->bot->getRootHist().printBasicInfo(sout, engine->bot->getRootBoard());
-      //Filter out all double newlines, since double newline terminates GTP command responses
-      string s = sout.str();
-      string filtered;
-      for(int i = 0; i<s.length(); i++) {
-        if(i > 0 && s[i-1] == '\n' && s[i] == '\n')
-          continue;
-        filtered += s[i];
-      }
-      response = Global::trim(filtered);
+      response = Global::trim(filterDoubleNewlines(sout.str()));
     }
 
     else if(command == "fixed_handicap") {
@@ -2855,8 +2858,24 @@ int MainCmds::gtp(const vector<string>& args) {
       if(!responseIsError) {
         Search* search = engine->bot->getSearchStopAndWait();
         ostringstream sout;
+
+        Player pla = engine->bot->getRootPla();
+        Board board = engine->bot->getRootBoard();
+        BoardHistory hist = engine->bot->getRootHist();
+        bool allLegal = true;
+        for(Loc loc: options.branch_) {
+          bool suc = hist.makeBoardMoveTolerant(board, loc, pla, false);
+          if(!suc) {
+            allLegal = false;
+            break;
+          }
+          pla = getOpp(pla);
+        }
+        if(allLegal) {
+          Board::printBoard(sout, board, Board::NULL_LOC, &hist.moveHistory);
+        }
         search->printTree(sout, search->rootNode, options, perspective);
-        response = sout.str();
+        response = filterDoubleNewlines(sout.str());
       }
     }
     else if(command == "cputime" || command == "gomill-cpu_time") {

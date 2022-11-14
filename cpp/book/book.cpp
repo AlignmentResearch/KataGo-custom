@@ -5,6 +5,7 @@
 #include <thread>
 #include "../core/makedir.h"
 #include "../core/fileutils.h"
+#include "../game/graphhash.h"
 #include "../neuralnet/nninputs.h"
 #include "../external/nlohmann_json/json.hpp"
 
@@ -109,32 +110,6 @@ static Hash128 getExtraPosHash(const Board& board) {
   return hash;
 }
 
-static Hash128 getStateHash(const BoardHistory& hist) {
-  const Board& board = hist.getRecentBoard(0);
-  Player nextPlayer = hist.presumedNextMovePla;
-  double drawEquivalentWinsForWhite = 0.5;
-  Hash128 hash = BoardHistory::getSituationRulesAndKoHash(board, hist, nextPlayer, drawEquivalentWinsForWhite);
-
-  // Fold in whether a pass ends this phase
-  bool passEndsPhase = hist.passWouldEndPhase(board,nextPlayer);
-  if(passEndsPhase)
-    hash ^= Board::ZOBRIST_PASS_ENDS_PHASE;
-  // Fold in whether the game is over or not
-  if(hist.isGameFinished)
-    hash ^= Board::ZOBRIST_GAME_IS_OVER;
-
-  //Fold in whether someone has passed
-  if(hist.someoneHasPassed)
-    hash ^= Board::ZOBRIST_SOMEONE_HAS_PASSED;
-
-  // Fold in consecutive pass count. Probably usually redundant with history tracking. Use some standard LCG constants.
-  static constexpr uint64_t CONSECPASS_MULT0 = 2862933555777941757ULL;
-  static constexpr uint64_t CONSECPASS_MULT1 = 3202034522624059733ULL;
-  hash.hash0 += CONSECPASS_MULT0 * (uint64_t)hist.consecutiveEndingPasses;
-  hash.hash1 += CONSECPASS_MULT1 * (uint64_t)hist.consecutiveEndingPasses;
-  return hash;
-}
-
 void BookHash::getHashAndSymmetry(const BoardHistory& hist, int repBound, BookHash& hashRet, int& symmetryToAlignRet, vector<int>& symmetriesRet) {
   Board boardsBySym[SymmetryHelpers::NUM_SYMMETRIES];
   BoardHistory histsBySym[SymmetryHelpers::NUM_SYMMETRIES];
@@ -153,6 +128,10 @@ void BookHash::getHashAndSymmetry(const BoardHistory& hist, int repBound, BookHa
     accums[symmetry] = Hash128();
   }
 
+  //TODO
+  //This may be buggy with encore phase because the hash doesn't include encore phase or ko marks in the history.
+  //It's kind of tricky to trigger though since it depends on finding a situation in the encore where the current
+  //ko marks aren't sufficient, where the history matters.
   for(size_t i = 0; i<hist.moveHistory.size(); i++) {
     for(int symmetry = 0; symmetry < numSymmetries; symmetry++) {
       Loc moveLoc = SymmetryHelpers::getSymLoc(hist.moveHistory[i].loc, boardsBySym[symmetry], symmetry);
@@ -174,8 +153,12 @@ void BookHash::getHashAndSymmetry(const BoardHistory& hist, int repBound, BookHa
   }
 
   BookHash hashes[SymmetryHelpers::NUM_SYMMETRIES];
-  for(int symmetry = 0; symmetry < numSymmetries; symmetry++)
-    hashes[symmetry] = BookHash(accums[symmetry] ^ getExtraPosHash(boardsBySym[symmetry]), getStateHash(histsBySym[symmetry]));
+  for(int symmetry = 0; symmetry < numSymmetries; symmetry++) {
+    Player nextPlayer = hist.presumedNextMovePla;
+    constexpr double drawEquivalentWinsForWhite = 0.5;
+    Hash128 stateHash = GraphHash::getStateHash(histsBySym[symmetry],nextPlayer,drawEquivalentWinsForWhite);
+    hashes[symmetry] = BookHash(accums[symmetry] ^ getExtraPosHash(boardsBySym[symmetry]), stateHash);
+  }
 
   // Use the smallest symmetry that gives us the same hash
   int smallestSymmetry = 0;
@@ -1564,9 +1547,9 @@ void Book::recomputeNodeCost(BookNode* node) {
   // Apply bonuses to moves now. Apply fully up to 0.75 of the cost.
   for(auto& locAndBookMove: node->moves) {
     const BookNode* child = get(locAndBookMove.second.hash);
-    double winLossError = fabs(child->recursiveValues.winLossUCB - child->recursiveValues.winLossLCB) / errorFactor / 2.0;
-    double scoreError = fabs(child->recursiveValues.scoreUCB - child->recursiveValues.scoreLCB) / errorFactor / 2.0;
-    double sharpScoreDiscrepancy = fabs(child->recursiveValues.sharpScoreMean - child->recursiveValues.scoreMean);
+    double winLossError = std::fabs(child->recursiveValues.winLossUCB - child->recursiveValues.winLossLCB) / errorFactor / 2.0;
+    double scoreError = std::fabs(child->recursiveValues.scoreUCB - child->recursiveValues.scoreLCB) / errorFactor / 2.0;
+    double sharpScoreDiscrepancy = std::fabs(child->recursiveValues.sharpScoreMean - child->recursiveValues.scoreMean);
     double bonus =
       bonusPerWinLossError * winLossError +
       bonusPerScoreError * scoreError +
@@ -1580,7 +1563,7 @@ void Book::recomputeNodeCost(BookNode* node) {
       double wlPVBonusScale = (locAndBookMove.second.costFromRoot - node->minCostFromRoot);
       if(wlPVBonusScale > 0.0) {
         double factor1 = std::max(0.0, 1.0 - square(child->recursiveValues.winLossValue));
-        double factor2 = 4.0 * std::max(0.0, 0.25 - square(0.5 - fabs(child->recursiveValues.winLossValue)));
+        double factor2 = 4.0 * std::max(0.0, 0.25 - square(0.5 - std::fabs(child->recursiveValues.winLossValue)));
         locAndBookMove.second.costFromRoot -= wlPVBonusScale * tanh(factor1 * bonusForWLPV1 + factor2 * bonusForWLPV2);
       }
     }
@@ -1588,7 +1571,7 @@ void Book::recomputeNodeCost(BookNode* node) {
   {
     double winLossError = node->thisValuesNotInBook.winLossError;
     double scoreError = node->thisValuesNotInBook.scoreError;
-    double sharpScoreDiscrepancy = fabs(node->thisValuesNotInBook.sharpScoreMean - node->thisValuesNotInBook.scoreMean);
+    double sharpScoreDiscrepancy = std::fabs(node->thisValuesNotInBook.sharpScoreMean - node->thisValuesNotInBook.scoreMean);
 
     // If there's an unusually large share of the policy not expanded, add a mild bonus for it.
     // For the final node expansion cost, sharp score discrepancy beyond 1 point is not capped, to encourage expanding the
@@ -1613,7 +1596,7 @@ void Book::recomputeNodeCost(BookNode* node) {
       double wlPVBonusScale = node->thisNodeExpansionCost;
       if(wlPVBonusScale > 0.0) {
         double factor1 = std::max(0.0, 1.0 - square(node->thisValuesNotInBook.winLossValue));
-        double factor2 = 4.0 * std::max(0.0, 0.25 - square(0.5 - fabs(node->thisValuesNotInBook.winLossValue)));
+        double factor2 = 4.0 * std::max(0.0, 0.25 - square(0.5 - std::fabs(node->thisValuesNotInBook.winLossValue)));
         node->thisNodeExpansionCost -= wlPVBonusScale * tanh(factor1 * bonusForWLPV1 + factor2 * bonusForWLPV2);
       }
     }

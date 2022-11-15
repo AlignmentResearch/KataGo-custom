@@ -3,6 +3,7 @@
 
 #include "../core/global.h"
 #include "../game/board.h"
+#include <optional>
 
 struct SearchParams {
   // Modifications of pass suppression behavior.

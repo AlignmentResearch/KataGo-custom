@@ -253,7 +253,7 @@ struct SearchThread {
   //it here instead of deleting it, so that pointers and accesses to it remain valid.
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
-  // For EMCTS1 support
+  // For AMCTS support
   // SearchThread does not own this pointer.
   SearchNode* lastVisitedNode;
 

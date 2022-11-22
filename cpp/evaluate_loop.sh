@@ -9,7 +9,7 @@ then
 fi
 
 BASE_DIR="$1"
-PREDICTOR_DIR="$2"
+PREDICTOR_DIR=${2:-}
 MODELS_DIR="$BASE_DIR"/models
 VICTIMS_DIR="$BASE_DIR"/victims
 OUTPUT_DIR="$BASE_DIR"/eval

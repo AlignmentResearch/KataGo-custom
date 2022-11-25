@@ -493,7 +493,7 @@ Search::Search(
     assert(!oppParams.usingAdversarialAlgo());
 
     oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R ? oppParams.maxVisits : 1;
-    oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_SXX ? oppParams.rootNumSymmetriesToSample : 1;
+    oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
     oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
   }
 

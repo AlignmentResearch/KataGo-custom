@@ -188,8 +188,8 @@ struct SearchNode {
 
   std::atomic<int32_t> dirtyCounter;
 
-  // For EMCTS, sometimes contains locs and playSelectionValues computed via Search.runWholeSearch.
-  // Note that these are NOT threadsafe. We don't currently support multithreading for EMCTS.
+  // For AMCTS, sometimes contains locs and playSelectionValues computed via Search.runWholeSearch.
+  // Note that these are NOT threadsafe. We don't currently support multithreading for AMCTS.
   std::optional<std::vector<Loc>> oppLocs;
   std::optional<std::vector<double>> oppPlaySelectionValues;
 
@@ -348,7 +348,7 @@ struct Search {
   std::vector<std::shared_ptr<NNOutput>*> oldNNOutputsToCleanUp;
 
   //================================================================================================================
-  // EMCTS related
+  // AMCTS related
   //================================================================================================================
 
   // Our model of the opponent.

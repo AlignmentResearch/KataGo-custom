@@ -13,7 +13,7 @@ void runAllAMCTSTests(const int maxVisits, const int numMovesToSimulate);
 // (when using standard MCTS search).
 void testConstPolicies();
 
-// Test our modifications didn't break the original EMCTS.
+// Test our modifications didn't break the original MCTS.
 void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of MCTS search

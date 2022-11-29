@@ -140,17 +140,13 @@ string Search::getRankStr() const {
            std::to_string(bot->searchParams.rootNumSymmetriesToSample);
   };
 
-  switch (searchParams.searchAlgo) {
-    case SearchParams::SearchAlgorithm::MCTS:
-      return "algo=MCTS," + getVisitStr(this, "");
+  if (searchParams.usingAdversarialAlgo())
+    return "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "") + "," + getVisitStr(oppBot.get(), "opp_");
+  
+  if (searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS)
+    return "algo=MCTS," + getVisitStr(this, "");
 
-    case SearchParams::SearchAlgorithm::EMCTS1:
-      return "algo=EMCTS1," + getVisitStr(this, "") + "," +
-             getVisitStr(oppBot.get(), "opp_");
-
-    default:
-      ASSERT_UNREACHABLE;
-  }
+  ASSERT_UNREACHABLE;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -491,22 +487,14 @@ Search::Search(
    oldNNOutputsToCleanUpMutex(),
    oldNNOutputsToCleanUp()
 {
-  switch (searchParams.searchAlgo) {
-    case SearchParams::SearchAlgorithm::EMCTS1: {
-        assert(searchParams.numThreads == 1); // We do not support multithreading with EMCTS1 (yet).
-        assert(oppNNEval != nullptr);
-        assert(oppParams.searchAlgo != SearchParams::SearchAlgorithm::EMCTS1);
+  if (searchParams.usingAdversarialAlgo()) {
+    assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
+    assert(oppNNEval != nullptr);
+    assert(!oppParams.usingAdversarialAlgo());
 
-        oppParams.maxVisits = params.oppVisitsOverride.value_or(oppParams.maxVisits);
-        oppParams.rootNumSymmetriesToSample =
-          params.oppRootSymmetriesOverride.value_or(oppParams.rootNumSymmetriesToSample);
-        oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
-        break;
-    }
-    case SearchParams::SearchAlgorithm::MCTS:
-      break;
-    default:
-      ASSERT_UNREACHABLE;
+    oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R ? oppParams.maxVisits : 1;
+    oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
+    oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
   }
 
   assert(logger != NULL);
@@ -556,8 +544,9 @@ void Search::evaluateNode(
   bool skipCache,
   bool includeOwnerMap
 ) const {
-  switch(searchParams.searchAlgo) {
-    case SearchParams::SearchAlgorithm::MCTS: {
+  if (searchParams.usingAdversarialAlgo()) {
+    if (node.nextPla == rootNode->nextPla) {
+      // it's "our" (the adversary's) turn -- search as usual
       nnEvaluator->evaluate(
         board, history, nextPlayer, nnInputParams,
         buf, skipCache, includeOwnerMap
@@ -565,53 +554,44 @@ void Search::evaluateNode(
       return;
     }
 
-    case SearchParams::SearchAlgorithm::EMCTS1: {
-      if (node.nextPla == rootNode->nextPla) {
-        // it's "our" (the adversary's) turn -- search as usual
-        nnEvaluator->evaluate(
-          board, history, nextPlayer, nnInputParams,
-          buf, skipCache, includeOwnerMap
-        );
-        return;
-      }
+    // We evaluate using the opponent nnEval to populate buf.result with valid
+    // NNOutput values, which are needed for the Search not to crash.
+    // Technically, these values are not used by AMCTS, but there are
+    // intermediate computations done on them (which are later ignored) that
+    // would crash if done an invalid NNOutput.
+    //
+    // This doesn't impact performance because of the result will be cached
+    // in nnCacheTable and reused in the runWholeSearch() call below. This was
+    // checked in a debugger.
+    //
+    // The last argument (includeOwnerMap) is hardcoded to true in order to
+    // always get a cache hit, since runWholeSearch later calls evaluate with
+    // includeOwnerMap=true on the root node.
+    oppBot.get()->nnEvaluator->evaluate(
+      board, history, nextPlayer, nnInputParams,
+      buf, skipCache, true
+    );
+    assert(buf.hasResult);
 
-      // We evaluate using the opponent nnEval to populate buf.result with valid
-      // NNOutput values, which are needed for the Search not to crash.
-      // Technically, these values are not used by EMCTS, but there are
-      // intermediate computations done on them (which are later ignored) that
-      // would crash if done an invalid NNOutput.
-      //
-      // This doesn't impact performance because of the result will be cached
-      // in nnCacheTable and reused in the runWholeSearch() call below. This was
-      // checked in a debugger.
-      //
-      // The last argument (includeOwnerMap) is hardcoded to true in order to
-      // always get a cache hit, since runWholeSearch later calls evaluate with
-      // includeOwnerMap=true on the root node.
-      oppBot.get()->nnEvaluator->evaluate(
+    oppBot.get()->setPosition(node.nextPla, board, history);
+    oppBot.get()->runWholeSearch(node.nextPla);
+
+    node.oppLocs = vector<Loc>();
+    node.oppPlaySelectionValues = vector<double>();
+
+    const bool suc = oppBot.get()->getPlaySelectionValues(
+      node.oppLocs.value(),
+      node.oppPlaySelectionValues.value(),
+      0.0
+    );
+    assert(suc);
+  } else if (searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS) {
+    nnEvaluator->evaluate(
         board, history, nextPlayer, nnInputParams,
-        buf, skipCache, true
+        buf, skipCache, includeOwnerMap
       );
-      assert(buf.hasResult);
-
-      oppBot.get()->setPosition(node.nextPla, board, history);
-      oppBot.get()->runWholeSearch(node.nextPla);
-
-      node.oppLocs = vector<Loc>();
-      node.oppPlaySelectionValues = vector<double>();
-
-      const bool suc = oppBot.get()->getPlaySelectionValues(
-        node.oppLocs.value(),
-        node.oppPlaySelectionValues.value(),
-        0.0
-      );
-      assert(suc);
-
-      return;
-    }
-
-    default:
-      ASSERT_UNREACHABLE;
+  } else {
+    ASSERT_UNREACHABLE;
   }
 }
 
@@ -1228,9 +1208,9 @@ void Search::runWholeSearch(
     logger->write("Warning: bool atomic shouldStopNow is not lock free");
   if (rootNode != NULL
       && rootNode->oppPlaySelectionValues.has_value()
-      && searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
+      && searchParams.usingAdversarialAlgo()) {
     logger->write(
-        "Warning: EMCTS doesn't expect to search when the root node is a "
+        "Warning: AMCTS doesn't expect to search when the root node is a "
         "victim node. Clearing search."
     );
     clearSearch();
@@ -1814,8 +1794,8 @@ void Search::recursivelyRecomputeStats(SearchNode& n) {
       //  1. In the case where it's the root node and has 0 visits, it's because
       //     we began a search and then stopped it before any playouts happened.
       //     In that case, there's not much to recompute.
-      //  2. We could be doing EMCTS1.
-      if(weightSum <= 0.0 && searchParams.searchAlgo != SearchParams::SearchAlgorithm::EMCTS1) {
+      //  2. We could be doing AMCTS.
+      if(weightSum <= 0.0 && !searchParams.usingAdversarialAlgo()) {
         assert(numVisits == 0);
         assert(isRoot);
       }
@@ -2838,7 +2818,7 @@ double Search::getFpuValueForChildrenAssumeVisited(
 
   assert(visits > 0);
   assert(weightSum >= 0.0);
-  assert(weightSum > 0.0 || searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1);
+  assert(weightSum > 0.0 || searchParams.usingAdversarialAlgo());
   parentWeightPerVisit = weightSum / visits;
   parentUtility = utilityAvg;
   double variancePrior = searchParams.cpuctUtilityStdevPrior * searchParams.cpuctUtilityStdevPrior;
@@ -2967,14 +2947,14 @@ void Search::selectBestChildToDescend(
 
   const std::vector<int>& avoidMoveUntilByLoc = thread.pla == P_BLACK ? avoidMoveUntilByLocBlack : avoidMoveUntilByLocWhite;
 
-  // If we are searching with EMCTS1 and are on an opponents move,
+  // If we are searching with AMCTS and are on an opponents move,
   // we choose via oppPlaySelectionValues, in a fashion that emulates
   // oppBot.getChosenMoveLoc() exactly.
   if (
-    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
+    searchParams.usingAdversarialAlgo()
     && node.nextPla != rootNode->nextPla
   ) {
-    // EMCTS1 does not support avoidMoveUntilByLoc.
+    // AMCTS does not support avoidMoveUntilByLoc.
     assert(avoidMoveUntilByLoc.size() == 0);
 
     {
@@ -3322,7 +3302,7 @@ int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) 
 
   int numNodesAdded = 1;
   if (
-    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
+    searchParams.usingAdversarialAlgo()
     && thread.lastVisitedNode->nextPla != rootPla
     && thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) == 0
   ) {
@@ -3579,11 +3559,8 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
 
 
 double Search::computeNodeWeight(const SearchNode& node) const {
-  // If doing EMCTS1, we weight opponent nodes as zero.
-  if (
-    searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
-    && node.nextPla != rootNode->nextPla
-  ) {
+  // If doing AMCTS, we weight opponent nodes as zero.
+  if (searchParams.usingAdversarialAlgo() && node.nextPla != rootNode->nextPla) {
     return 0.0;
   }
 

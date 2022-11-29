@@ -22,16 +22,29 @@ std::string SearchParams::passingBehaviorToStr(PassingBehavior behavior) {
   return behavior_to_string.at(behavior);
 }
 
+bool SearchParams::usingAdversarialAlgo() const {
+  return (
+    searchAlgo == SearchAlgorithm::AMCTS_S ||
+    searchAlgo == SearchAlgorithm::AMCTS_SXX ||
+    searchAlgo == SearchAlgorithm::AMCTS_R
+  );
+}
+
 SearchParams::SearchAlgorithm SearchParams::strToSearchAlgo(const std::string& algoStr) {
   if (algoStr == "MCTS") return SearchAlgorithm::MCTS;
-  if (algoStr == "EMCTS1") return SearchAlgorithm::EMCTS1;
+  // Be a little bit lenient here and allow users to refer to AMCTS-S simply as "AMCTS"
+  if (algoStr == "AMCTS-S" || algoStr == "AMCTS") return SearchAlgorithm::AMCTS_S;
+  if (algoStr == "AMCTS-S++") return SearchAlgorithm::AMCTS_SXX;
+  if (algoStr == "AMCTS-R") return SearchAlgorithm::AMCTS_R;
   ASSERT_UNREACHABLE;
 }
 
 std::string SearchParams::searchAlgoToStr(SearchAlgorithm algo) {
   switch(algo) {
     case SearchAlgorithm::MCTS: return "MCTS";
-    case SearchAlgorithm::EMCTS1: return "EMCTS1";
+    case SearchAlgorithm::AMCTS_S: return "AMCTS";
+    case SearchAlgorithm::AMCTS_SXX: return "AMCTS-S++";
+    case SearchAlgorithm::AMCTS_R: return "AMCTS-R";
     default: ASSERT_UNREACHABLE;
   }
 }

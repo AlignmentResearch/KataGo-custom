@@ -91,7 +91,6 @@ class ConfigParser {
  private:
   bool initialized;
   std::string fileName;
-  std::vector<std::string> baseDirs;
   std::string contents;
   std::map<std::string, std::string> keyValues;
 
@@ -105,6 +104,7 @@ class ConfigParser {
   int curLineNum = 0;
   std::string curFilename;
   std::vector<std::string> includedFiles;
+  std::vector<std::string> baseDirs;
 
   std::vector<std::string> logMessages;
 

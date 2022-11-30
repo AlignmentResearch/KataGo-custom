@@ -68,20 +68,16 @@ bool Search::initNodeNNOutput(
       std::swap(symmetryIndexes[i], symmetryIndexes[thread.rand.nextInt(i,SymmetryHelpers::NUM_SYMMETRIES-1)]);
       nnInputParams.symmetry = symmetryIndexes[i];
       bool skipCacheThisIteration = true; //Skip cache since there's no guarantee which symmetry is in the cache
-      nnEvaluator->evaluate(
-        thread.board, thread.history, thread.pla,
-        nnInputParams,
-        thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
+      evaluateNode(
+        node, thread.board, thread.history, thread.pla, nnInputParams, thread.nnResultBuf, skipCacheThisIteration, includeOwnerMap
       );
       ptrs.push_back(std::move(thread.nnResultBuf.result));
     }
     result = new std::shared_ptr<NNOutput>(new NNOutput(ptrs));
   }
   else {
-    nnEvaluator->evaluate(
-      thread.board, thread.history, thread.pla,
-      nnInputParams,
-      thread.nnResultBuf, skipCache, includeOwnerMap
+    evaluateNode(
+      node, thread.board, thread.history, thread.pla, nnInputParams, thread.nnResultBuf, skipCache, includeOwnerMap
     );
     result = new std::shared_ptr<NNOutput>(std::move(thread.nnResultBuf.result));
   }

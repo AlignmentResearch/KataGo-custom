@@ -1,4 +1,5 @@
-/*#include "../tests/testamcts.h"
+#ifdef AMCTS_TESTS
+#include "../tests/testamcts.h"
 
 #include "../dataio/sgf.h"
 #include "../program/play.h"
@@ -203,9 +204,6 @@ void AMCTSTests::testConstPolicies() {
   }
 }
 
-<<<<<<< HEAD:cpp/tests/testemcts1.cpp
-void EMCTS1Tests::testEMCTS1(const int maxVisits,
-=======
 void AMCTSTests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   cout << "Testing MCTS..." << endl;
 
@@ -268,7 +266,6 @@ void AMCTSTests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
 }
 
 void AMCTSTests::testAMCTS(const int maxVisits,
->>>>>>> stable:cpp/tests/testamcts.cpp
                              const int numMovesToSimulate) {
   cout << "Testing AMCTS..." << endl;
 
@@ -361,9 +358,6 @@ void AMCTSTests::testAMCTS(const int maxVisits,
   }
 }
 
-<<<<<<< HEAD:cpp/tests/testemcts1.cpp
-void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
-=======
 void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
                                   const float loss_prob) {
   testAssert(bot.searchParams.searchAlgo ==
@@ -416,7 +410,6 @@ void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
 }
 
 void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
->>>>>>> stable:cpp/tests/testamcts.cpp
                                     const float loss_prob1,
                                     const float win_prob2,
                                     const float loss_prob2) {
@@ -482,11 +475,7 @@ void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
   checkPlayoutLogic(bot);
 }
 
-<<<<<<< HEAD:cpp/tests/testemcts1.cpp
-/* void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
-=======
 void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
->>>>>>> stable:cpp/tests/testamcts.cpp
   unordered_map<Loc, double> trueLocToPsv;
   {
     vector<double> playSelectionValues;
@@ -993,4 +982,4 @@ NodeStats AMCTSTests::averageStats(
 
   return stats;
 }
-*/
+#endif

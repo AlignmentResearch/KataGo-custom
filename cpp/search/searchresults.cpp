@@ -1737,12 +1737,12 @@ bool Search::getAnalysisJson(
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 
-        json pv = json::array();
-        int pvLen =
-          (preventEncore && data.pvContainsPass() && node == rootNode) ? data.getPVLenUpToPhaseEnd(board, hist, pla) : (int)data.pv.size();
-        for(int j = 0; j < pvLen; j++)
-          pv.push_back(Location::toString(data.pv[j], board));
-        moveInfo["pv"] = pv;
+      json pv = json::array();
+      int pvLen =
+        (preventEncore && data.pvContainsPass() && node == rootNode) ? data.getPVLenUpToPhaseEnd(board, hist, pla) : (int)data.pv.size();
+      for(int j = 0; j < pvLen; j++)
+        pv.push_back(Location::toString(data.pv[j], board));
+      moveInfo["pv"] = pv;
 
       if(includePVVisits) {
         assert(data.pvVisits.size() >= pvLen);
@@ -1770,6 +1770,8 @@ bool Search::getAnalysisJson(
       else if(includeMovesOwnership) {
         moveInfo["ownership"] = json(getAverageTreeOwnership(perspective, data.node, data.symmetry));
       }
+      if(includeTree)
+        moveInfo["children"] = dfs(data.node, dfs);
 
       moveInfos.push_back(moveInfo);
     }

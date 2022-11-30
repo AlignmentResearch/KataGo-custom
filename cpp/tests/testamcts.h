@@ -1,4 +1,5 @@
-/*#ifndef TESTAMCTS_H
+#ifdef AMCTS_TESTS
+#ifndef TESTAMCTS_H
 #define TESTAMCTS_H
 
 #include "../core/config_parser.h"
@@ -107,4 +108,4 @@ const float CP2_LOSS_PROB = 1 - CP2_WIN_PROB;
 }  // namespace AMCTSTests
 
 #endif
-*/
+#endif

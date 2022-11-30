@@ -1724,15 +1724,15 @@ bool Search::getAnalysisJson(
       json moveInfo;
       moveInfo["move"] = Location::toString(data.move, board);
       moveInfo["visits"] = data.numVisits;
-      moveInfo["utility"] = roundDynamic(utility,OUTPUT_PRECISION);
-      moveInfo["winrate"] = roundDynamic(winrate,OUTPUT_PRECISION);
-      moveInfo["scoreMean"] = roundDynamic(lead,OUTPUT_PRECISION);
-      moveInfo["scoreSelfplay"] = roundDynamic(scoreMean,OUTPUT_PRECISION);
-      moveInfo["scoreLead"] = roundDynamic(lead,OUTPUT_PRECISION);
-      moveInfo["scoreStdev"] = roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
-      moveInfo["prior"] = roundDynamic(data.policyPrior,OUTPUT_PRECISION);
-      moveInfo["lcb"] = roundDynamic(lcb,OUTPUT_PRECISION);
-      moveInfo["utilityLcb"] = roundDynamic(utilityLcb,OUTPUT_PRECISION);
+      moveInfo["utility"] = Global::roundDynamic(utility,OUTPUT_PRECISION);
+      moveInfo["winrate"] = Global::roundDynamic(winrate,OUTPUT_PRECISION);
+      moveInfo["scoreMean"] = Global::roundDynamic(lead,OUTPUT_PRECISION);
+      moveInfo["scoreSelfplay"] = Global::roundDynamic(scoreMean,OUTPUT_PRECISION);
+      moveInfo["scoreLead"] = Global::roundDynamic(lead,OUTPUT_PRECISION);
+      moveInfo["scoreStdev"] = Global::roundDynamic(data.scoreStdev,OUTPUT_PRECISION);
+      moveInfo["prior"] = Global::roundDynamic(data.policyPrior,OUTPUT_PRECISION);
+      moveInfo["lcb"] = Global::roundDynamic(lcb,OUTPUT_PRECISION);
+      moveInfo["utilityLcb"] = Global::roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["order"] = data.order;
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
@@ -1759,16 +1759,16 @@ bool Search::getAnalysisJson(
       }
 
       if(includeMovesOwnership && includeMovesOwnershipStdev) {
-        std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
-        moveInfo["ownership"] = ownershipAndStdev.first;
-        moveInfo["ownershipStdev"] = ownershipAndStdev.second;
+        std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
+        moveInfo["ownership"] = json(ownershipAndStdev.first);
+        moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
       }
       else if(includeMovesOwnershipStdev) {
-        std::pair<json,json> ownershipAndStdev = getJsonOwnershipAndStdevMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
-        moveInfo["ownershipStdev"] = ownershipAndStdev.second;
+        std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
+        moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
       }
       else if(includeMovesOwnership) {
-        moveInfo["ownership"] = getJsonOwnershipMap(rootPla, perspective, board, data.node, ownershipMinWeight, data.symmetry);
+        moveInfo["ownership"] = json(getAverageTreeOwnership(perspective, data.node, data.symmetry));
       }
 
       moveInfos.push_back(moveInfo);

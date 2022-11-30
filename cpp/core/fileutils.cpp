@@ -24,17 +24,6 @@ bool FileUtils::exists(const string& path) {
   }
 }
 
-bool FileUtils::isDirectory(const std::string &path)
-{
-  try {
-    gfs::path gfsPath(gfs::u8path(path));
-    return gfs::is_directory(gfsPath);
-  }
-  catch(const gfs::filesystem_error& e) {
-    throw std::runtime_error(e.what());
-  }
-}
-
 bool FileUtils::tryOpen(ifstream& in, const char* filename, std::ios_base::openmode mode) {
   in.open(gfs::u8path(filename), mode);
   return in.good();

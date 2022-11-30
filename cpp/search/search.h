@@ -212,7 +212,7 @@ struct Search {
   // None of these top-level functions are thread-safe. They should only ever be called sequentially.
   //================================================================================================================
 
-  string Search::getRankStr() const;
+  std::string getRankStr() const;
   const Board& getRootBoard() const;
   const BoardHistory& getRootHist() const;
   Player getRootPla() const;

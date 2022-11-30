@@ -154,22 +154,6 @@ void Logger::writeLocked(const std::string &str, bool endLine, std::ostream &out
     out << std::flush;
 }
 
-void Logger::writeLocked(const std::string &str, bool endLine, std::ostream &out, const time_t& time)
-{
-  const char* timeFormat = "%F %T%z: ";
-
-  if(logTime) {DateTime::writeTimeToStream(out, timeFormat, time); out << str; }
-  else out << ": " << str;
-  if(endLine) out << std::endl; else out << std::flush;
-}
-
-void Logger::writeAcquireLock(const std::string &str, std::ostream &out)
-{
-  lock_guard<std::mutex> lock(mutex);
-  time_t time = DateTime::getNow();
-  writeLocked(str, true, out, time);
-}
-
 void Logger::write(const string& str) {
   write(str,true);
 }

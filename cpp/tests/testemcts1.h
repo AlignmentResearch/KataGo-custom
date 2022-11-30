@@ -1,4 +1,4 @@
-#ifndef TESTEMCTS1_H
+/*#ifndef TESTEMCTS1_H
 #define TESTEMCTS1_H
 
 #include "../core/config_parser.h"
@@ -29,7 +29,7 @@ void checkEMCTS1Search(const Search& bot, const float win_prob1,
                        const float loss_prob2);
 
 // Checks how we select our move based on results of tree search.
-void checkFinalMoveSelection(const Search& bot);
+// void checkFinalMoveSelection(const Search& bot);
 
 // Check playout logic (for either MCTS or EMCTS1)
 // Our naively implemented check simulates the entire playout process and takes
@@ -54,30 +54,30 @@ void resetBot(Search& bot, int board_size, const Rules& rules);
 
 // Helper struct for dealing with a search tree.
 struct SearchTree {
-  const SearchNode* const root;
+  const SearchChildPointer const root;
   const BoardHistory rootHist;
 
   // DFS visit order.
   // So a child will always come after its parent in this list.
-  std::vector<const SearchNode*> all_nodes;
+  std::vector<const SearchChildPointer> all_nodes;
 
-  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
+  std::unordered_map<const SearchChildPointer, std::vector<const SearchChildPointer>>
       children;
 
   SearchTree(const Search& bot);
 
-  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
+  std::vector<const SearchChildPointer> getSubtreeNodes(const SearchChildPointer node) const;
 
-  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
+  std::vector<const SearchChildPointer> getPathToRoot(const SearchChildPointer node) const;
 
-  BoardHistory getNodeHistory(const SearchNode* node) const;
+  BoardHistory getNodeHistory(const SearchChildPointer node) const;
 };
 
 // Optional param: terminal_node_visits (specify if you want to override
 // terminal node weights)
 NodeStats averageStats(const Search& bot,
-                       const std::vector<const SearchNode*>& nodes,
-                       const std::unordered_map<const SearchNode*, int>*
+                       const std::vector<const SearchChildPointer>& nodes,
+                       const std::unordered_map<const SearchChildPointer, int>*
                            terminal_node_visits = nullptr);
 
 // Constants
@@ -107,3 +107,4 @@ const float CP2_LOSS_PROB = 1 - CP2_WIN_PROB;
 }  // namespace EMCTS1Tests
 
 #endif
+*/

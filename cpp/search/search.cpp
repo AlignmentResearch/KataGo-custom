@@ -3557,6 +3557,8 @@ int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) 
   if (
     searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1
     && thread.lastVisitedNode->nextPla != rootPla
+    // This condition *should* always be true given the two above, but just in case...
+    // see the first if-block in computeNodeWeight
     && thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) == 0
   ) {
     assert(finishedPlayout);
@@ -3568,12 +3570,16 @@ int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) 
     assert(finishedPlayout2);
     assert(thread.lastVisitedNode->nextPla == rootPla);
 
+    // Make sure stats are updated
+    for (auto node : thread.graphPath) {
+      updateStatsAfterPlayout(*node, thread, node == rootNode);
+    }
     // Perform backup and update stats along path to root.
-    SearchNode *curNode = resumeDescentNode;
-    do {
-      curNode = curNode->parent;
-      updateStatsAfterPlayout(*curNode, thread, curNode == rootNode);
-    } while(curNode != rootNode);
+    // SearchNode *curNode = resumeDescentNode;
+    // do {
+    //   curNode = curNode->parent;
+    //   updateStatsAfterPlayout(*curNode, thread, curNode == rootNode);
+    // } while(curNode != rootNode);
 
     numNodesAdded += 1;
   }

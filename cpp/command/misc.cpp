@@ -92,8 +92,7 @@ static void writeLine(
     cout << data.policyPrior << " ";
   }
 
-  int minVisits = 3;
-  vector<double> ownership = search->getAverageTreeOwnership(minVisits);
+  vector<double> ownership = search->getAverageTreeOwnership();
   for(int y = 0; y<board.y_size; y++) {
     for(int x = 0; x<board.x_size; x++) {
       int pos = NNPos::xyToPos(x,y,nnXLen);
@@ -471,7 +470,7 @@ int MainCmds::demoplay(const vector<string>& args) {
           PlayUtils::getSearchFactor(searchFactorWhenWinningThreshold,searchFactorWhenWinning,params,recentWinLossValues,P_BLACK),
           PlayUtils::getSearchFactor(searchFactorWhenWinningThreshold,searchFactorWhenWinning,params,recentWinLossValues,P_WHITE)
         );
-      Loc moveLoc = bot->genMoveSynchronousAnalyze(pla,tc,searchFactor,callbackPeriod,callback);
+      Loc moveLoc = bot->genMoveSynchronousAnalyze(pla,tc,searchFactor,callbackPeriod,callbackPeriod,callback);
 
       bool isLegal = bot->isLegalStrict(moveLoc,pla);
       if(moveLoc == Board::NULL_LOC || !isLegal) {
@@ -644,7 +643,8 @@ int MainCmds::samplesgfs(const vector<string>& args) {
 
   MakeDir::make(outDir);
 
-  Logger logger(nullptr, true);
+  const bool logToStdout = true;
+  Logger logger(nullptr, logToStdout);
   logger.addFile(outDir + "/" + "log.log");
   for(const string& arg: args)
     logger.write(string("Command: ") + arg);
@@ -990,7 +990,8 @@ int MainCmds::dataminesgfs(const vector<string>& args) {
 
   MakeDir::make(outDir);
 
-  Logger logger(&cfg, true);
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
   logger.addFile(outDir + "/" + "log.log");
   for(const string& arg: args)
     logger.write(string("Command: ") + arg);
@@ -1271,7 +1272,7 @@ int MainCmds::dataminesgfs(const vector<string>& args) {
     const bool preventEncore = true;
     const vector<Move>& sgfMoves = sgf->moves;
 
-    if(sgfMoves.size() > maxDepth) {
+    if((int64_t)sgfMoves.size() > maxDepth) {
       numFilteredSgfs.fetch_add(1);
       return;
     }
@@ -1810,7 +1811,8 @@ int MainCmds::trystartposes(const vector<string>& args) {
     return 1;
   }
 
-  Logger logger(&cfg, true);
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
 
   SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_ANALYSIS);
   //Ignore temperature, noise
@@ -1967,7 +1969,9 @@ int MainCmds::viewstartposes(const vector<string>& args) {
   }
 
   Rand rand;
-  Logger logger(&cfg, true);
+
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
 
   Rules rules;
   AsyncBot* bot = NULL;
@@ -2113,7 +2117,9 @@ int MainCmds::sampleinitializations(const vector<string>& args) {
   }
 
   Rand rand;
-  Logger logger(&cfg, true);
+
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
 
   NNEvaluator* nnEval = NULL;
   if(cfg.getFileName() != "") {
@@ -2164,6 +2170,7 @@ int MainCmds::sampleinitializations(const vector<string>& args) {
       NULL,
       NULL,
       logger,
+      nullptr,
       nullptr,
       nullptr,
       nullptr,

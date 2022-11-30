@@ -3,6 +3,7 @@
 #include "../core/timer.h"
 #include "../dataio/sgf.h"
 #include "../search/asyncbot.h"
+#include "../search/searchnode.h"
 #include "../program/setup.h"
 #include "../program/playutils.h"
 #include "../program/play.h"
@@ -206,7 +207,8 @@ int MainCmds::evalsgf(const vector<string>& args) {
 
   //Load neural net and start bot------------------------------------------
 
-  Logger logger(&cfg, true);
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
   logger.write("Engine starting...");
 
   SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_GTP);

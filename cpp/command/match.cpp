@@ -5,6 +5,7 @@
 #include "../core/timer.h"
 #include "../dataio/sgf.h"
 #include "../search/asyncbot.h"
+#include "../search/patternbonustable.h"
 #include "../program/setup.h"
 #include "../program/play.h"
 #include "../command/commandline.h"
@@ -230,6 +231,7 @@ int MainCmds::match(const vector<string>& args) {
     auto shouldStopFunc = []() {
       return shouldStop.load();
     };
+    WaitableFlag* shouldPause = nullptr;
 
     Rand thisLoopSeedRand;
     while(true) {
@@ -259,7 +261,7 @@ int MainCmds::match(const vector<string>& args) {
         logger.write("Launching " + gameDescription);
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
-          shouldStopFunc, nullptr, afterInitialization, nullptr
+          shouldStopFunc, shouldPause, nullptr, afterInitialization, nullptr
         );
         logger.write("Finished " + gameDescription);
       }

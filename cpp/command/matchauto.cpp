@@ -268,11 +268,11 @@ namespace {
 
       namespace gfs = ghc::filesystem;
 
-      for(gfs::directory_iterator iter(resultsDir); iter != gfs::directory_iterator(); ++iter) {
+      for(gfs::directory_iterator iter(gfs::u8path(resultsDir)); iter != gfs::directory_iterator(); ++iter) {
         gfs::path dirPath = iter->path();
         if(gfs::is_directory(dirPath))
           continue;
-        string file = dirPath.string();
+        string file = dirPath.u8string();
         if(Global::isSuffix(file,".results.csv")) {
           vector<string> lines = FileUtils::readFileLines(file,'\n');
           for(int i = 0; i<lines.size(); i++) {
@@ -545,6 +545,7 @@ int MainCmds::matchauto(const vector<string>& args) {
     auto shouldStopFunc = []() {
       return shouldStop.load();
     };
+    WaitableFlag* shouldPause = nullptr;
 
     Rand thisLoopSeedRand;
     while(true) {
@@ -560,7 +561,7 @@ int MainCmds::matchauto(const vector<string>& args) {
         string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
-          shouldStopFunc, nullptr, nullptr, nullptr
+          shouldStopFunc, shouldPause, nullptr, nullptr, nullptr
         );
       }
 

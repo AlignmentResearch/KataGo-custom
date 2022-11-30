@@ -4,6 +4,7 @@
 #include "../core/datetime.h"
 #include "../core/makedir.h"
 #include "../search/asyncbot.h"
+#include "../search/patternbonustable.h"
 #include "../program/setup.h"
 #include "../program/playutils.h"
 #include "../program/play.h"
@@ -38,6 +39,7 @@ struct AnalyzeRequest {
 
   bool reportDuringSearch;
   double reportDuringSearchEvery;
+  double firstReportDuringSearchAfter;
 
   vector<int> avoidMoveUntilByLocBlack;
   vector<int> avoidMoveUntilByLocWhite;
@@ -103,9 +105,10 @@ int MainCmds::analysis(const vector<string>& args) {
   if(forDeterministicTesting)
     seedRand.init("forDeterministicTesting");
 
-  Logger logger(&cfg);
-
-  const bool logToStderr = cfg.contains("logToStderr") ? cfg.getBool("logToStderr") : true;
+  const bool logToStdoutDefault = false;
+  const bool logToStderrDefault = true;
+  Logger logger(&cfg, logToStdoutDefault, logToStderrDefault);
+  const bool logToStderr = logger.isLoggingToStderr();
 
   logger.write("Analysis Engine starting...");
   logger.write(Version::getKataGoVersionForHelp());
@@ -241,7 +244,6 @@ int MainCmds::analysis(const vector<string>& args) {
 
   //Returns false if no analysis was reportable due to there being no root node or search results.
   auto reportAnalysis = [&preventEncore,&pushToWrite](const AnalyzeRequest* request, const Search* search, bool isDuringSearch) {
-    static constexpr int ownershipMinVisits = 3;
     json ret;
     ret["id"] = request->id;
     ret["turnNumber"] = request->turnNumber;
@@ -249,7 +251,7 @@ int MainCmds::analysis(const vector<string>& args) {
 
     bool success = search->getAnalysisJson(
       request->perspective,
-      request->analysisPVLen, ownershipMinVisits, preventEncore, request->includePolicy,
+      request->analysisPVLen, preventEncore, request->includePolicy,
       request->includeOwnership,request->includeOwnershipStdev,
       request->includeMovesOwnership,request->includeMovesOwnershipStdev,
       request->includePVVisits,
@@ -302,7 +304,11 @@ int MainCmds::analysis(const vector<string>& args) {
             const bool isDuringSearch = true;
             reportAnalysis(request,search,isDuringSearch);
           };
-          bot->genMoveSynchronousAnalyze(pla, TimeControls(), searchFactor, request->reportDuringSearchEvery, callback, onSearchBegun);
+          bot->genMoveSynchronousAnalyze(
+            pla, TimeControls(), searchFactor,
+            request->reportDuringSearchEvery, request->firstReportDuringSearchAfter,
+            callback, onSearchBegun
+          );
         }
         else {
           bot->genMoveSynchronous(pla, TimeControls(), searchFactor, onSearchBegun);
@@ -488,7 +494,8 @@ int MainCmds::analysis(const vector<string>& args) {
       rbase.includePVVisits = false;
       rbase.includeTree = false;
       rbase.reportDuringSearch = false;
-      rbase.reportDuringSearchEvery = 1.0;
+      rbase.reportDuringSearchEvery = 1e30;
+      rbase.firstReportDuringSearchAfter = 1e30;
       rbase.priority = 0;
       rbase.avoidMoveUntilByLocBlack.clear();
       rbase.avoidMoveUntilByLocWhite.clear();
@@ -903,6 +910,13 @@ int MainCmds::analysis(const vector<string>& args) {
         if(!suc)
           continue;
         rbase.reportDuringSearch = true;
+        rbase.firstReportDuringSearchAfter = rbase.reportDuringSearchEvery;
+      }
+      if(input.find("firstReportDuringSearchAfter") != input.end()) {
+        bool suc = parseDouble(input, "firstReportDuringSearchAfter", rbase.firstReportDuringSearchAfter, 0.001, 1000000.0, "Must be number of seconds from 0.001 to 1000000.0");
+        if(!suc)
+          continue;
+        rbase.reportDuringSearch = true;
       }
       if(input.find("priority") != input.end()) {
         if(input.find("priorities") != input.end()) {
@@ -1031,6 +1045,7 @@ int MainCmds::analysis(const vector<string>& args) {
           newRequest->includeTree = rbase.includeTree;
           newRequest->reportDuringSearch = rbase.reportDuringSearch;
           newRequest->reportDuringSearchEvery = rbase.reportDuringSearchEvery;
+          newRequest->firstReportDuringSearchAfter = rbase.firstReportDuringSearchAfter;
           newRequest->priority = priority;
           newRequest->avoidMoveUntilByLocBlack = rbase.avoidMoveUntilByLocBlack;
           newRequest->avoidMoveUntilByLocWhite = rbase.avoidMoveUntilByLocWhite;

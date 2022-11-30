@@ -14,7 +14,7 @@
 #include "../neuralnet/nninputs.h"
 #include "../program/gtpconfig.h"
 #include "../program/setup.h"
-#include "../tests/testemcts1.h"
+#include "../tests/testamcts.h"
 #include "../tests/tests.h"
 #include "../tests/tinymodel.h"
 #include "../command/commandline.h"
@@ -67,7 +67,7 @@ int MainCmds::runexpensivetests(const vector<string>& args) {
     cerr << "Must supply exactly two arguments: MAX_VISITS NUM_MOVES_TO_SIMULATE" << endl;
     return 1;
   }
-  // EMCTS1Tests::runAllEMCTS1Tests(
+  // AMCTSTests::runAllAMCTSTests(
   //   Global::stringToInt(args[1]),
   //   Global::stringToInt(args[2])
   // );

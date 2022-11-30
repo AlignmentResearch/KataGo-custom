@@ -1,4 +1,4 @@
-/*#include "../tests/testemcts1.h"
+/*#include "../tests/testamcts.h"
 
 #include "../dataio/sgf.h"
 #include "../program/play.h"
@@ -10,11 +10,11 @@ using namespace std;
 // Uncomment to enable debugging
 // #define DEBUG
 
-void EMCTS1Tests::runAllEMCTS1Tests(const int maxVisits,
+void AMCTSTests::runAllAMCTSTests(const int maxVisits,
                                     const int numMovesToSimulate) {
   testConstPolicies();
   testMCTS(maxVisits, numMovesToSimulate);
-  testEMCTS1(maxVisits, numMovesToSimulate);
+  testAMCTS(maxVisits, numMovesToSimulate);
 }
 
 static constexpr double TOTALCHILDWEIGHT_PUCT_OFFSET = 0.01;
@@ -104,10 +104,10 @@ static double getFpuValue(const Search& bot, const SearchChildPointer nodePtr,
   return fpuValue;
 }
 
-void EMCTS1Tests::testConstPolicies() {
+void AMCTSTests::testConstPolicies() {
   cout << "Testing custom const policy nets..." << endl;
 
-  ConfigParser cfg(EMCTS1_CONFIG_PATH);
+  ConfigParser cfg(AMCTS_CONFIG_PATH);
   Logger logger(&cfg, false);
 
   testAssert(parseRules(cfg, logger) == Rules::getTrompTaylorish());
@@ -203,11 +203,76 @@ void EMCTS1Tests::testConstPolicies() {
   }
 }
 
+<<<<<<< HEAD:cpp/tests/testemcts1.cpp
 void EMCTS1Tests::testEMCTS1(const int maxVisits,
-                             const int numMovesToSimulate) {
-  cout << "Testing EMCTS1..." << endl;
+=======
+void AMCTSTests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
+  cout << "Testing MCTS..." << endl;
 
-  ConfigParser cfg(EMCTS1_CONFIG_PATH);
+  ConfigParser cfg(AMCTS_CONFIG_PATH);
+  Logger logger(&cfg, false);
+
+  vector<SearchParams> searchParamss =
+      Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+  testAssert(searchParamss.size() == 2);
+
+  const SearchParams mctsParams = [&]() {
+    SearchParams ret = searchParamss[0];
+    setSimpleSearchParams(ret);
+    return ret;
+  }();
+
+  auto nnEval1 = getNNEval(CONST_POLICY_1_PATH, cfg, logger, 42);
+  auto nnEval2 = getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);
+  Search bot1(mctsParams, nnEval1.get(), &logger, "forty-two");
+  Search bot2(mctsParams, nnEval2.get(), &logger, "forty-two");
+
+  for (auto bot_ptr : {&bot1, &bot2}) {
+    Search& bot = *bot_ptr;
+
+    const int BOARD_SIZE = 9;
+    resetBot(bot, BOARD_SIZE, Rules::getTrompTaylorish());
+
+    // The initial board we perform tests on.
+    // It has 8 placed stones that are at the top left corner that look like
+    // this:
+    //    BBBB.....
+    //    .WWWW....
+    //    .........
+    // Here, dots are empty spaces. It is black's turn to move.
+    const unique_ptr<CompactSgf> initSgf(
+        CompactSgf::parse("(;FF[4]KM[7.5]SZ[19];B[aa];W[bb];B[ba];W[cb];B[ca];"
+                          "W[db];B[da];W[eb])"));
+    for (auto& m : initSgf->moves) {
+      bot.makeMove(m.loc, m.pla);
+    }
+
+    Player curPla = P_BLACK;
+    for (int midx = 0; midx < numMovesToSimulate; midx++) {
+      // Change up visit count to make tests more varied
+      bot.searchParams.maxVisits = maxVisits + midx;
+
+      bot.clearSearch();
+      const Loc loc = bot.runWholeSearchAndGetMove(curPla);
+
+      checkMCTSSearch(bot, (&bot == &bot1) ? CP1_WIN_PROB : CP2_WIN_PROB,
+                      (&bot == &bot1) ? CP1_LOSS_PROB : CP2_LOSS_PROB);
+
+      bot.makeMove(loc, curPla);
+      curPla = getOpp(curPla);
+
+      // Break if game is finished.
+      if (bot.rootHistory.isGameFinished) break;
+    }
+  }
+}
+
+void AMCTSTests::testAMCTS(const int maxVisits,
+>>>>>>> stable:cpp/tests/testamcts.cpp
+                             const int numMovesToSimulate) {
+  cout << "Testing AMCTS..." << endl;
+
+  ConfigParser cfg(AMCTS_CONFIG_PATH);
   Logger logger(&cfg, false);
 
   vector<SearchParams> searchParamss =
@@ -224,17 +289,15 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
 
     return ret;
   }();
-  const SearchParams emcts1Params_v1 = [&]() {
+  const SearchParams amcts_s_Params = [&]() {
     SearchParams ret = searchParamss[1];
+    ret.searchAlgo = SearchParams::SearchAlgorithm::AMCTS_S;
     setSimpleSearchParams(ret);
-    ret.oppVisitsOverride = 1;
-    ret.oppRootSymmetriesOverride = 1;
     return ret;
   }();
-  const SearchParams emcts1Params_v8 = [&]() {
-    SearchParams ret = emcts1Params_v1;
-    ret.oppVisitsOverride = 8;
-    ret.oppRootSymmetriesOverride = 4;
+  const SearchParams amcts_r_Params = [&]() {
+    SearchParams ret = amcts_s_Params;
+    ret.searchAlgo = SearchParams::SearchAlgorithm::AMCTS_R;
     return ret;
   }();
 
@@ -242,17 +305,17 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
       getNNEval(CONST_POLICY_1_PATH, cfg, logger, 42);  // move over pass
   auto nnEval2 =
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
-  Search bot11_v1(emcts1Params_v1, nnEval1.get(), &logger, "forty-two",
+  Search bot11_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
                   mctsParams, nnEval1.get());
-  Search bot12_v1(emcts1Params_v1, nnEval1.get(), &logger, "forty-two",
+  Search bot12_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
                   mctsParams, nnEval2.get());
 
-  Search bot11_v8(emcts1Params_v8, nnEval1.get(), &logger, "forty-two",
+  Search bot11_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
                   mctsParams, nnEval1.get());
-  Search bot12_v8(emcts1Params_v8, nnEval1.get(), &logger, "forty-two",
+  Search bot12_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
                   mctsParams, nnEval2.get());
 
-  for (auto bot_ptr : {&bot11_v1, &bot12_v1, &bot11_v8, &bot12_v8}) {
+  for (auto bot_ptr : {&bot11_s, &bot12_s, &bot11_r, &bot12_r}) {
     Search& bot = *bot_ptr;
 
     const int BOARD_SIZE = 9;
@@ -281,11 +344,11 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
       bot.clearSearch();
       const Loc loc = bot.runWholeSearchAndGetMove(curPla);
 
-      if (&bot == &bot11_v1 || &bot == &bot11_v8) {
-        checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP1_WIN_PROB,
+      if (&bot == &bot11_s || &bot == &bot11_r) {
+        checkAMCTSSearch(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP1_WIN_PROB,
                           CP1_LOSS_PROB);
-      } else if (&bot == &bot12_v1 || &bot == &bot12_v8) {
-        checkEMCTS1Search(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
+      } else if (&bot == &bot12_s || &bot == &bot12_r) {
+        checkAMCTSSearch(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
                           CP2_LOSS_PROB);
       }
 
@@ -298,12 +361,66 @@ void EMCTS1Tests::testEMCTS1(const int maxVisits,
   }
 }
 
+<<<<<<< HEAD:cpp/tests/testemcts1.cpp
 void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
+=======
+void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
+                                  const float loss_prob) {
+  testAssert(bot.searchParams.searchAlgo ==
+             SearchParams::SearchAlgorithm::MCTS);
+  SearchTree tree(bot);
+
+  // Not equality since sometimes we visit terminal nodes multiple times.
+  testAssert(tree.all_nodes.size() <= bot.searchParams.maxPlayouts);
+
+  // Test { nodes without nnOutputs } == { terminal nodes }
+  for (auto node : tree.all_nodes) {
+    if (node->getNNOutput() == nullptr) {
+      assert(tree.getNodeHistory(node).isGameFinished);
+    } else {
+      assert(!tree.getNodeHistory(node).isGameFinished);
+    }
+  }
+
+  // Test weights are as expected
+  for (auto node : tree.all_nodes) {
+    if (node->getNNOutput() == nullptr) {
+      // Terminal nodes don't have a nnoutput, so we directly check
+      // weightSum. They might also be visited more than once.
+      testAssert(NodeStats(node->stats).weightSum >= 1);
+    } else {
+      testAssert(bot.computeNodeWeight(*node) == 1);
+    }
+  }
+
+  // Test nnOutputs are as expected
+  for (auto node : tree.all_nodes) {
+    if (node->getNNOutput() == nullptr) continue;
+    testAssert(approxEqual(node->getNNOutput()->whiteWinProb,
+                           node->nextPla == P_WHITE ? win_prob : loss_prob));
+    testAssert(approxEqual(node->getNNOutput()->whiteLossProb,
+                           node->nextPla == P_WHITE ? loss_prob : win_prob));
+    testAssert(approxEqual(node->getNNOutput()->whiteNoResultProb, 0));
+  }
+
+  // Test backup
+  for (auto node : tree.all_nodes) {
+    const NodeStats s1 = averageStats(bot, tree.getSubtreeNodes(node));
+    const NodeStats s2(node->stats);
+    testAssert(approxEqual(s1, s2));
+  }
+
+  checkFinalMoveSelection(bot);
+
+  checkPlayoutLogic(bot);
+}
+
+void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
+>>>>>>> stable:cpp/tests/testamcts.cpp
                                     const float loss_prob1,
                                     const float win_prob2,
                                     const float loss_prob2) {
-  testAssert(bot.searchParams.searchAlgo ==
-             SearchParams::SearchAlgorithm::EMCTS1);
+  testAssert(bot.searchParams.usingAdversarialAlgo());
 
   SearchTree tree(bot);
 
@@ -365,7 +482,11 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
   checkPlayoutLogic(bot);
 }
 
+<<<<<<< HEAD:cpp/tests/testemcts1.cpp
 /* void EMCTS1Tests::checkFinalMoveSelection(const Search& bot) {
+=======
+void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
+>>>>>>> stable:cpp/tests/testamcts.cpp
   unordered_map<Loc, double> trueLocToPsv;
   {
     vector<double> playSelectionValues;
@@ -492,10 +613,10 @@ void EMCTS1Tests::checkEMCTS1Search(const Search& bot, const float win_prob1,
   for (const auto [child, psv] : childToPsv) {
     testAssert(approxEqual(trueLocToPsv[child->prevMoveLoc], psv));
   }
-} */
-/*
-void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
-  if (bot.searchParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
+}
+
+void AMCTSTests::checkPlayoutLogic(const Search& bot) {
+  if (bot.searchParams.usingAdversarialAlgo()) {
     // We need temperature to be zero for opponent to be determinstic.
     testAssert(bot.oppBot.get()->searchParams.chosenMoveTemperature == 0);
     testAssert(bot.oppBot.get()->searchParams.chosenMoveTemperatureEarly == 0);
@@ -555,16 +676,16 @@ void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
 
       if (node->getNNOutput() == nullptr) return;  // This is a terminal nodes
       if (visits[node] == 1) {  // First time visiting the node
-        switch (bot.searchParams.searchAlgo) {
-          case SearchParams::SearchAlgorithm::MCTS:
-            return;
-          case SearchParams::SearchAlgorithm::EMCTS1:
-            if (node->nextPla == bot.rootPla) return;
-            numNodesAdded += 1;
-            for (auto x : tree.getPathToRoot(node)) visits[x] += 1;
-            break;
-          default:
-            ASSERT_UNREACHABLE;
+        if (bot.searchParams.usingAdversarialAlgo()) {
+          if (node->nextPla == bot.rootPla) return;
+
+          numNodesAdded += 1;
+          for (auto x : tree.getPathToRoot(node))
+            visits[x] += 1;
+        } else if (bot.searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS) {
+          return;
+        } else {
+          ASSERT_UNREACHABLE;
         }
       }
 
@@ -593,8 +714,7 @@ void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
         policyProbMassVisited += policyProbs[nodeToPos(child)];
       }
 
-      if (bot.searchParams.searchAlgo ==
-              SearchParams::SearchAlgorithm::EMCTS1 &&
+      if (bot.searchParams.usingAdversarialAlgo() &&
           node->nextPla != bot.rootPla) {
         if (oppNodeCache.find(node) == oppNodeCache.end()) {
           bot.oppBot.get()->setPosition(node->nextPla, board, history);
@@ -702,12 +822,12 @@ void EMCTS1Tests::checkPlayoutLogic(const Search& bot) {
   }
 }
 
-Rules EMCTS1Tests::parseRules(ConfigParser& cfg, Logger& logger) {
+Rules AMCTSTests::parseRules(ConfigParser& cfg, Logger& logger) {
   GameInitializer gInit(cfg, logger);
   return gInit.createRules();
 }
 
-shared_ptr<NNEvaluator> EMCTS1Tests::getNNEval(string modelFile,
+shared_ptr<NNEvaluator> AMCTSTests::getNNEval(string modelFile,
                                                ConfigParser& cfg,
                                                Logger& logger, uint64_t seed) {
   Setup::initializeSession(cfg);
@@ -728,7 +848,7 @@ shared_ptr<NNEvaluator> EMCTS1Tests::getNNEval(string modelFile,
   return ret;
 }
 
-shared_ptr<NNResultBuf> EMCTS1Tests::evaluate(shared_ptr<NNEvaluator> nnEval,
+shared_ptr<NNResultBuf> AMCTSTests::evaluate(shared_ptr<NNEvaluator> nnEval,
                                               Board& board, BoardHistory& hist,
                                               Player nextPla, bool skipCache,
                                               bool includeOwnerMap) {
@@ -740,13 +860,13 @@ shared_ptr<NNResultBuf> EMCTS1Tests::evaluate(shared_ptr<NNEvaluator> nnEval,
   return ret;
 }
 
-void EMCTS1Tests::resetBot(Search& bot, int board_size, const Rules& rules) {
+void AMCTSTests::resetBot(Search& bot, int board_size, const Rules& rules) {
   Board board(board_size, board_size);
   BoardHistory hist(board, P_BLACK, rules, 0);
   bot.setPosition(P_BLACK, board, hist);
 }
 
-EMCTS1Tests::SearchTree::SearchTree(const Search& bot)
+AMCTSTests::SearchTree::SearchTree(const Search& bot)
     : root(bot.rootNode), rootHist(bot.rootHistory) {
   auto build = [this](const SearchChildPointer node, auto&& dfs) -> void {
     all_nodes.push_back(node);
@@ -765,9 +885,9 @@ EMCTS1Tests::SearchTree::SearchTree(const Search& bot)
   build(root, build);
 }
 
-vector<const SearchChildPointer> EMCTS1Tests::SearchTree::getSubtreeNodes(
-    const SearchChildPointer subtree_root) const {
-  vector<const SearchChildPointer> subtree_nodes;
+vector<const SearchNode*> AMCTSTests::SearchTree::getSubtreeNodes(
+    const SearchNode* subtree_root) const {
+  vector<const SearchNode*> subtree_nodes;
 
   auto walk = [this, &subtree_nodes](const SearchChildPointer node,
                                      auto&& dfs) -> void {
@@ -781,36 +901,36 @@ vector<const SearchChildPointer> EMCTS1Tests::SearchTree::getSubtreeNodes(
   return subtree_nodes;
 }
 
-// std::vector<const SearchChildPointer> EMCTS1Tests::SearchTree::getPathToRoot(
-//     const SearchChildPointer node) const {
-//   vector<const SearchChildPointer> path = {node};
-//   while (*path.rbegin() != root) {
-//     path.push_back((*path.rbegin())->parent);
-//   }
-//   return path;
-// }
+std::vector<const SearchNode*> AMCTSTests::SearchTree::getPathToRoot(
+    const SearchNode* node) const {
+  vector<const SearchNode*> path = {node};
+  while (*path.rbegin() != root) {
+    path.push_back((*path.rbegin())->parent);
+  }
+  return path;
+}
 
-// BoardHistory EMCTS1Tests::SearchTree::getNodeHistory(
-//     const SearchChildPointer node) const {
-//   const auto pathRootToNode = [&]() {
-//     auto path = getPathToRoot(node);
-//     std::reverse(path.begin(), path.end());
-//     return path;
-//   }();
-// 
-//   Board board = rootHist.getRecentBoard(0);
-//   BoardHistory hist = rootHist;
-//   for (auto& n : pathRootToNode) {
-//     if (n == root) continue;  // Skip root node
-//     hist.makeBoardMoveTolerant(board, n->prevMoveLoc, getOpp(n->nextPla));
-//   }
-// 
-//   return hist;
-// }
+BoardHistory AMCTSTests::SearchTree::getNodeHistory(
+    const SearchNode* node) const {
+  const auto pathRootToNode = [&]() {
+    auto path = getPathToRoot(node);
+    std::reverse(path.begin(), path.end());
+    return path;
+  }();
 
-NodeStats EMCTS1Tests::averageStats(
-    const Search& bot, const vector<const SearchChildPointer>& nodes,
-    const unordered_map<const SearchChildPointer, int>* terminal_node_visits) {
+  Board board = rootHist.getRecentBoard(0);
+  BoardHistory hist = rootHist;
+  for (auto& n : pathRootToNode) {
+    if (n == root) continue;  // Skip root node
+    hist.makeBoardMoveTolerant(board, n->prevMoveLoc, getOpp(n->nextPla));
+  }
+
+  return hist;
+}
+
+NodeStats AMCTSTests::averageStats(
+    const Search& bot, const vector<const SearchNode*>& nodes,
+    const unordered_map<const SearchNode*, int>* terminal_node_visits) {
   NodeStats stats;
 
   // During the following loop, stats will track sums and not averages!

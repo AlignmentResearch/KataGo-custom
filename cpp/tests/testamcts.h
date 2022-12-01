@@ -1,37 +1,37 @@
-#ifndef TESTEMCTS1_H
-#define TESTEMCTS1_H
+#ifndef TESTAMCTS_H
+#define TESTAMCTS_H
 
 #include "../core/config_parser.h"
 #include "../core/logger.h"
 #include "../neuralnet/nneval.h"
 #include "../search/search.h"
 
-namespace EMCTS1Tests {
-void runAllEMCTS1Tests(const int maxVisits, const int numMovesToSimulate);
+namespace AMCTSTests {
+void runAllAMCTSTests(const int maxVisits, const int numMovesToSimulate);
 
 // Checks that the models/const-policy-*-.bin.gz behave as expected
 // (when using standard MCTS search).
 void testConstPolicies();
 
-// Test our modifications didn't break the original EMCTS.
+// Test our modifications didn't break the original MCTS.
 void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of MCTS search
 void checkMCTSSearch(const Search& bot, const float win_prob,
                      const float loss_prob);
 
-// Test EMCTS1
-void testEMCTS1(const int maxVisits, const int numMovesToSimulate);
+// Test AMCTS
+void testAMCTS(const int maxVisits, const int numMovesToSimulate);
 
-// Checks one move's worth of EMCTS1 search
-void checkEMCTS1Search(const Search& bot, const float win_prob1,
+// Checks one move's worth of AMCTS search
+void checkAMCTSSearch(const Search& bot, const float win_prob1,
                        const float loss_prob1, const float win_prob2,
                        const float loss_prob2);
 
 // Checks how we select our move based on results of tree search.
 void checkFinalMoveSelection(const Search& bot);
 
-// Check playout logic (for either MCTS or EMCTS1)
+// Check playout logic (for either MCTS or AMCTS)
 // Our naively implemented check simulates the entire playout process and takes
 // O(BP^3) time, where B is the size of the board and P is the number of
 // playouts.
@@ -82,7 +82,7 @@ NodeStats averageStats(const Search& bot,
 
 // Constants
 
-const std::string EMCTS1_CONFIG_PATH = "cpp/tests/data/configs/test-emcts1.cfg";
+const std::string AMCTS_CONFIG_PATH = "cpp/tests/data/configs/test-amcts.cfg";
 
 // exp(1)
 const float E = 2.718281828459045f;
@@ -104,6 +104,6 @@ const std::string CONST_POLICY_2_PATH =
 const float CP2_WIN_PROB = 1 / (1 + E * E);
 const float CP2_LOSS_PROB = 1 - CP2_WIN_PROB;
 
-}  // namespace EMCTS1Tests
+}  // namespace AMCTSTests
 
 #endif

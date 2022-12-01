@@ -325,7 +325,7 @@ struct GTPEngine {
   bool analysisAntiMirror;
 
   NNEvaluator* nnEval;
-  NNEvaluator* opNNEval; // Optional (required when using EMCTS1)
+  NNEvaluator* opNNEval; // Optional (required when using AMCTS)
   AsyncBot* bot;
   Rules currentRules; //Should always be the same as the rules in bot, if bot is not NULL.
 
@@ -1528,7 +1528,7 @@ int MainCmds::gtp(const vector<string>& args) {
 
     TCLAP::ValueArg<string> opNNFileArg(
       "", "victim-model",
-      "Path to victim model (for EMCTS search).",
+      "Path to victim model (for AMCTS search).",
       false, string(), "VICTIM_MODEL"
     );
     cmd.add(opNNFileArg);
@@ -1581,26 +1581,23 @@ int MainCmds::gtp(const vector<string>& args) {
   vector<SearchParams> paramss = Setup::loadParams(cfg,Setup::SETUP_FOR_GTP);
   assert(!paramss.empty());
   SearchParams& initialParams = paramss[0];
-  switch (initialParams.searchAlgo) {
-    case SearchParams::SearchAlgorithm::MCTS:
-      if (paramss.size() != 1) {
+  if (initialParams.usingAdversarialAlgo()) {
+    if (paramss.size() != 2) {
+      throw StringError(
+          "Expect 2 bots for AMCTS, got " + Global::intToString(paramss.size())
+      );
+    }
+    if (opNNModelFile == "") {
+      throw StringError("-victim-model flag must be specified for AMCTS");
+    }
+  } else if (initialParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS) {
+    if (paramss.size() != 1) {
         throw StringError(
             "Expect 1 bot for MCTS, got " + Global::intToString(paramss.size())
         );
       }
-      break;
-    case SearchParams::SearchAlgorithm::EMCTS1:
-      if (paramss.size() != 2) {
-        throw StringError(
-            "Expect 2 bots for EMCTS, got " + Global::intToString(paramss.size())
-        );
-      }
-      if (opNNModelFile == "") {
-        throw StringError("-victim-model flag must be specified for EMCTS");
-      }
-      break;
-    default:
-      ASSERT_UNREACHABLE;
+  } else {
+    ASSERT_UNREACHABLE;
   }
 
   logger.write("Using " + Global::intToString(initialParams.numThreads) + " CPU thread(s) for search");
@@ -1611,10 +1608,10 @@ int MainCmds::gtp(const vector<string>& args) {
     initialParams.fillDameBeforePass = true;
 
   const bool ponderingEnabled = cfg.contains("ponderingEnabled") ? cfg.getBool("ponderingEnabled") : false;
-  if (ponderingEnabled && initialParams.searchAlgo == SearchParams::SearchAlgorithm::EMCTS1) {
-    // EMCTS expects to conduct searches with the root node always being one
+  if (ponderingEnabled && initialParams.usingAdversarialAlgo()) {
+    // AMCTS expects to conduct searches with the root node always being one
     // fixed color. Pondering breaks this.
-    throw StringError("Pondering must be disabled for EMCTS.");
+    throw StringError("Pondering must be disabled for AMCTS.");
   }
 
   const enabled_t cleanupBeforePass = cfg.contains("cleanupBeforePass") ? cfg.getEnabled("cleanupBeforePass") : enabled_t::Auto;

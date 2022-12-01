@@ -29,17 +29,21 @@ struct SearchParams {
   bool forceWinningPass;
 
   // Algorithm to use for search
-  enum class SearchAlgorithm { MCTS, EMCTS1 };
+  enum class SearchAlgorithm {
+    // Vanilla self-play MCTS
+    MCTS,
+    // A-MCTS-S: Adversarial MCTS with sampling
+    AMCTS_S,
+    // A-MCTS-S++: Adversarial MCTS with sampling and averaging over board symmetries
+    AMCTS_SXX,
+    // A-MCTS-R: Adversarial MCTS with recursion
+    AMCTS_R
+  };
   static SearchAlgorithm strToSearchAlgo(const std::string& algoStr);
   static std::string searchAlgoToStr(SearchAlgorithm algo);
   SearchAlgorithm searchAlgo;
   std::string getSearchAlgoAsStr() const;
-
-  // Overrides the number of vists we use in EMCTS to simulate the victim.
-  std::optional<int> oppVisitsOverride;
-
-  // Overrides the number of root symmetries that are sampled for EMCTS
-  std::optional<int> oppRootSymmetriesOverride;
+  bool usingAdversarialAlgo() const;
 
   // Whether we are allowed to be the first player that passes in a game.
   bool canPassFirst;

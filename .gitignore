@@ -22,7 +22,6 @@ cpp/main
 cpp/maincuda
 cpp/mainopencl
 cpp/katago
-cpp/configs
 cpp/evalsgf
 cpp/runmatch.sh
 cpp/runmatchauto.sh

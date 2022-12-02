@@ -82,6 +82,10 @@ FinishedGameData::FinishedGameData()
    policyTargetsByTurn(),
    whiteValueTargetsByTurn(),
    nnRawStatsByTurn(),
+
+   queryMoveLoc(Board::NULL_LOC),
+   playoutHistoriesByTurn(),
+
    finalFullArea(NULL),
    finalOwnership(NULL),
    finalSekiAreas(NULL),

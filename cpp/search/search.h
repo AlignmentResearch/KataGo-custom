@@ -130,6 +130,21 @@ public:
   bool storeIfNull(SearchNode* node);
 };
 
+// Records info about a playout; used when queryMoveLoc != Board::NULL_LOC
+struct SearchPlayoutRecord {
+  int64_t playoutIdx;
+  double queryMoveSelectionProb;
+  std::vector<Loc> visitedMoves;
+
+  // Sort of silly but we need to pass these to Location::toString inside
+  // of operator<< below
+  int boardXSize;
+  int boardYSize;
+
+  friend std::ostream& operator<<(std::ostream& out, const SearchPlayoutRecord& record);
+  nlohmann::json toJson() const;
+};
+
 struct SearchNode {
   //Locks------------------------------------------------------------------------------
   mutable std::atomic_flag statsLock = ATOMIC_FLAG_INIT;
@@ -317,6 +332,7 @@ struct Search {
 
   //Mutable---------------------------------------------------------------
   SearchNode* rootNode;
+  std::vector<SearchPlayoutRecord> playoutHistory;
 
   //Services--------------------------------------------------------------
   MutexPool* mutexPool;
@@ -485,6 +501,7 @@ struct Search {
 
   //Useful utility function exposed for outside use
   static uint32_t chooseIndexWithTemperature(Rand& rand, const double* relativeProbs, int numRelativeProbs, double temperature);
+  static void temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize = true);
   static void computeDirichletAlphaDistribution(int policySize, const float* policyProbs, double* alphaDistr);
   static void addDirichletNoise(const SearchParams& searchParams, Rand& rand, int policySize, float* policyProbs);
 

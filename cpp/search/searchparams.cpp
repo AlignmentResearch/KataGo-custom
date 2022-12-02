@@ -61,6 +61,7 @@ std::string SearchParams::getSearchAlgoAsStr() const {
 SearchParams::SearchParams()
   :passingBehavior(PassingBehavior::Standard),
    forceWinningPass(false),
+   queryMoveLoc(Board::NULL_LOC),
    searchAlgo(SearchAlgorithm::MCTS),
    canPassFirst(true),
    winLossUtilityFactor(1.0),

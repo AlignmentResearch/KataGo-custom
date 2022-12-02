@@ -112,6 +112,21 @@ MoreNodeStats::MoreNodeStats()
 MoreNodeStats::~MoreNodeStats()
 {}
 
+std::ostream& operator<<(std::ostream& out, const SearchPlayoutRecord& record) {
+  // Currently we're not including playoutIdx in the description because
+  // over in WriteSgf we always write all the playouts in order. If we
+  // decide to change that, we should include playoutIdx here.
+  out << "{" << record.queryMoveSelectionProb << ", (";
+
+  for(int i = 0; i < record.visitedMoves.size(); i++) {
+    if(i > 0)
+      out << ", ";
+    out << Location::toString(record.visitedMoves[i], record.boardXSize, record.boardYSize);
+  }
+  out << ")}";
+  return out;
+}
+
 double Search::getResultUtility(double winLossValue, double noResultValue) const {
   return (
     winLossValue * searchParams.winLossUtilityFactor +
@@ -813,6 +828,8 @@ void Search::clearSearch() {
   rootNode = NULL;
   clearOldNNOutputs();
   searchNodeAge = 0;
+
+  playoutHistory.clear();
 }
 
 bool Search::isLegalTolerant(Loc moveLoc, Player movePla) const {
@@ -974,13 +991,6 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
   double processedRelProbs[Board::MAX_ARR_SIZE];
 
-  double maxValue = 0.0;
-  for(int i = 0; i<numRelativeProbs; i++) {
-    if(relativeProbs[i] > maxValue)
-      maxValue = relativeProbs[i];
-  }
-  assert(maxValue > 0.0);
-
   //Temperature so close to 0 that we just calculate the max directly
   if(temperature <= 1.0e-4) {
     double bestProb = relativeProbs[0];
@@ -995,16 +1005,34 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   }
   //Actual temperature
   else {
-    double logMaxValue = log(maxValue);
-    double sum = 0.0;
-    for(int i = 0; i<numRelativeProbs; i++) {
-      //Numerically stable way to raise to power and normalize
-      processedRelProbs[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
-      sum += processedRelProbs[i];
-    }
-    assert(sum > 0.0);
-    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs);
+    temperatureScaleProbs(relativeProbs, numRelativeProbs, temperature, processedRelProbs, false);
+    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs); // This normalizes the probs for us
     return idxChosen;
+  }
+}
+
+void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize) {
+  assert(numRelativeProbs > 0);
+  assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
+
+  double maxValue = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    if(relativeProbs[i] > maxValue)
+      maxValue = relativeProbs[i];
+  }
+  assert(maxValue > 0.0);
+
+  double logMaxValue = log(maxValue);
+  double sum = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    //Numerically stable way to raise to power and normalize
+    buf[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
+    sum += buf[i];
+  }
+  assert(sum > 0.0);
+  if(normalize) {
+    for(int i = 0; i<numRelativeProbs; i++)
+      buf[i] /= sum;
   }
 }
 
@@ -1317,6 +1345,49 @@ void Search::runWholeSearch(
         if (numNodesAdded > 0) {
           numPlayouts = numPlayoutsShared.fetch_add((int64_t)numNodesAdded, std::memory_order_relaxed);
           numPlayouts += numNodesAdded;
+
+          // If we're logging the selection prob history, do that now
+          if (searchParams.queryMoveLoc != Board::NULL_LOC) {
+            vector<Loc> locs;
+            vector<double> playSelectionValues;
+            bool suc = getPlaySelectionValues(locs,playSelectionValues,0.0);
+            assert(suc);
+
+            // Collect the move sequence we just explored into playoutMoves in reverse order,
+            // starting from the last visited node
+            std::vector<Loc> playoutMoves;
+            SearchNode *curNode = stbuf->lastVisitedNode;
+            while(curNode != rootNode && curNode != NULL) {
+              playoutMoves.push_back(curNode->prevMoveLoc);
+              curNode = curNode->parent;
+            }
+            // assert(playoutMoves.size() > 0);
+
+            // Reverse playoutMoves so that it's in temporal/topological order
+            std::reverse(playoutMoves.begin(), playoutMoves.end());
+
+            // Check if we're considering the query move at all; if so, add its selection prob to the history
+            auto result = std::find(locs.begin(), locs.end(), searchParams.queryMoveLoc);
+            if (result != locs.end()) {
+              std::vector<double> selectionProbs(playSelectionValues.size());
+              
+              double temp = interpolateEarly(
+                searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
+              );
+              temperatureScaleProbs(playSelectionValues.data(), playSelectionValues.size(), temp, selectionProbs.data());
+
+              int queryIdx = result - locs.begin();
+              playoutHistory.push_back(
+                SearchPlayoutRecord{numPlayouts, selectionProbs[queryIdx], playoutMoves, rootBoard.x_size, rootBoard.y_size}
+              );
+            }
+            // If we're not considering the query move, its selection prob is 0
+            else {
+              playoutHistory.push_back(
+                SearchPlayoutRecord{numPlayouts, 0.0, playoutMoves, rootBoard.x_size, rootBoard.y_size}
+              );
+            }
+          }
         }
         else {
           //In the case that we didn't finish a playout, give other threads a chance to run before we try again

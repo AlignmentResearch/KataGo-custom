@@ -68,6 +68,18 @@ static int parseSgfCoord(char c) {
   return -1;
 }
 
+// Port of Python str.join() method basically
+template<typename T>
+static string join(const vector<T>& vec, const string& sep) {
+  ostringstream out;
+  for(int i = 0; i<vec.size(); i++) {
+    if(i > 0)
+      out << sep;
+    out << vec[i];
+  }
+  return out.str();
+}
+
 //MoveNoBSize uses only single bytes
 //If both coords are COORD_MAX, that indicates pass
 static const int COORD_MAX = 128;
@@ -1658,6 +1670,13 @@ void WriteSgf::writeSgf(
           comment += " ";
         comment += "weight=";
         comment += weightBuf;
+      }
+      if(turnAfterStart < gameData->playoutHistoriesByTurn.size()) {
+        const std::vector<SearchPlayoutRecord> &history = gameData->playoutHistoriesByTurn[turnAfterStart];
+        if(comment.length() > 0)
+          comment += " ";
+        comment += "prob_" + Location::toString(gameData->queryMoveLoc, board) + "_hist" + "=";
+        comment += "(" + join(history, ", ") + ")";
       }
     }
 

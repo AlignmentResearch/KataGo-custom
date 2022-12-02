@@ -132,7 +132,7 @@ public:
 
 // Records info about a playout; used when queryMoveLoc != Board::NULL_LOC
 struct SearchPlayoutRecord {
-  long playoutIdx;
+  int64_t playoutIdx;
   double queryMoveSelectionProb;
   std::vector<Loc> visitedMoves;
 

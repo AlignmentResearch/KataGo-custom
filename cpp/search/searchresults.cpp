@@ -266,9 +266,29 @@ bool Search::getPlaySelectionValues(
     }
   }
 
-  return clipAndScalePlaySelectionValues(
+  const bool clipSucceeded = clipAndScalePlaySelectionValues(
     playSelectionValues, numChildren, scaleMaxToAtLeast
   );
+  if (!clipSucceeded && (suppressPass || suppressPassAliveTerritory)) {
+    // If all play values are bad due to suppressing all the high
+    // value moves, then just pass. (Not sure if this actually happens in
+    // practice.)
+    logger->write("WARNING: No moves found, perhaps due to move suppression. Returning pass.");
+    bool passMoveExists = false;
+    for(size_t i = 0; i < locs.size(); i++) {
+      if (locs[i] == Board::PASS_LOC) {
+        playSelectionValues[i] = 1.0;
+        passMoveExists = true;
+        break;
+      }
+    }
+    if (!passMoveExists) {
+      locs.push_back(Board::PASS_LOC);
+      playSelectionValues.push_back(1.0);
+    }
+    return true;
+  }
+  return clipSucceeded;
 }
 
 bool Search::clipAndScalePlaySelectionValues(

@@ -440,13 +440,14 @@ private:
   double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const;
   double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
   double getApproxScoreUtilityDerivative(double scoreMean) const;
-  double getUtilityFromNN(const NNOutput& nnOutput) const;
+  // This is made public in our branch so AMCTSTests can use it
+  public: double getUtilityFromNN(const NNOutput& nnOutput) const; private:
 
   //----------------------------------------------------------------------------------------
   // Miscellaneous search biasing helpers, root move selection, etc.
   // searchhelpers.cpp
   //----------------------------------------------------------------------------------------
-  bool isAllowedRootMove(Loc moveLoc) const;
+  public: bool isAllowedRootMove(Loc moveLoc) const; private:
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
   double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const;
   bool shouldSuppressPass(const SearchNode* n) const;
@@ -589,6 +590,8 @@ private:
   );
   void addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExistingWeight);
 
+  // Public in order to be called from AMCTSTests
+  public: double computeWeightFromNode(const SearchNode &node) const; private:
   double computeWeightFromNNOutput(const NNOutput* nnOutput) const;
 
   void updateStatsAfterPlayout(SearchNode& node, SearchThread& thread, bool isRoot);

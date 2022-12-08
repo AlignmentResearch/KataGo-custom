@@ -355,7 +355,7 @@ bool Search::getNodeRawNNValues(const SearchNode& node, ReportedSearchValues& va
   if(winLossValue < -1.0) winLossValue = -1.0;
   values.winLossValue = winLossValue;
 
-  values.weight = computeWeightFromNNOutput(nnOutput);
+  values.weight = computeWeightFromNode(node);
   values.visits = 1;
 
   return true;
@@ -1248,7 +1248,7 @@ std::pair<double,double> Search::getAverageShorttermWLAndScoreErrorHelper(const 
   double scoreErrorSum = 0.0;
   double weightSum = 0.0;
   {
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeWeightFromNode(*node);
     wlErrorSum += nnOutput->shorttermWinlossError * thisNodeWeight;
     scoreErrorSum += nnOutput->shorttermScoreError * thisNodeWeight;
     weightSum += thisNodeWeight;
@@ -1330,7 +1330,7 @@ bool Search::getSharpScore(const SearchNode* node, double& ret) const {
     if(nnOutput == NULL)
       return false;
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeWeightFromNode(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1422,7 +1422,7 @@ double Search::getSharpScoreHelper(
   //Also add in the direct evaluation of this node.
   {
     double scoreMean = (double)nnOutput->whiteScoreMean;
-    double thisNodeWeight = computeWeightFromNNOutput(nnOutput);
+    double thisNodeWeight = computeWeightFromNode(*node);
     double desiredScoreWeight = (scoreWeightSum < 1e-50 || childWeightSum < 1e-50) ? thisNodeWeight : thisNodeWeight * (scoreWeightSum / childWeightSum);
     scoreMeanSum += scoreMean * desiredScoreWeight;
     scoreWeightSum += desiredScoreWeight;
@@ -1524,7 +1524,7 @@ bool Search::traverseTreeForOwnership(
   }
 
   double selfProp;
-  double parentNNWeight = computeWeightFromNNOutput(nnOutput);
+  double parentNNWeight = computeWeightFromNode(*node);
   if(childrenCapacity <= SearchNode::CHILDREN0SIZE) {
     double childWeightBuf[SearchNode::CHILDREN0SIZE];
     selfProp = traverseTreeForOwnershipChildren(

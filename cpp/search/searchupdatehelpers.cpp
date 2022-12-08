@@ -91,8 +91,17 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
   double scoreMean = (double)nnOutput->whiteScoreMean;
   double scoreMeanSq = (double)nnOutput->whiteScoreMeanSq;
   double lead = (double)nnOutput->whiteLead;
-  double weight = computeWeightFromNNOutput(nnOutput);
+  double weight = computeWeightFromNode(node);
   addLeafValue(node,winProb-lossProb,noResultProb,scoreMean,scoreMeanSq,lead,weight,false,assumeNoExistingWeight);
+}
+
+double Search::computeWeightFromNode(const SearchNode& node) const {
+  // If doing AMCTS, we weight opponent nodes as zero.
+  if (searchParams.usingAdversarialAlgo() && node.nextPla != rootNode->nextPla) {
+    return 0.0;
+  }
+  const NNOutput* nnOutput = node.getNNOutput();
+  return computeWeightFromNNOutput(nnOutput);
 }
 
 double Search::computeWeightFromNNOutput(const NNOutput* nnOutput) const {
@@ -288,7 +297,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
       //desiredSelfWeight *= weightSum / (1.0-biasFactor) / std::max(0.001, (weightSum + desiredSelfWeight - desiredSelfWeight / (1.0-biasFactor)));
     }
 
-    double weight = computeWeightFromNNOutput(nnOutput);
+    double weight = computeWeightFromNode(node);
     winLossValueSum += (winProb - lossProb) * weight;
     noResultValueSum += noResultProb * weight;
     scoreMeanSum += scoreMean * weight;

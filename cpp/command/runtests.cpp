@@ -69,10 +69,10 @@ int MainCmds::runexpensivetests(const vector<string>& args) {
     cerr << "Must supply exactly two arguments: MAX_VISITS NUM_MOVES_TO_SIMULATE" << endl;
     return 1;
   }
-  // AMCTSTests::runAllAMCTSTests(
-  //   Global::stringToInt(args[1]),
-  //   Global::stringToInt(args[2])
-  // );
+  AMCTSTests::runAllAMCTSTests(
+    Global::stringToInt(args[1]),
+    Global::stringToInt(args[2])
+  );
 
   ScoreValue::freeTables();
   cout << "All expensive tests passed" << endl;

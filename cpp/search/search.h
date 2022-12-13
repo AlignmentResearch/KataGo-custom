@@ -438,7 +438,7 @@ private:
   double getResultUtility(double winlossValue, double noResultValue) const;
   double getResultUtilityFromNN(const NNOutput& nnOutput) const;
   double getScoreUtility(double scoreMeanAvg, double scoreMeanSqAvg) const;
-  double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const;
+  public: double getScoreUtilityDiff(double scoreMeanAvg, double scoreMeanSqAvg, double delta) const; private:
   double getApproxScoreUtilityDerivative(double scoreMean) const;
   // This is made public in our branch so AMCTSTests can use it
   public: double getUtilityFromNN(const NNOutput& nnOutput) const; private:
@@ -449,13 +449,14 @@ private:
   //----------------------------------------------------------------------------------------
   public: bool isAllowedRootMove(Loc moveLoc) const; private:
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
-  double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const;
+  public: double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const; private:
   bool shouldSuppressPass(const SearchNode* n) const;
 
   double interpolateEarly(double halflife, double earlyValue, double value) const;
 
   // LCB helpers
-  void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, int64_t edgeVisits, Loc moveLoc, double& lcbBuf, double& radiusBuf) const;
+  public: void getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, int64_t edgeVisits, Loc moveLoc, double& lcbBuf, double& radiusBuf) const;
+  private:
 
   //----------------------------------------------------------------------------------------
   // Mirror handling logic
@@ -540,14 +541,14 @@ private:
     double exploreSelectionValue, double nnPolicyProb, double totalChildWeight,
     double childUtility, double parentUtilityStdevFactor, Player pla
   ) const;
-  double getExploreSelectionValueOfChild(
+  public: double getExploreSelectionValueOfChild(
     const SearchNode& parent, const float* parentPolicyProbs, const SearchNode* child,
     Loc moveLoc,
     double totalChildWeight, int64_t childEdgeVisits, double fpuValue,
     double parentUtility, double parentWeightPerVisit, double parentUtilityStdevFactor,
     bool isDuringSearch, bool antiMirror, double maxChildWeight, SearchThread* thread
   ) const;
-  public: double getNewExploreSelectionValue(
+  double getNewExploreSelectionValue(
     const SearchNode& parent, float nnPolicyProb,
     double totalChildWeight, double fpuValue,
     double parentWeightPerVisit, double parentUtilityStdevFactor,

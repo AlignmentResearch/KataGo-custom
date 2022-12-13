@@ -19,12 +19,23 @@ void testConstPolicies();
 // Test our modifications didn't break the original MCTS.
 void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
+// Test AMCTS
+void testAMCTS(const int maxVisits, const int numMovesToSimulate);
+
 std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
                                        Logger& logger, uint64_t seed);
 
 // Checks one move's worth of MCTS search
 void checkMCTSSearch(const Search& bot, const float win_prob,
                      const float loss_prob);
+
+// Checks one move's worth of AMCTS search
+void checkAMCTSSearch(const Search& bot, const float win_prob1,
+                       const float loss_prob1, const float win_prob2,
+                       const float loss_prob2);
+
+// Checks how we select our move based on results of tree search.
+void checkFinalMoveSelection(const Search& bot);
 
 // Check playout logic (for either MCTS or AMCTS)
 // Our naively implemented check simulates the entire playout process and takes
@@ -82,35 +93,20 @@ struct SearchTree {
   // DFS visit order.
   // So a child will always come after its parent in this list.
   std::vector<const SearchNode*> all_nodes;
+  std::unordered_map<const SearchNode*, Loc> prevMoves;
 
   std::unordered_map<const SearchNode*, std::vector<const SearchChildPointer *>>
       outEdges;
+  std::unordered_map<const SearchNode*, const SearchNode*> parents;
 
   SearchTree(const Search& bot);
 
   std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*node) const;
 
-  // std::vector<const SearchChildPointer> getPathToRoot(const SearchChildPointer node) const;
+  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
 
-  //BoardHistory getNodeHistory(const SearchChildPointer node) const;
+  BoardHistory getNodeHistory(const SearchNode* node) const;
 };
-
-#ifdef AMCTS_TESTS
-
-// Test AMCTS
-void testAMCTS(const int maxVisits, const int numMovesToSimulate);
-
-// Checks one move's worth of AMCTS search
-void checkAMCTSSearch(const Search& bot, const float win_prob1,
-                       const float loss_prob1, const float win_prob2,
-                       const float loss_prob2);
-
-// Checks how we select our move based on results of tree search.
-// void checkFinalMoveSelection(const Search& bot);
-
-// Helper functions
-
-#endif
 
 }  // namespace AMCTSTests
 

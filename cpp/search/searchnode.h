@@ -64,7 +64,7 @@ struct NodeStats {
   inline static double childWeightSq(int64_t edgeVisits, int64_t childVisits, double rawChildWeightSq) {
     return rawChildWeightSq * ((double)edgeVisits / (double)std::max(childVisits,(int64_t)1));
   }
-  double getChildWeight(int64_t edgeVisits) {
+  double getChildWeight(int64_t edgeVisits) const {
     return childWeight(edgeVisits, visits, weightSum);
   }
 };

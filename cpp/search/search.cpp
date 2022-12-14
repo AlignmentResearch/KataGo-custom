@@ -1140,12 +1140,12 @@ void Search::computeRootValues() {
       expectedScore = nnResultBuf.result->whiteScoreMean;
     }
 
-    /*recentScoreCenter = expectedScore * (1.0 - searchParams.dynamicScoreCenterZeroWeight);
+    recentScoreCenter = expectedScore * (1.0 - searchParams.dynamicScoreCenterZeroWeight);
     double cap =  sqrt(rootBoard.x_size * rootBoard.y_size) * searchParams.dynamicScoreCenterScale;
     if(recentScoreCenter > expectedScore + cap)
       recentScoreCenter = expectedScore + cap;
     if(recentScoreCenter < expectedScore - cap)
-      recentScoreCenter = expectedScore - cap;*/
+      recentScoreCenter = expectedScore - cap;
   }
 
   //If we're using graph search, we recompute the graph hash from scratch at the start of search.

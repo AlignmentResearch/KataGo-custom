@@ -410,6 +410,13 @@ class Curriculum:
         logging.info("Loaded curriculum with the following params:")
         logging.info("\n".join([str(x) for x in config]))
 
+        # Make sure that all the victims exist
+        for victim in self.victims:
+            assert victim.name is not None
+            victim_ckpt = victims_input_dir / victim.name
+            if not victim_ckpt.exists():
+                raise ValueError(f"Victim checkpoint {victim_ckpt} does not exist")
+
         # Try to restart training from the latest victim if we've previously been run
         self.victim_idx = 0
         latest_victim_params = self._load_latest_victim_params()

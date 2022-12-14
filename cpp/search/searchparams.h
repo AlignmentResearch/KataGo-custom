@@ -46,7 +46,7 @@ struct SearchParams {
   std::string getSearchAlgoAsStr() const;
   bool usingAdversarialAlgo() const;
 
-  // Overrides the number of vists we use in AMCTS-R to simulate the victim.
+  // Overrides the number of visits we use in AMCTS-R to simulate the victim.
   std::optional<int> oppVisitsOverride;
 
   // Whether we are allowed to be the first player that passes in a game.

@@ -901,8 +901,6 @@ void Search::getAnalysisData(
   );
 
   vector<MoreNodeStats> statsBuf(numChildren);
-  double valueSum = std::accumulate(playSelectionValues.begin(), playSelectionValues.end(), 0.0);
-
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];
     int64_t edgeVisits = childrenEdgeVisits[i];
@@ -912,7 +910,7 @@ void Search::getAnalysisData(
       child, edgeVisits, scratchLocs, scratchValues, moveLoc, policyProb, fpuValue, parentUtility, parentWinLossValue,
       parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
     );
-    data.playSelectionValue = playSelectionValues[i] / valueSum;
+    data.playSelectionValue = playSelectionValues[i];
     //Make sure data.lcb is from white's perspective, for consistency with everything else
     //In lcbBuf, it's from self perspective, unlike values at nodes.
     data.lcb = node.nextPla == P_BLACK ? -lcbBuf[i] : lcbBuf[i];

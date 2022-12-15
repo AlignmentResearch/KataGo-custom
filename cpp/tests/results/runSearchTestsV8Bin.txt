@@ -1,14 +1,14 @@
 Running search tests introduced after v8 nets
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Initializing neural net buffer to be size 9 * 9 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Initializing neural net buffer to be size 9 * 9 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST EXACT (NO MASKING) VS MASKED 9x9 ==========================================================================
@@ -58,20 +58,20 @@ MoveNum: 3 HASH: 51A2E952B6FF793C9B33F3C9C4FAA3F6
 
 Root visits: 200
 New playouts: 200
-NN rows: 192
-NN batches: 192
+NN rows: 191
+NN batches: 191
 NN avg batch size: 1
 PV: G6 H6 C5 C4 F5 F4 H5
 Tree:
-: T  -1.98c W  -0.75c S  -1.23c ( -0.1 L  -0.1) N     200  --  G6 H6 C5 C4 F5 F4 H5
+: T  -1.95c W  -0.73c S  -1.22c ( -0.1 L  -0.1) N     200  --  G6 H6 C5 C4 F5 F4 H5
 ---White(^)---
-G6  : T   0.68c W   1.62c S  -0.93c ( +0.1 L  +0.1) LCB   -6.63c P 34.43% WF 129.7 PSV     126 N     126  --  G6 H6 C5 C4 F5 F4 H5
-C5  : T  -2.73c W  -1.36c S  -1.37c ( -0.2 L  -0.1) LCB  -12.82c P 20.48% WF  40.2 PSV      40 N      41  --  C5 C4 G6 D5 D6 C6 B5
-D4  : T -14.17c W -11.45c S  -2.70c ( -1.1 L  -0.8) LCB  -34.76c P 14.73% WF   9.8 PSV      11 N      11  --  D4 D3 D5 C3 G6 H6
-G7  : T -11.47c W  -9.69c S  -1.78c ( -0.4 L  -0.7) LCB  -36.83c P 11.64% WF   9.1 PSV      10 N      10  --  G7 C5 C6 B6 D5
-C6  : T -11.26c W  -9.08c S  -2.18c ( -0.7 L  -0.7) LCB  -47.01c P  5.53% WF   4.6 PSV       5 N       5  --  C6 F7 D3 D4
-C4  : T -11.78c W  -9.33c S  -2.46c ( -0.9 L  -1.0) LCB  -88.86c P  3.41% WF   2.8 PSV       3 N       3  --  C4 D5 G6
-F5  : T -16.83c W -13.27c S  -3.56c ( -1.7 L  -1.0) LCB -366.83c P  2.10% WF   0.9 PSV       1 N       1  --  F5
+G6  : T   0.72c W   1.64c S  -0.93c ( +0.1 L  +0.1) LCB   -6.66c P 34.43% WF 131.8 PSV     128 N     128  --  G6 H6 C5 C4 F5 F4 H5
+C5  : T  -2.88c W  -1.47c S  -1.40c ( -0.2 L  -0.2) LCB  -13.40c P 20.48% WF  38.2 PSV      39 N      39  --  C5 C4 G6 D5 D6 C6 B5
+D4  : T -14.18c W -11.46c S  -2.70c ( -1.1 L  -0.8) LCB  -34.77c P 14.74% WF   9.8 PSV      11 N      11  --  D4 D3 D5 C3 G6 H6
+G7  : T -11.48c W  -9.69c S  -1.78c ( -0.4 L  -0.7) LCB  -36.84c P 11.63% WF   9.1 PSV      10 N      10  --  G7 C5 C6 B6 D5
+C6  : T -11.27c W  -9.08c S  -2.18c ( -0.7 L  -0.7) LCB  -47.02c P  5.52% WF   4.6 PSV       5 N       5  --  C6 F7 D3 D4
+C4  : T -11.79c W  -9.34c S  -2.46c ( -0.9 L  -1.0) LCB  -88.88c P  3.41% WF   2.8 PSV       3 N       3  --  C4 D5 G6
+F5  : T -16.81c W -13.25c S  -3.56c ( -1.7 L  -1.0) LCB -366.81c P  2.10% WF   0.9 PSV       1 N       1  --  F5
 F4  : T -10.63c W  -7.81c S  -2.82c ( -1.3 L  -0.8) LCB -360.63c P  1.91% WF   0.9 PSV       1 N       1  --  F4
 F7  : T -31.02c W -27.10c S  -3.92c ( -1.8 L  -1.7) LCB -381.02c P  2.33% WF   0.9 PSV       0 N       1  --  F7
 EXACT
@@ -89,33 +89,33 @@ MoveNum: 3 HASH: 51A2E952B6FF793C9B33F3C9C4FAA3F6
 
 Root visits: 200
 New playouts: 200
-NN rows: 192
-NN batches: 192
+NN rows: 191
+NN batches: 191
 NN avg batch size: 1
 PV: G6 H6 C5 C4 F5 F4 H5
 Tree:
-: T  -1.98c W  -0.75c S  -1.23c ( -0.1 L  -0.1) N     200  --  G6 H6 C5 C4 F5 F4 H5
+: T  -1.95c W  -0.73c S  -1.22c ( -0.1 L  -0.1) N     200  --  G6 H6 C5 C4 F5 F4 H5
 ---White(^)---
-G6  : T   0.68c W   1.62c S  -0.93c ( +0.1 L  +0.1) LCB   -6.63c P 34.43% WF 129.7 PSV     126 N     126  --  G6 H6 C5 C4 F5 F4 H5
-C5  : T  -2.73c W  -1.36c S  -1.37c ( -0.2 L  -0.1) LCB  -12.82c P 20.48% WF  40.2 PSV      40 N      41  --  C5 C4 G6 D5 D6 C6 B5
-D4  : T -14.17c W -11.45c S  -2.70c ( -1.1 L  -0.8) LCB  -34.76c P 14.73% WF   9.8 PSV      11 N      11  --  D4 D3 D5 C3 G6 H6
-G7  : T -11.47c W  -9.69c S  -1.78c ( -0.4 L  -0.7) LCB  -36.83c P 11.64% WF   9.1 PSV      10 N      10  --  G7 C5 C6 B6 D5
-C6  : T -11.26c W  -9.08c S  -2.18c ( -0.7 L  -0.7) LCB  -47.01c P  5.53% WF   4.6 PSV       5 N       5  --  C6 F7 D3 D4
-C4  : T -11.78c W  -9.33c S  -2.46c ( -0.9 L  -1.0) LCB  -88.86c P  3.41% WF   2.8 PSV       3 N       3  --  C4 D5 G6
-F5  : T -16.83c W -13.27c S  -3.56c ( -1.7 L  -1.0) LCB -366.83c P  2.10% WF   0.9 PSV       1 N       1  --  F5
+G6  : T   0.72c W   1.64c S  -0.93c ( +0.1 L  +0.1) LCB   -6.66c P 34.43% WF 131.8 PSV     128 N     128  --  G6 H6 C5 C4 F5 F4 H5
+C5  : T  -2.88c W  -1.47c S  -1.40c ( -0.2 L  -0.2) LCB  -13.40c P 20.48% WF  38.2 PSV      39 N      39  --  C5 C4 G6 D5 D6 C6 B5
+D4  : T -14.18c W -11.46c S  -2.70c ( -1.1 L  -0.8) LCB  -34.77c P 14.74% WF   9.8 PSV      11 N      11  --  D4 D3 D5 C3 G6 H6
+G7  : T -11.48c W  -9.69c S  -1.78c ( -0.4 L  -0.7) LCB  -36.84c P 11.63% WF   9.1 PSV      10 N      10  --  G7 C5 C6 B6 D5
+C6  : T -11.27c W  -9.08c S  -2.18c ( -0.7 L  -0.7) LCB  -47.02c P  5.52% WF   4.6 PSV       5 N       5  --  C6 F7 D3 D4
+C4  : T -11.79c W  -9.34c S  -2.46c ( -0.9 L  -1.0) LCB  -88.88c P  3.41% WF   2.8 PSV       3 N       3  --  C4 D5 G6
+F5  : T -16.81c W -13.25c S  -3.56c ( -1.7 L  -1.0) LCB -366.81c P  2.10% WF   0.9 PSV       1 N       1  --  F5
 F4  : T -10.63c W  -7.81c S  -2.82c ( -1.3 L  -0.8) LCB -360.63c P  1.91% WF   0.9 PSV       1 N       1  --  F4
 F7  : T -31.02c W -27.10c S  -3.92c ( -1.8 L  -1.7) LCB -381.02c P  2.33% WF   0.9 PSV       0 N       1  --  F7
 
 
 : GPU 0 finishing, processed 192 rows 192 batches
-: GPU 0 finishing, processed 192 rows 192 batches
-: GPU 0 finishing, processed 192 rows 192 batches
+: GPU 0 finishing, processed 191 rows 191 batches
+: GPU 0 finishing, processed 191 rows 191 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Initializing neural net buffer to be size 19 * 19 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST EXACT (NO MASKING) VS MASKED ==========================================================================
@@ -227,11 +227,11 @@ B16 : T  -6.63c W  -5.15c S  -1.48c ( -1.3 L  -0.6) LCB -356.63c P  1.15% WF   1
 
 TEST SYMMETRY AVGING ==========================================================================
 : GPU 0 finishing, processed 195 rows 195 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : GPU 0 finishing, processed 195 rows 195 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 BASIC
@@ -325,21 +325,21 @@ Q15 : T   4.01c W   3.12c S   0.89c ( +0.8 L  +1.2) LCB  354.01c P  1.23% WF   1
 
 
 : GPU 0 finishing, processed 202 rows 202 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : GPU 0 finishing, processed 202 rows 202 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST NN TEMPERATURE ==========================================================================
 BASELINE
 : GPU 0 finishing, processed 0 rows 0 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : GPU 0 finishing, processed 0 rows 0 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 MoveNum: 8 HASH: EB3485F1C1921D5CD4B08C09B7E45930
@@ -428,11 +428,11 @@ O18 C17 : T  -3.81c W  -3.51c S  -0.30c ( -0.9 L  -1.2) LCB  -77.90c P  3.99% WF
 P16 : T  11.13c W   9.23c S   1.91c ( +2.4 L  +2.5) LCB   23.37c P 16.43% WF   9.7 PSV      11 N      11  --  P16 P17 S16 S15 S17 R14 P15 Q14
 TEMP 1.5
 : GPU 0 finishing, processed 185 rows 185 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : GPU 0 finishing, processed 185 rows 185 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 MoveNum: 8 HASH: EB3485F1C1921D5CD4B08C09B7E45930
@@ -527,11 +527,11 @@ Q3  : T   4.89c W   3.94c S   0.95c ( +1.4 L  +1.8) LCB  354.89c P  0.98% WF   1
 S17 : T   6.54c W   5.46c S   1.08c ( +1.6 L  +2.0) LCB  356.54c P  0.82% WF   0.9 PSV       0 N       1  --  S17
 TEMP 0.5
 : GPU 0 finishing, processed 192 rows 192 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : GPU 0 finishing, processed 192 rows 192 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 MoveNum: 8 HASH: EB3485F1C1921D5CD4B08C09B7E45930
@@ -609,7 +609,7 @@ O18 N18 : T  -0.64c W  -0.67c S   0.03c ( -0.2 L  -0.1) LCB   -5.13c P 88.64% WF
 : GPU 0 finishing, processed 194 rows 194 batches
 : GPU 0 finishing, processed 194 rows 194 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 ===================================================================
@@ -1785,7 +1785,7 @@ C8  : T -46.59c W -45.81c S  -0.78c ( -6.2 L  -6.5) LCB  303.41c P  0.83% WF   0
 H10 : T -39.83c W -39.91c S   0.08c ( -5.4 L  -6.4) LCB  310.17c P  0.83% WF   0.9 PSV       0 N       1  --  H10
 F3  : T -48.77c W -47.81c S  -0.95c ( -6.4 L  -7.0) LCB  301.23c P  0.72% WF   0.9 PSV       0 N       1  --  F3
 : GPU 0 finishing, processed 5942 rows 5942 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 ===================================================================
@@ -1898,7 +1898,7 @@ D5  : T 110.80c W  95.75c S  15.05c (+39.2 L +40.9) LCB  460.80c P  1.14% WF   1
 Q11 : T 117.61c W  97.62c S  20.00c (+48.2 L +49.6) LCB  467.61c P  0.95% WF   0.9 PSV       1 N       1  --  Q11
 L15 : T 111.35c W  95.70c S  15.65c (+40.5 L +41.6) LCB  461.35c P  0.73% WF   1.0 PSV       1 N       1  --  L15
 : GPU 0 finishing, processed 643 rows 643 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 AntiMirror white ==========================================================================
@@ -2142,7 +2142,7 @@ H10 : T -35.97c W -31.76c S  -4.22c ( -3.0 L  -2.6) LCB -385.97c P  0.01% WF   1
 
 : GPU 0 finishing, processed 977 rows 977 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST VALUE BIAS ==========================================================================
@@ -3501,28 +3501,28 @@ MoveNum: 0 HASH: 4D72B4DBC647CF796F650AFB443D5C08
 
 Root visits: 300
 New playouts: 300
-NN rows: 267
-NN batches: 267
+NN rows: 273
+NN batches: 273
 NN avg batch size: 1
 PV: F9 pass G11 pass
 Tree:
-: T 120.41c W  99.70c S  20.33c (+71.0 L +69.5) N     300  --  F9 pass G11 pass
+: T 120.47c W  99.70c S  20.38c (+71.0 L +69.6) N     300  --  F9 pass G11 pass
 ---White(^)---
-F9  : T 121.52c W  99.98c S  21.51c (+71.7 L +71.5) LCB  118.89c P  7.85% WF  28.3 PSV      60 N      28  --  F9 pass G11 pass
-K10 : T 120.25c W  99.98c S  20.25c (+70.5 L +70.2) LCB  118.33c P 12.53% WF  36.0 PSV      36 N      36  --  K10 pass K6 pass H1
-K6  : T 120.52c W  99.98c S  20.52c (+70.8 L +68.9) LCB  116.59c P  9.90% WF  30.1 PSV      30 N      30  --  K6 pass F9 pass
+F9  : T 121.72c W  99.98c S  21.71c (+71.8 L +71.5) LCB  119.05c P  7.85% WF  29.4 PSV      62 N      29  --  F9 pass G11 pass
+K10 : T 120.35c W  99.98c S  20.35c (+70.6 L +70.4) LCB  118.43c P 12.53% WF  37.0 PSV      37 N      37  --  K10 pass K6 pass H1
+K6  : T 120.43c W  99.98c S  20.43c (+70.7 L +69.0) LCB  116.39c P  9.90% WF  29.0 PSV      29 N      29  --  K6 pass F9 pass
+B7  : T 121.28c W  99.97c S  21.25c (+71.7 L +70.1) LCB  118.02c P  6.25% WF  22.2 PSV      22 N      22  --  B7 pass K10 pass K6
 J7  : T 121.73c W  99.99c S  21.72c (+71.7 L +69.6) LCB  117.57c P  6.00% WF  22.3 PSV      22 N      22  --  J7 pass K6 pass B7
-B7  : T 121.23c W  99.97c S  21.19c (+71.6 L +69.8) LCB  117.95c P  6.25% WF  21.2 PSV      21 N      21  --  B7 pass K10 pass K6
-G11 : T 120.77c W  99.98c S  20.77c (+71.1 L +70.2) LCB  117.39c P  6.25% WF  20.1 PSV      20 N      20  --  G11 pass K10 pass K6
-A6  : T 120.53c W  99.98c S  20.50c (+70.9 L +70.1) LCB  116.53c P  5.53% WF  17.0 PSV      17 N      17  --  A6 pass B7 pass
-C6  : T 120.69c W  99.98c S  20.65c (+71.1 L +69.7) LCB  116.83c P  5.37% WF  17.0 PSV      17 N      17  --  C6 pass K10 pass
-L7  : T 122.02c W  99.98c S  22.00c (+72.0 L +69.8) LCB  117.93c P  4.32% WF  17.2 PSV      17 N      17  --  L7 pass K6 pass H1
+G11 : T 120.91c W  99.98c S  20.91c (+71.2 L +70.3) LCB  117.35c P  6.25% WF  20.1 PSV      20 N      20  --  G11 pass K10 pass K6
+A6  : T 120.71c W  99.98c S  20.68c (+71.1 L +70.3) LCB  116.49c P  5.53% WF  17.0 PSV      17 N      17  --  A6 pass B7 pass
+C6  : T 120.87c W  99.98c S  20.83c (+71.2 L +69.8) LCB  116.82c P  5.37% WF  17.1 PSV      17 N      17  --  C6 pass K10 pass
 H7  : T 120.86c W  99.98c S  20.88c (+70.9 L +68.8) LCB  115.11c P  4.86% WF  15.1 PSV      15 N      15  --  H7 pass H1 pass
-C11 : T 120.75c W  99.96c S  20.58c (+71.3 L +69.4) LCB  114.93c P  4.68% WF  15.0 PSV      14 N      15  --  C11 pass A11 pass
-B6  : T 121.06c W  99.98c S  21.01c (+71.4 L +69.8) LCB  115.15c P  4.51% WF  14.1 PSV      13 N      14  --  B6 pass K10 pass
+C11 : T 120.75c W  99.96c S  20.58c (+71.3 L +69.4) LCB  114.93c P  4.68% WF  15.0 PSV      15 N      15  --  C11 pass A11 pass
+B6  : T 121.47c W  99.98c S  21.44c (+71.7 L +69.9) LCB  115.76c P  4.51% WF  15.1 PSV      15 N      15  --  B6 pass K10 pass K6
+L7  : T 121.56c W  99.98c S  21.53c (+71.6 L +69.8) LCB  117.04c P  4.32% WF  15.1 PSV      15 N      15  --  L7 pass K6 pass H1
 D11 : T 120.04c W  99.98c S  19.97c (+70.5 L +69.3) LCB  112.87c P  4.53% WF  12.0 PSV      12 N      12  --  D11 pass K10 pass
 B5  : T 120.21c W  99.97c S  20.24c (+70.7 L +69.0) LCB  104.71c P  2.88% WF   7.0 PSV       7 N       7  --  B5 pass K10 pass
-F8  : T 120.74c W  99.97c S  20.78c (+71.2 L +69.5) LCB  104.96c P  2.38% WF   7.0 PSV       6 N       7  --  F8 pass K6 pass
+F8  : T 120.84c W  99.97c S  20.87c (+71.3 L +68.8) LCB   99.96c P  2.38% WF   6.0 PSV       6 N       6  --  F8 pass K6 pass
 L1  : T 119.79c W  99.96c S  19.81c (+70.1 L +68.3) LCB   45.81c P  1.27% WF   3.0 PSV       3 N       3  --  L1 pass K10
 L11 : T 119.60c W  99.93c S  19.67c (+70.8 L +70.1) LCB  -29.35c P  0.92% WF   2.0 PSV       2 N       2  --  L11 pass
 E4  : T 118.63c W  99.94c S  18.69c (+69.6 L +65.3) LCB -231.82c P  0.80% WF   1.0 PSV       1 N       1  --  E4
@@ -3552,21 +3552,21 @@ C1  : T 117.72c W  99.91c S  17.80c (+69.1 L +65.0) LCB -232.66c P  0.46% WF   1
  -98.6  -97.7  -97.5  -97.2  -97.7  -98.8   99.9  100.0   99.7   99.6   98.7 
  -98.4  -97.5  -97.8  -98.2  -98.0  -98.9   99.6   95.1   91.7   99.4   89.0 
 
-K10 visits 36 edgeVisits 36 utilityNoBonus 120.25c utilityWithBonus 120.25c endingScoreBonus 0.00
-K6 visits 30 edgeVisits 30 utilityNoBonus 120.52c utilityWithBonus 120.52c endingScoreBonus 0.00
-F9 visits 28 edgeVisits 28 utilityNoBonus 121.52c utilityWithBonus 121.52c endingScoreBonus 0.00
-B7 visits 21 edgeVisits 21 utilityNoBonus 121.23c utilityWithBonus 121.23c endingScoreBonus 0.00
-G11 visits 20 edgeVisits 20 utilityNoBonus 120.77c utilityWithBonus 120.77c endingScoreBonus 0.00
+K10 visits 37 edgeVisits 37 utilityNoBonus 120.35c utilityWithBonus 120.35c endingScoreBonus 0.00
+K6 visits 29 edgeVisits 29 utilityNoBonus 120.43c utilityWithBonus 120.43c endingScoreBonus 0.00
+F9 visits 29 edgeVisits 29 utilityNoBonus 121.72c utilityWithBonus 121.72c endingScoreBonus 0.00
+B7 visits 22 edgeVisits 22 utilityNoBonus 121.28c utilityWithBonus 121.28c endingScoreBonus 0.00
+G11 visits 20 edgeVisits 20 utilityNoBonus 120.91c utilityWithBonus 120.91c endingScoreBonus 0.00
 J7 visits 22 edgeVisits 22 utilityNoBonus 121.73c utilityWithBonus 121.73c endingScoreBonus 0.00
-A6 visits 17 edgeVisits 17 utilityNoBonus 120.53c utilityWithBonus 120.53c endingScoreBonus 0.00
-C6 visits 17 edgeVisits 17 utilityNoBonus 120.69c utilityWithBonus 120.69c endingScoreBonus 0.00
+A6 visits 17 edgeVisits 17 utilityNoBonus 120.71c utilityWithBonus 120.71c endingScoreBonus 0.00
+C6 visits 17 edgeVisits 17 utilityNoBonus 120.87c utilityWithBonus 120.87c endingScoreBonus 0.00
 H7 visits 15 edgeVisits 15 utilityNoBonus 120.86c utilityWithBonus 120.86c endingScoreBonus 0.00
 C11 visits 15 edgeVisits 15 utilityNoBonus 120.75c utilityWithBonus 120.75c endingScoreBonus 0.00
 D11 visits 12 edgeVisits 12 utilityNoBonus 120.04c utilityWithBonus 119.64c endingScoreBonus -0.31
-B6 visits 14 edgeVisits 14 utilityNoBonus 121.06c utilityWithBonus 120.50c endingScoreBonus -0.46
-L7 visits 17 edgeVisits 17 utilityNoBonus 122.02c utilityWithBonus 122.02c endingScoreBonus 0.00
+B6 visits 15 edgeVisits 15 utilityNoBonus 121.47c utilityWithBonus 120.93c endingScoreBonus -0.46
+L7 visits 15 edgeVisits 15 utilityNoBonus 121.56c utilityWithBonus 121.56c endingScoreBonus 0.00
 B5 visits 7 edgeVisits 7 utilityNoBonus 120.21c utilityWithBonus 119.61c endingScoreBonus -0.48
-F8 visits 7 edgeVisits 7 utilityNoBonus 120.74c utilityWithBonus 120.19c endingScoreBonus -0.46
+F8 visits 6 edgeVisits 6 utilityNoBonus 120.84c utilityWithBonus 120.28c endingScoreBonus -0.46
 L1 visits 3 edgeVisits 3 utilityNoBonus 119.79c utilityWithBonus 119.79c endingScoreBonus 0.00
 pass visits 2 edgeVisits 2 utilityNoBonus -3.26c utilityWithBonus -3.26c endingScoreBonus 0.00
 L11 visits 2 edgeVisits 2 utilityNoBonus 119.60c utilityWithBonus 119.60c endingScoreBonus 0.00
@@ -3786,8 +3786,8 @@ G4  : T   1.17c W  -2.51c S   3.68c ( -0.1 L  -0.5) LCB  351.17c P  1.59% WF   0
 
 
 TEST Hintlocs ==========================================================================
-: GPU 0 finishing, processed 5824 rows 5824 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: GPU 0 finishing, processed 5830 rows 5830 batches
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 ===================================================================
@@ -4344,7 +4344,7 @@ L3  : T   0.31c W  -0.82c S   1.14c ( -0.1 L  +0.1) LCB   74.33c P  2.62% WF   3
 K3  : T   0.27c W  -0.87c S   1.14c ( -0.1 L  +0.1) LCB   74.43c P  2.57% WF   3.2 PSV       3 N       3  --  K3 R16
 C1  : T  43.81c W  36.43c S   7.38c ( +9.2 L  +9.6) LCB   49.60c P  2.01% WF  32.6 PSV       0 N      55  --  C1 Q17 C3 C4 D2 E3 E2
 : GPU 0 finishing, processed 2011 rows 2011 batches
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 Mix pruning, subtracting, dirichlet noise, value weight exponent =========================================
@@ -5057,16 +5057,16 @@ MoveNum: 0 HASH: BD1462547D9800FEAC5BE4AEE35F3CA1
 
 Root visits: 600
 New playouts: 600
-NN rows: 291
-NN batches: 291
+NN rows: 299
+NN batches: 299
 NN avg batch size: 1
 PV: J3 J1 pass pass pass pass C7 D3 A9 pass F6 pass B10 pass C9 pass
 Tree:
-: T  32.03c W  28.87c S   3.13c ( +0.1 L  -0.0) N     600  --  J3 J1 pass pass pass pass C7
+: T  32.05c W  28.90c S   3.12c ( +0.1 L  -0.0) N     600  --  J3 J1 pass pass pass pass C7
 ---Black(v)---
-J3  : T  33.08c W  30.06c S   2.99c ( -0.0 L  -0.0) LCB   43.28c P 54.87% WF 311.1 PSV     317 N     317  --  J3 J1 pass pass pass pass C7 D3
-pss : T  30.51c W  27.23c S   3.26c ( +0.1 L  +0.0) LCB   43.63c P 26.88% WF 238.3 PSV     230 N     232  --  pass J1 J3 pass pass pass pass D3
-C4  : T  31.10c W  27.71c S   3.16c ( +0.1 L  -0.1) LCB   60.40c P  5.68% WF  43.4 PSV      40 N      43  --  C4 B4 J3 J1 pass pass pass pass
+J3  : T  33.10c W  30.09c S   2.99c ( -0.0 L  -0.0) LCB   43.29c P 54.87% WF 312.1 PSV     318 N     318  --  J3 J1 pass pass pass pass C7 D3
+pss : T  30.53c W  27.26c S   3.25c ( +0.1 L  +0.0) LCB   43.62c P 26.88% WF 237.3 PSV     231 N     231  --  pass J1 J3 pass pass pass pass D3
+C4  : T  31.10c W  27.71c S   3.16c ( +0.1 L  -0.1) LCB   60.40c P  5.68% WF  43.5 PSV      41 N      43  --  C4 B4 J3 J1 pass pass pass pass
 B4  : T  73.65c W  66.02c S   7.63c ( +2.0 L  +1.7) LCB  424.62c P  2.42% WF   0.8 PSV       1 N       1  --  B4
 F6  : T  52.18c W  47.27c S   4.91c ( +0.7 L  +0.3) LCB  402.18c P  1.54% WF   0.9 PSV       1 N       1  --  F6
 A9  : T  56.16c W  50.83c S   5.33c ( +0.9 L  +0.4) LCB  406.16c P  1.46% WF   0.9 PSV       1 N       1  --  A9
@@ -5092,19 +5092,19 @@ MoveNum: 0 HASH: BD1462547D9800FEAC5BE4AEE35F3CA1
 
 Root visits: 600
 New playouts: 600
-NN rows: 291
-NN batches: 291
+NN rows: 299
+NN batches: 299
 NN avg batch size: 1
 PV: J3 J1 pass pass pass pass C7 D3 A9 pass F6 pass B10 pass C9 pass
 Tree:
-: T  32.03c W  28.87c S   3.13c ( +0.1 L  -0.0) N     600  --  J3 J1 pass pass pass pass C7
+: T  32.05c W  28.90c S   3.12c ( +0.1 L  -0.0) N     600  --  J3 J1 pass pass pass pass C7
 ---Black(v)---
-J3  : T  33.08c W  30.06c S   2.99c ( -0.0 L  -0.0) LCB   43.28c P 54.87% WF 311.1 PSV     317 N     317  --  J3 J1 pass pass pass pass C7 D3
-C4  : T  31.10c W  27.71c S   3.16c ( +0.1 L  -0.1) LCB   60.40c P  5.68% WF  43.4 PSV      40 N      43  --  C4 B4 J3 J1 pass pass pass pass
+J3  : T  33.10c W  30.09c S   2.99c ( -0.0 L  -0.0) LCB   43.29c P 54.87% WF 312.1 PSV     318 N     318  --  J3 J1 pass pass pass pass C7 D3
+C4  : T  31.10c W  27.71c S   3.16c ( +0.1 L  -0.1) LCB   60.40c P  5.68% WF  43.5 PSV      41 N      43  --  C4 B4 J3 J1 pass pass pass pass
 B4  : T  73.65c W  66.02c S   7.63c ( +2.0 L  +1.7) LCB  424.62c P  2.42% WF   0.8 PSV       1 N       1  --  B4
 F6  : T  52.18c W  47.27c S   4.91c ( +0.7 L  +0.3) LCB  402.18c P  1.54% WF   0.9 PSV       1 N       1  --  F6
 A9  : T  56.16c W  50.83c S   5.33c ( +0.9 L  +0.4) LCB  406.16c P  1.46% WF   0.9 PSV       1 N       1  --  A9
-pss : T  30.51c W  27.23c S   3.26c ( +0.1 L  +0.0) LCB   43.63c P 26.88% WF 238.3 PSV       0 N     232  --  pass J1 J3 pass pass pass pass D3
+pss : T  30.53c W  27.26c S   3.25c ( +0.1 L  +0.0) LCB   43.62c P 26.88% WF 237.3 PSV       0 N     231  --  pass J1 J3 pass pass pass pass D3
 B7  : T  58.62c W  53.53c S   5.09c ( +0.8 L  +0.4) LCB  408.62c P  0.76% WF   0.9 PSV       0 N       1  --  B7
 G2  : T  50.92c W  45.58c S   5.34c ( +0.9 L  +0.5) LCB  402.16c P  0.70% WF   0.9 PSV       0 N       1  --  G2
 D6  : T  60.37c W  55.21c S   5.16c ( +0.8 L  +0.4) LCB  410.37c P  0.64% WF   0.9 PSV       0 N       1  --  D6
@@ -5127,17 +5127,17 @@ MoveNum: 0 HASH: 086C2CEF1E05F58D28EE1499F236BEF6
 
 Root visits: 600
 New playouts: 600
-NN rows: 100
-NN batches: 100
+NN rows: 101
+NN batches: 101
 NN avg batch size: 1
 PV: pass pass
 Tree:
-: T 100.34c W  96.14c S   4.19c ( +0.9 L  +0.9) N     600  --  pass pass
+: T 100.43c W  96.22c S   4.20c ( +0.9 L  +0.9) N     600  --  pass pass
 ---White(^)---
-pss : T 101.61c W  97.35c S   4.25c ( +0.9 L  +1.0) LCB   99.41c P 57.56% WF 501.2 PSV     495 N     495  --  pass pass
-J3  : T  99.59c W  95.32c S   4.26c ( +0.9 L  +0.9) LCB   88.87c P 11.24% WF  62.4 PSV      61 N      64  --  J3 pass pass
-C3  : T  97.95c W  93.90c S   4.03c ( +0.8 L  +0.9) LCB   79.62c P  3.75% WF  12.5 PSV      13 N      13  --  C3 pass pass
-B1  : T  96.28c W  92.32c S   3.93c ( +0.8 L  +0.9) LCB   74.73c P  3.80% WF  10.5 PSV      11 N      11  --  B1 pass pass
+pss : T 101.72c W  97.45c S   4.26c ( +0.9 L  +1.0) LCB   99.57c P 57.56% WF 501.3 PSV     495 N     495  --  pass pass
+J3  : T  99.59c W  95.32c S   4.26c ( +0.9 L  +0.9) LCB   88.87c P 11.24% WF  62.4 PSV      59 N      64  --  J3 pass pass
+C3  : T  97.95c W  93.90c S   4.03c ( +0.8 L  +0.9) LCB   79.62c P  3.75% WF  12.5 PSV      12 N      13  --  C3 pass pass
+B1  : T  96.28c W  92.32c S   3.93c ( +0.8 L  +0.9) LCB   74.73c P  3.80% WF  10.5 PSV      10 N      11  --  B1 pass pass
 D3  : T  63.64c W  61.75c S   1.89c ( +0.2 L  +0.2) LCB  -91.77c P  4.15% WF   1.6 PSV       2 N       2  --  D3 pass
 C1  : T  63.34c W  61.07c S   2.28c ( +0.3 L  +0.4) LCB  -97.55c P  2.77% WF   1.6 PSV       1 N       2  --  C1 pass
 A1  : T  62.88c W  60.35c S   2.55c ( +0.4 L  +0.5) LCB -105.52c P  2.57% WF   1.6 PSV       1 N       2  --  A1 pass
@@ -5166,14 +5166,14 @@ MoveNum: 0 HASH: 086C2CEF1E05F58D28EE1499F236BEF6
 
 Root visits: 600
 New playouts: 600
-NN rows: 189
-NN batches: 189
+NN rows: 191
+NN batches: 191
 NN avg batch size: 1
 PV: pass D3 pass pass
 Tree:
-: T -106.26c W -99.98c S  -6.24c ( -5.1 L  -5.1) N     600  --  pass D3 pass pass
+: T -106.25c W -99.97c S  -6.23c ( -5.1 L  -5.1) N     600  --  pass D3 pass pass
 ---Black(v)---
-pss : T -106.37c W -99.98c S  -6.35c ( -5.2 L  -5.1) LCB -105.90c P 49.97% WF 342.4 PSV     342 N     342  --  pass D3 pass pass
+pss : T -106.37c W -99.98c S  -6.35c ( -5.2 L  -5.1) LCB -105.90c P 49.97% WF 343.5 PSV     343 N     343  --  pass D3 pass pass
 A8  : T -106.53c W -99.98c S  -6.51c ( -5.2 L  -5.2) LCB -105.64c P 11.90% WF  84.2 PSV      84 N      84  --  A8 pass pass
 E8  : T -105.98c W -99.97c S  -5.96c ( -5.0 L  -5.0) LCB -101.90c P  4.19% WF  19.9 PSV      20 N      20  --  E8 pass pass
 E9  : T -106.03c W -99.97c S  -6.02c ( -5.1 L  -5.0) LCB -101.77c P  4.04% WF  18.9 PSV      19 N      19  --  E9 pass pass
@@ -5189,7 +5189,7 @@ G6  : T -106.01c W -99.97c S  -6.00c ( -5.1 L  -5.0) LCB  -93.31c P  1.63% WF   
 C6  : T -105.65c W -99.96c S  -5.65c ( -5.0 L  -4.8) LCB  -89.62c P  1.58% WF   7.0 PSV       7 N       7  --  C6 pass pass
 G8  : T -105.90c W -99.97c S  -5.88c ( -5.0 L  -4.9) LCB  -89.76c P  1.45% WF   7.0 PSV       6 N       7  --  G8 pass pass
 A6  : T -106.49c W -99.98c S  -6.49c ( -5.2 L  -5.1) LCB  -77.21c P  1.11% WF   5.0 PSV       5 N       5  --  A6 pass pass
-D3  : T -104.13c W -99.94c S  -4.20c ( -4.5 L  -4.3) LCB  -28.86c P  0.87% WF   3.0 PSV       3 N       3  --  D3 C3
+D3  : T -100.15c W -98.81c S  -1.36c ( -3.5 L  -3.2) LCB   50.95c P  0.87% WF   1.9 PSV       2 N       2  --  D3 C3
 Move loc: pass
 Conservative pass: A8
 Basic graph search 7x7 fight =========================================
@@ -7019,9 +7019,9 @@ D8  : T -87.97c W -79.71c S  -8.26c (-25.1 L -23.5) LCB -437.97c P  0.34% WF   1
 E15 : T -83.69c W -76.01c S  -7.68c (-24.3 L -23.1) LCB -433.69c P  0.31% WF   1.0 PSV       1 N       1  --  E15
 E5  : T -82.59c W -75.26c S  -7.33c (-23.9 L -22.5) LCB -432.59c P  0.31% WF   1.0 PSV       1 N       1  --  E5
 L4  : T -84.24c W -77.03c S  -7.22c (-23.5 L -21.9) LCB -434.24c P  0.31% WF   1.0 PSV       1 N       1  --  L4
-: GPU 0 finishing, processed 55191 rows 55191 batches
+: GPU 0 finishing, processed 55210 rows 55210 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST ownership endgame ==========================================================================
@@ -7076,7 +7076,7 @@ B9  : T -44.96c W -35.67c S  -9.28c ( -2.0 L  -1.9) LCB -394.96c P  2.58% WF   0
 
 : GPU 0 finishing, processed 71 rows 71 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 TEST sampled symmetries ==========================================================================
@@ -7281,7 +7281,7 @@ WL samples
 27 -0.00392559
 : GPU 0 finishing, processed 1028 rows 1028 batches
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 Multithreaded search test =========================================

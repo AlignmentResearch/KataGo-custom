@@ -61,6 +61,13 @@ namespace Setup {
     ConfigParser& cfg,
     setup_for_t setupFor
   );
+  //Loads search parameters into `paramss`, keeping the parameter values already
+  //in `paramss` when they are not specified in the config.
+  void loadParams(
+    ConfigParser& cfg,
+    setup_for_t setupFor,
+    std::vector<SearchParams>* paramss
+  );
   SearchParams loadSingleParams(
     ConfigParser& cfg,
     setup_for_t setupFor

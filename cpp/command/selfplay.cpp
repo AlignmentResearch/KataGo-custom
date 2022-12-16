@@ -189,8 +189,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   else assert(paramss.size() == 1);
 
   SearchParams baseParams = paramss[0];
-  SearchParams victimSearchParams = paramss[0];
-  SearchParams advSearchParams = paramss[paramss.size() - 1];
   mutex paramsReloadMutex;
 
   //Initialize object for randomizing game settings and running games
@@ -481,9 +479,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &numGamesStarted,
     &forkData,
     maxGamesTotal,
+    &paramss,
     &baseParams,
-    &victimSearchParams,
-    &advSearchParams,
     &paramsReloadMutex,
     &gameSeedBase,
     &victimplay,
@@ -529,28 +526,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
             victimCfg.initialize(victimCfgReloadPath);
             {
               lock_guard<mutex> lock(paramsReloadMutex);
-              if(victimCfg.contains("maxVisits0")) {
-                int64_t mv = victimCfg.getInt64("maxVisits0", (int64_t)1, (int64_t)1 << 50);
-                if(victimSearchParams.maxVisits != mv) {
-                  paramsChangeLog += "\n  victim maxVisits reloaded from " +
-                      std::to_string(victimSearchParams.maxVisits) +
-                      " to " + std::to_string(mv);
-                  victimSearchParams.maxVisits = mv;
-                }
-              }
-              if(victimCfg.contains("maxVisits1")) {
-                int64_t mv = victimCfg.getInt64("maxVisits1", (int64_t)1, (int64_t)1 << 50);
-                if(advSearchParams.maxVisits != mv) {
-                  paramsChangeLog += "\n  adversary maxVisits reloaded from " +
-                      std::to_string(advSearchParams.maxVisits) +
-                      " to " + std::to_string(mv);
-                  advSearchParams.maxVisits = mv;
-                }
-              }
-              if(!victimCfg.unusedKeys().empty()) {
-                paramsChangeLog+= "\n  unused keys in the '" +
-                    victimCfgReloadPath + "'";
-              }
+              logger.write("Reloading with config: " + victimCfg.getAllKeyVals());
+              Setup::loadParams(victimCfg, Setup::SETUP_FOR_OTHER, &paramss);
+              victimCfg.warnUnusedKeys(cerr, &logger);
             }  // end of mutex scope
           } catch (const IOError &e) {
             logger.write(logPrefix + "victim config reloading error: " + e.what());
@@ -583,8 +561,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       // (probably changed from another thread at this point)
       {
         lock_guard<mutex> lock(paramsReloadMutex);
-        curVictimSearchParams = victimSearchParams;
-        curAdvSearchParams = advSearchParams;
+        curVictimSearchParams = paramss[0];
+        curAdvSearchParams = paramss[paramss.size() - 1];
       }
 
       NNEvaluator* nnEval = manager->acquireLatest();

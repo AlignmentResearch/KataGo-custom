@@ -205,7 +205,7 @@ namespace {
 //-----------------------------------------------------------------------------------------
 
 
-int MainCmds::gatekeeper(const vector<string>& args) {
+int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   Board::initHash();
   ScoreValue::initTables();
   Rand seedRand;
@@ -328,6 +328,26 @@ int MainCmds::gatekeeper(const vector<string>& args) {
     Logger::logThreadUncaught("data write loop", &logger, dataWriteLoop);
   };
 
+  // TODO(tomtseng)
+  // the plan:
+  // * pull finding the latest model out of loadLatestNeuralNet
+  // * pull moving model into rejected out of loadLatestNeuralNet
+  // * loading victim cfg in selfplay: you need to move that out to a common
+  //   file because you need to reuse it here. Maybe check the shasum to
+  //   determine whether to refresh the victim?
+  //   * add function called updateParams in setup.h?
+  //     - oof this kinda sucks, ideally we want to log every extra assignment?
+  //       Maybe we just have updateParams() print out the whole config file
+  // * move the actual evaluation stuff out of the while(true) loop b/c we need
+  // to reuse it
+  //
+  // * steps:
+  // *  - find latest test, accepted
+  // *  - if acceptedTime > testTime then reject automatically
+  // *  - find latest victim + victim config
+  // *  - if <acceptedName, victimName, victimCfg.getContents()> are different from
+  //      before, then compute accepted vs. victim
+  // *  - compute test vs. victim, keep the better one
   auto loadLatestNeuralNet =
     [&testModelsDir,&rejectedModelsDir,&acceptedModelsDir,&sgfOutputDir,&logger,&cfg,numGameThreads,noAutoRejectOldModels,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed]() -> NetAndStuff* {

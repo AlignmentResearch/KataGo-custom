@@ -356,14 +356,24 @@ vector<SearchParams> Setup::loadParams(
   ConfigParser& cfg,
   setup_for_t setupFor
 ) {
-
   vector<SearchParams> paramss;
+  loadParams(cfg, setupFor, &paramss);
+  return paramss;
+}
+
+void Setup::loadParams(
+  ConfigParser& cfg,
+  setup_for_t setupFor,
+  vector<SearchParams>* paramss
+) {
+  assert(paramss != nullptr);
   int numBots = 1;
   if(cfg.contains("numBots"))
     numBots = cfg.getInt("numBots",1,MAX_BOT_PARAMS_FROM_CFG);
+  paramss->resize(numBots);
 
   for(int i = 0; i<numBots; i++) {
-    SearchParams params;
+    SearchParams& params = (*paramss)[i];
 
     string idxStr = Global::intToString(i);
 
@@ -657,10 +667,8 @@ vector<SearchParams> Setup::loadParams(
     else                                             params.futileVisitsThreshold = 0.0;
 
 
-    paramss.push_back(params);
+    paramss->push_back(params);
   }
-
-  return paramss;
 }
 
 Player Setup::parseReportAnalysisWinrates(

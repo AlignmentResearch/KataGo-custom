@@ -847,10 +847,6 @@ Hash128 NNInputs::getHash(
   if(hist.isGameFinished || hist.isPastNormalPhaseEnd)
     hash ^= Board::ZOBRIST_GAME_IS_OVER;
 
-  //Fold in whether someone has passed
-  if(hist.someoneHasPassed)
-    hash ^= Board::ZOBRIST_SOMEONE_HAS_PASSED;
-
   //Fold in asymmetric playout indicator
   if(nnInputParams.playoutDoublingAdvantage != 0) {
     int64_t playoutDoublingsDiscretized = (int64_t)(nnInputParams.playoutDoublingAdvantage*256.0f);

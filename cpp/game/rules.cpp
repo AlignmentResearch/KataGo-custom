@@ -17,8 +17,6 @@ Rules::Rules() {
   whiteHandicapBonusRule = WHB_ZERO;
   friendlyPassOk = false;
   komi = 7.5f;
-
-  playerThatCanPassFirst = P_ANY;
 }
 
 Rules::Rules(
@@ -29,8 +27,7 @@ Rules::Rules(
   bool button,
   int whbRule,
   bool pOk,
-  float km,
-  Player ppf
+  float km
 )
   :koRule(kRule),
    scoringRule(sRule),
@@ -39,8 +36,7 @@ Rules::Rules(
    hasButton(button),
    whiteHandicapBonusRule(whbRule),
    friendlyPassOk(pOk),
-   komi(km),
-   playerThatCanPassFirst(ppf)
+   komi(km)
 {}
 
 Rules::~Rules() {
@@ -55,8 +51,7 @@ bool Rules::operator==(const Rules& other) const {
     hasButton == other.hasButton &&
     whiteHandicapBonusRule == other.whiteHandicapBonusRule &&
     friendlyPassOk == other.friendlyPassOk &&
-    komi == other.komi &&
-    playerThatCanPassFirst == other.playerThatCanPassFirst;
+    komi == other.komi;
 }
 
 bool Rules::operator!=(const Rules& other) const {
@@ -68,8 +63,7 @@ bool Rules::operator!=(const Rules& other) const {
     hasButton != other.hasButton ||
     whiteHandicapBonusRule != other.whiteHandicapBonusRule ||
     friendlyPassOk != other.friendlyPassOk ||
-    komi != other.komi ||
-    playerThatCanPassFirst != other.playerThatCanPassFirst;
+    komi != other.komi;
 }
 
 bool Rules::equalsIgnoringKomi(const Rules& other) const {
@@ -80,8 +74,7 @@ bool Rules::equalsIgnoringKomi(const Rules& other) const {
     multiStoneSuicideLegal == other.multiStoneSuicideLegal &&
     hasButton == other.hasButton &&
     whiteHandicapBonusRule == other.whiteHandicapBonusRule &&
-    friendlyPassOk == other.friendlyPassOk &&
-    playerThatCanPassFirst == other.playerThatCanPassFirst;
+    friendlyPassOk == other.friendlyPassOk;
 }
 
 bool Rules::gameResultWillBeInteger() const {
@@ -209,8 +202,6 @@ string Rules::toStringNoKomi() const {
     out << "whb" << Rules::writeWhiteHandicapBonusRule(whiteHandicapBonusRule);
   if(friendlyPassOk)
     out << "fpok" << friendlyPassOk;
-  if(playerThatCanPassFirst != P_ANY)
-    out << "ppf" << PlayerIO::playerToStringShort(playerThatCanPassFirst);
   return out.str();
 }
 

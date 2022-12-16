@@ -9446,8 +9446,8 @@ whiteValueTargetsByTurn 73 0.0157602 0.98424 0 -51.0856 -
 whiteValueTargetsByTurn 74 0.00156854 0.998431 0 -53.709 - 
 whiteValueTargetsByTurn 75 0.000817687 0.999182 0 -51.9017 - 
 whiteValueTargetsByTurn 76 0.000890296 0.99911 0 -53.7617 - 
-(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=10,rsym=1]WR[algo=MCTS,v=10,rsym=1]HA[0]DT[20221215-031701~20221215-031702]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]RE[B+R]C[startTurnIdx=7,initTurnNum=0,gameHash=F7A17051D50449D2028AEF337C814460,gtype=normal];B[ch];W[hc];B[dd];W[ij];B[ih];W[di];B[ci];W[gi]C[0.47 0.53 0.00 -0.6 v=10];B[ie]C[0.49 0.51 0.00 -0.2 v=10];W[id]C[0.50 0.50 0.00 0.2 v=5];B[he]C[0.52 0.48 0.00 0.8 v=10];W[fc]C[0.53 0.47 0.00 1.2 v=10];B[ec]C[0.51 0.49 0.00 0.6 v=5];W[fd]C[0.53 0.47 0.00 1.3 v=10];B[df]C[0.52 0.48 0.00 1.1 v=10];W[cc]C[0.54 0.46 0.00 1.6 v=5];B[eb]C[0.52 0.48 0.00 0.9 v=5];W[be]C[0.51 0.49 0.00 0.8 v=10];B[cd]C[0.50 0.50 0.00 0.1 v=10];W[bd]C[0.51 0.49 0.00 0.7 v=5];B[cb]C[0.53 0.47 0.00 1.4 v=5];W[bb]C[0.49 0.51 0.00 -0.2 v=5];B[dc]C[0.45 0.55 0.00 -2.1 v=10];W[bc]C[0.45 0.55 0.00 -2.2 v=5];B[ba]C[0.42 0.58 0.00 -3.2 v=5];W[bg]C[0.38 0.62 0.00 -4.8 v=5];B[cg]C[0.38 0.62 0.00 -4.8 v=10];W[cf]C[0.40 0.60 0.00 -4.3 v=5];B[ce]C[0.42 0.58 0.00 -2.8 v=10];W[bf]C[0.45 0.55 0.00 -1.8 v=10];B[bh]C[0.45 0.55 0.00 -1.8 v=10];W[dg]C[0.41 0.59 0.00 -3.6 v=10];B[ef]C[0.43 0.57 0.00 -2.7 v=5];W[dh]C[0.41 0.59 0.00 -3.4 v=10];B[dj]C[0.41 0.59 0.00 -3.8 v=10];W[ej]C[0.38 0.62 0.00 -5.3 v=5];B[cj]C[0.35 0.65 0.00 -6.4 v=10];W[gf]C[0.33 0.67 0.00 -7.4 v=5];B[ge]C[0.41 0.59 0.00 -3.7 v=10];W[fe]C[0.41 0.59 0.00 -3.3 v=10];B[ff]C[0.41 0.59 0.00 -3.2 v=10];W[gg]C[0.43 0.57 0.00 -2.3 v=5];B[fh]C[0.44 0.56 0.00 -1.8 v=10];W[gh]C[0.41 0.59 0.00 -2.9 v=5];B[ei]C[0.36 0.64 0.00 -5.2 v=10];W[fi]C[0.36 0.64 0.00 -4.7 v=5];B[eh]C[0.33 0.67 0.00 -6.0 v=5];W[je]C[0.32 0.68 0.00 -6.8 v=5];B[jf]C[0.31 0.69 0.00 -7.9 v=5];W[jd]C[0.30 0.70 0.00 -8.4 v=5];B[jj]C[0.27 0.73 0.00 -9.9 v=5];W[ii]C[0.26 0.74 0.00 -10.3 v=5];B[ji]C[0.26 0.74 0.00 -12.4 v=10];W[jk]C[0.26 0.74 0.00 -12.6 v=10];B[ig]C[0.32 0.68 0.00 -11.3 v=10];W[hf]C[0.30 0.70 0.00 -12.5 v=5];B[if]C[0.33 0.67 0.00 -10.5 v=5];W[kj]C[0.32 0.68 0.00 -11.5 v=10];B[ki]C[0.32 0.68 0.00 -11.2 v=5];W[jh]C[0.38 0.62 0.00 -7.8 v=10];B[kk]C[0.38 0.62 0.00 -7.7 v=10];W[ik]C[0.44 0.56 0.00 -4.3 v=5];B[jg]C[0.44 0.56 0.00 -4.1 v=5];W[kh]C[0.35 0.65 0.00 -10.0 v=5];B[kg]C[0.35 0.65 0.00 -11.5 v=10];W[kj]C[0.31 0.69 0.00 -15.1 v=5];B[fj]C[0.21 0.79 0.00 -23.4 v=5];W[gj]C[0.17 0.83 0.00 -28.8 v=10];B[ek]C[0.18 0.82 0.00 -28.4 v=10];W[hh]C[0.15 0.85 0.00 -31.6 v=5];B[hj]C[0.17 0.83 0.00 -29.6 v=5];W[jh]C[0.19 0.81 0.00 -27.7 v=10];B[kk]C[0.21 0.79 0.00 -26.1 v=5];W[hi]C[0.22 0.78 0.00 -24.8 v=10];B[gk]C[0.20 0.80 0.00 -25.3 v=10];W[hk]C[0.23 0.77 0.00 -23.1 v=5];B[fk]C[0.12 0.88 0.00 -37.1 v=10];W[kj]C[0.06 0.94 0.00 -43.0 v=10];B[kh]C[0.09 0.91 0.00 -40.4 v=5];W[kk]C[0.07 0.93 0.00 -42.9 v=10];B[fg]C[0.02 0.98 0.00 -51.1 v=5];W[fb]C[0.00 1.00 0.00 -53.7 v=5];B[fa]C[0.00 1.00 0.00 -51.9 v=5];W[ga]C[0.00 1.00 0.00 -53.8 v=10 result=B+R])
-(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=10,rsym=1]WR[algo=MCTS,v=10,rsym=1]HA[0]DT[20221215-031701~20221215-031702]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]RE[B+R]C[startTurnIdx=7,initTurnNum=0,gameHash=F7A17051D50449D2028AEF337C814460,gtype=normal];B[ch];W[hc];B[dd];W[ij];B[ih];W[di];B[ci];W[gi]C[0.47 0.53 0.00 -0.6 v=10];B[ie]C[0.49 0.51 0.00 -0.2 v=10];W[id]C[0.50 0.50 0.00 0.2 v=5];B[he]C[0.52 0.48 0.00 0.8 v=10];W[fc]C[0.53 0.47 0.00 1.2 v=10];B[ec]C[0.51 0.49 0.00 0.6 v=5];W[fd]C[0.53 0.47 0.00 1.3 v=10];B[df]C[0.52 0.48 0.00 1.1 v=10];W[cc]C[0.54 0.46 0.00 1.6 v=5];B[eb]C[0.52 0.48 0.00 0.9 v=5];W[be]C[0.51 0.49 0.00 0.8 v=10];B[cd]C[0.50 0.50 0.00 0.1 v=10];W[bd]C[0.51 0.49 0.00 0.7 v=5];B[cb]C[0.53 0.47 0.00 1.4 v=5];W[bb]C[0.49 0.51 0.00 -0.2 v=5];B[dc]C[0.45 0.55 0.00 -2.1 v=10];W[bc]C[0.45 0.55 0.00 -2.2 v=5];B[ba]C[0.42 0.58 0.00 -3.2 v=5];W[bg]C[0.38 0.62 0.00 -4.8 v=5];B[cg]C[0.38 0.62 0.00 -4.8 v=10];W[cf]C[0.40 0.60 0.00 -4.3 v=5];B[ce]C[0.42 0.58 0.00 -2.8 v=10];W[bf]C[0.45 0.55 0.00 -1.8 v=10];B[bh]C[0.45 0.55 0.00 -1.8 v=10];W[dg]C[0.41 0.59 0.00 -3.6 v=10];B[ef]C[0.43 0.57 0.00 -2.7 v=5];W[dh]C[0.41 0.59 0.00 -3.4 v=10];B[dj]C[0.41 0.59 0.00 -3.8 v=10];W[ej]C[0.38 0.62 0.00 -5.3 v=5];B[cj]C[0.35 0.65 0.00 -6.4 v=10];W[gf]C[0.33 0.67 0.00 -7.4 v=5];B[ge]C[0.41 0.59 0.00 -3.7 v=10];W[fe]C[0.41 0.59 0.00 -3.3 v=10];B[ff]C[0.41 0.59 0.00 -3.2 v=10];W[gg]C[0.43 0.57 0.00 -2.3 v=5];B[fh]C[0.44 0.56 0.00 -1.8 v=10];W[gh]C[0.41 0.59 0.00 -2.9 v=5];B[ei]C[0.36 0.64 0.00 -5.2 v=10];W[fi]C[0.36 0.64 0.00 -4.7 v=5];B[eh]C[0.33 0.67 0.00 -6.0 v=5];W[je]C[0.32 0.68 0.00 -6.8 v=5];B[jf]C[0.31 0.69 0.00 -7.9 v=5];W[jd]C[0.30 0.70 0.00 -8.4 v=5];B[jj]C[0.27 0.73 0.00 -9.9 v=5];W[ii]C[0.26 0.74 0.00 -10.3 v=5];B[ji]C[0.26 0.74 0.00 -12.4 v=10];W[jk]C[0.26 0.74 0.00 -12.6 v=10];B[ig]C[0.32 0.68 0.00 -11.3 v=10];W[hf]C[0.30 0.70 0.00 -12.5 v=5];B[if]C[0.33 0.67 0.00 -10.5 v=5];W[kj]C[0.32 0.68 0.00 -11.5 v=10];B[ki]C[0.32 0.68 0.00 -11.2 v=5];W[jh]C[0.38 0.62 0.00 -7.8 v=10];B[kk]C[0.38 0.62 0.00 -7.7 v=10];W[ik]C[0.44 0.56 0.00 -4.3 v=5];B[jg]C[0.44 0.56 0.00 -4.1 v=5];W[kh]C[0.35 0.65 0.00 -10.0 v=5];B[kg]C[0.35 0.65 0.00 -11.5 v=10];W[kj]C[0.31 0.69 0.00 -15.1 v=5];B[fj]C[0.21 0.79 0.00 -23.4 v=5];W[gj]C[0.17 0.83 0.00 -28.8 v=10];B[ek]C[0.18 0.82 0.00 -28.4 v=10];W[hh]C[0.15 0.85 0.00 -31.6 v=5];B[hj]C[0.17 0.83 0.00 -29.6 v=5];W[jh]C[0.19 0.81 0.00 -27.7 v=10];B[kk]C[0.21 0.79 0.00 -26.1 v=5];W[hi]C[0.22 0.78 0.00 -24.8 v=10];B[gk]C[0.20 0.80 0.00 -25.3 v=10];W[hk]C[0.23 0.77 0.00 -23.1 v=5];B[fk]C[0.12 0.88 0.00 -37.1 v=10];W[kj]C[0.06 0.94 0.00 -43.0 v=10];B[kh]C[0.09 0.91 0.00 -40.4 v=5];W[kk]C[0.07 0.93 0.00 -42.9 v=10];B[fg]C[0.02 0.98 0.00 -51.1 v=5];W[fb]C[0.00 1.00 0.00 -53.7 v=5];B[fa]C[0.00 1.00 0.00 -51.9 v=5];C[0.00 1.00 0.00 -53.8 v=10 result=B+R])
+(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=10,rsym=1]WR[algo=MCTS,v=10,rsym=1]HA[0]DT[20221215-225434~20221215-225435]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]RE[B+R]C[startTurnIdx=7,initTurnNum=0,gameHash=F7A17051D50449D2028AEF337C814460,gtype=normal];B[ch];W[hc];B[dd];W[ij];B[ih];W[di];B[ci];W[gi]C[0.47 0.53 0.00 -0.6 v=10];B[ie]C[0.49 0.51 0.00 -0.2 v=10];W[id]C[0.50 0.50 0.00 0.2 v=5];B[he]C[0.52 0.48 0.00 0.8 v=10];W[fc]C[0.53 0.47 0.00 1.2 v=10];B[ec]C[0.51 0.49 0.00 0.6 v=5];W[fd]C[0.53 0.47 0.00 1.3 v=10];B[df]C[0.52 0.48 0.00 1.1 v=10];W[cc]C[0.54 0.46 0.00 1.6 v=5];B[eb]C[0.52 0.48 0.00 0.9 v=5];W[be]C[0.51 0.49 0.00 0.8 v=10];B[cd]C[0.50 0.50 0.00 0.1 v=10];W[bd]C[0.51 0.49 0.00 0.7 v=5];B[cb]C[0.53 0.47 0.00 1.4 v=5];W[bb]C[0.49 0.51 0.00 -0.2 v=5];B[dc]C[0.45 0.55 0.00 -2.1 v=10];W[bc]C[0.45 0.55 0.00 -2.2 v=5];B[ba]C[0.42 0.58 0.00 -3.2 v=5];W[bg]C[0.38 0.62 0.00 -4.8 v=5];B[cg]C[0.38 0.62 0.00 -4.8 v=10];W[cf]C[0.40 0.60 0.00 -4.3 v=5];B[ce]C[0.42 0.58 0.00 -2.8 v=10];W[bf]C[0.45 0.55 0.00 -1.8 v=10];B[bh]C[0.45 0.55 0.00 -1.8 v=10];W[dg]C[0.41 0.59 0.00 -3.6 v=10];B[ef]C[0.43 0.57 0.00 -2.7 v=5];W[dh]C[0.41 0.59 0.00 -3.4 v=10];B[dj]C[0.41 0.59 0.00 -3.8 v=10];W[ej]C[0.38 0.62 0.00 -5.3 v=5];B[cj]C[0.35 0.65 0.00 -6.4 v=10];W[gf]C[0.33 0.67 0.00 -7.4 v=5];B[ge]C[0.41 0.59 0.00 -3.7 v=10];W[fe]C[0.41 0.59 0.00 -3.3 v=10];B[ff]C[0.41 0.59 0.00 -3.2 v=10];W[gg]C[0.43 0.57 0.00 -2.3 v=5];B[fh]C[0.44 0.56 0.00 -1.8 v=10];W[gh]C[0.41 0.59 0.00 -2.9 v=5];B[ei]C[0.36 0.64 0.00 -5.2 v=10];W[fi]C[0.36 0.64 0.00 -4.7 v=5];B[eh]C[0.33 0.67 0.00 -6.0 v=5];W[je]C[0.32 0.68 0.00 -6.8 v=5];B[jf]C[0.31 0.69 0.00 -7.9 v=5];W[jd]C[0.30 0.70 0.00 -8.4 v=5];B[jj]C[0.27 0.73 0.00 -9.9 v=5];W[ii]C[0.26 0.74 0.00 -10.3 v=5];B[ji]C[0.26 0.74 0.00 -12.4 v=10];W[jk]C[0.26 0.74 0.00 -12.6 v=10];B[ig]C[0.32 0.68 0.00 -11.3 v=10];W[hf]C[0.30 0.70 0.00 -12.5 v=5];B[if]C[0.33 0.67 0.00 -10.5 v=5];W[kj]C[0.32 0.68 0.00 -11.5 v=10];B[ki]C[0.32 0.68 0.00 -11.2 v=5];W[jh]C[0.38 0.62 0.00 -7.8 v=10];B[kk]C[0.38 0.62 0.00 -7.7 v=10];W[ik]C[0.44 0.56 0.00 -4.3 v=5];B[jg]C[0.44 0.56 0.00 -4.1 v=5];W[kh]C[0.35 0.65 0.00 -10.0 v=5];B[kg]C[0.35 0.65 0.00 -11.5 v=10];W[kj]C[0.31 0.69 0.00 -15.1 v=5];B[fj]C[0.21 0.79 0.00 -23.4 v=5];W[gj]C[0.17 0.83 0.00 -28.8 v=10];B[ek]C[0.18 0.82 0.00 -28.4 v=10];W[hh]C[0.15 0.85 0.00 -31.6 v=5];B[hj]C[0.17 0.83 0.00 -29.6 v=5];W[jh]C[0.19 0.81 0.00 -27.7 v=10];B[kk]C[0.21 0.79 0.00 -26.1 v=5];W[hi]C[0.22 0.78 0.00 -24.8 v=10];B[gk]C[0.20 0.80 0.00 -25.3 v=10];W[hk]C[0.23 0.77 0.00 -23.1 v=5];B[fk]C[0.12 0.88 0.00 -37.1 v=10];W[kj]C[0.06 0.94 0.00 -43.0 v=10];B[kh]C[0.09 0.91 0.00 -40.4 v=5];W[kk]C[0.07 0.93 0.00 -42.9 v=10];B[fg]C[0.02 0.98 0.00 -51.1 v=5];W[fb]C[0.00 1.00 0.00 -53.7 v=5];B[fa]C[0.00 1.00 0.00 -51.9 v=5];W[ga]C[0.00 1.00 0.00 -53.8 v=10 result=B+R])
+(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=10,rsym=1]WR[algo=MCTS,v=10,rsym=1]HA[0]DT[20221215-225434~20221215-225435]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]RE[B+R]C[startTurnIdx=7,initTurnNum=0,gameHash=F7A17051D50449D2028AEF337C814460,gtype=normal];B[ch];W[hc];B[dd];W[ij];B[ih];W[di];B[ci];W[gi]C[0.47 0.53 0.00 -0.6 v=10];B[ie]C[0.49 0.51 0.00 -0.2 v=10];W[id]C[0.50 0.50 0.00 0.2 v=5];B[he]C[0.52 0.48 0.00 0.8 v=10];W[fc]C[0.53 0.47 0.00 1.2 v=10];B[ec]C[0.51 0.49 0.00 0.6 v=5];W[fd]C[0.53 0.47 0.00 1.3 v=10];B[df]C[0.52 0.48 0.00 1.1 v=10];W[cc]C[0.54 0.46 0.00 1.6 v=5];B[eb]C[0.52 0.48 0.00 0.9 v=5];W[be]C[0.51 0.49 0.00 0.8 v=10];B[cd]C[0.50 0.50 0.00 0.1 v=10];W[bd]C[0.51 0.49 0.00 0.7 v=5];B[cb]C[0.53 0.47 0.00 1.4 v=5];W[bb]C[0.49 0.51 0.00 -0.2 v=5];B[dc]C[0.45 0.55 0.00 -2.1 v=10];W[bc]C[0.45 0.55 0.00 -2.2 v=5];B[ba]C[0.42 0.58 0.00 -3.2 v=5];W[bg]C[0.38 0.62 0.00 -4.8 v=5];B[cg]C[0.38 0.62 0.00 -4.8 v=10];W[cf]C[0.40 0.60 0.00 -4.3 v=5];B[ce]C[0.42 0.58 0.00 -2.8 v=10];W[bf]C[0.45 0.55 0.00 -1.8 v=10];B[bh]C[0.45 0.55 0.00 -1.8 v=10];W[dg]C[0.41 0.59 0.00 -3.6 v=10];B[ef]C[0.43 0.57 0.00 -2.7 v=5];W[dh]C[0.41 0.59 0.00 -3.4 v=10];B[dj]C[0.41 0.59 0.00 -3.8 v=10];W[ej]C[0.38 0.62 0.00 -5.3 v=5];B[cj]C[0.35 0.65 0.00 -6.4 v=10];W[gf]C[0.33 0.67 0.00 -7.4 v=5];B[ge]C[0.41 0.59 0.00 -3.7 v=10];W[fe]C[0.41 0.59 0.00 -3.3 v=10];B[ff]C[0.41 0.59 0.00 -3.2 v=10];W[gg]C[0.43 0.57 0.00 -2.3 v=5];B[fh]C[0.44 0.56 0.00 -1.8 v=10];W[gh]C[0.41 0.59 0.00 -2.9 v=5];B[ei]C[0.36 0.64 0.00 -5.2 v=10];W[fi]C[0.36 0.64 0.00 -4.7 v=5];B[eh]C[0.33 0.67 0.00 -6.0 v=5];W[je]C[0.32 0.68 0.00 -6.8 v=5];B[jf]C[0.31 0.69 0.00 -7.9 v=5];W[jd]C[0.30 0.70 0.00 -8.4 v=5];B[jj]C[0.27 0.73 0.00 -9.9 v=5];W[ii]C[0.26 0.74 0.00 -10.3 v=5];B[ji]C[0.26 0.74 0.00 -12.4 v=10];W[jk]C[0.26 0.74 0.00 -12.6 v=10];B[ig]C[0.32 0.68 0.00 -11.3 v=10];W[hf]C[0.30 0.70 0.00 -12.5 v=5];B[if]C[0.33 0.67 0.00 -10.5 v=5];W[kj]C[0.32 0.68 0.00 -11.5 v=10];B[ki]C[0.32 0.68 0.00 -11.2 v=5];W[jh]C[0.38 0.62 0.00 -7.8 v=10];B[kk]C[0.38 0.62 0.00 -7.7 v=10];W[ik]C[0.44 0.56 0.00 -4.3 v=5];B[jg]C[0.44 0.56 0.00 -4.1 v=5];W[kh]C[0.35 0.65 0.00 -10.0 v=5];B[kg]C[0.35 0.65 0.00 -11.5 v=10];W[kj]C[0.31 0.69 0.00 -15.1 v=5];B[fj]C[0.21 0.79 0.00 -23.4 v=5];W[gj]C[0.17 0.83 0.00 -28.8 v=10];B[ek]C[0.18 0.82 0.00 -28.4 v=10];W[hh]C[0.15 0.85 0.00 -31.6 v=5];B[hj]C[0.17 0.83 0.00 -29.6 v=5];W[jh]C[0.19 0.81 0.00 -27.7 v=10];B[kk]C[0.21 0.79 0.00 -26.1 v=5];W[hi]C[0.22 0.78 0.00 -24.8 v=10];B[gk]C[0.20 0.80 0.00 -25.3 v=10];W[hk]C[0.23 0.77 0.00 -23.1 v=5];B[fk]C[0.12 0.88 0.00 -37.1 v=10];W[kj]C[0.06 0.94 0.00 -43.0 v=10];B[kh]C[0.09 0.91 0.00 -40.4 v=5];W[kk]C[0.07 0.93 0.00 -42.9 v=10];B[fg]C[0.02 0.98 0.00 -51.1 v=5];W[fb]C[0.00 1.00 0.00 -53.7 v=5];B[fa]C[0.00 1.00 0.00 -51.9 v=5];C[0.00 1.00 0.00 -53.8 v=10 result=B+R])
 
 ====================================================================================================
 ====================================================================================================
@@ -11294,7 +11294,7 @@ Presumed next pla White
 Past normal phase end 0
 Game result 0 Empty 0 0 0 0
 Last moves C8 H9 J4 D3 C5 C4 D5 F3 J8 J9 F9 K8 K7 J7 K6 H8 H3 D9 D8 E9 C2 B3 A10 E8 D2 
-(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=100,rsym=1]WR[algo=MCTS,v=100,rsym=1]HA[0]DT[20221215-031713~20221215-031718]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]C[startTurnIdx=0,initTurnNum=0,gameHash=BAC8F02481E984322E16CC885D8A7525,gtype=normal];B[cd]C[0.51 0.49 0.00 0.9 v=100 weight=1.18];W[hc]C[0.51 0.49 0.00 0.9 v=100 weight=1.04];B[ih]C[0.53 0.47 0.00 1.8 v=100 weight=1.05];W[di]C[0.53 0.47 0.00 1.7 v=100 weight=1.15];B[cg]C[0.54 0.46 0.00 1.8 v=100 weight=1.23];W[ch]C[0.55 0.45 0.00 2.1 v=100 weight=1.49];B[dg]C[0.57 0.43 0.00 2.7 v=100 weight=1.21];W[fi]C[0.57 0.43 0.00 2.6 v=100 weight=0.94];B[id]C[0.56 0.44 0.00 2.4 v=50 weight=0.06];W[ic]C[0.55 0.45 0.00 2.1 v=50 weight=0.00];B[fc]C[0.56 0.44 0.00 2.4 v=50 weight=0.00];W[jd]C[0.59 0.41 0.00 3.1 v=50 weight=1.74];B[je]C[0.63 0.37 0.00 4.4 v=50 weight=0.00];W[ie]C[0.70 0.30 0.00 6.8 v=100 weight=1.31];B[jf]C[0.70 0.30 0.00 6.8 v=99 weight=0.00];W[hd]C[0.70 0.30 0.00 6.7 v=100 weight=1.18];B[hi]C[0.71 0.29 0.00 7.0 v=100 weight=1.57];W[dc]C[0.71 0.29 0.00 6.8 v=76 weight=0.22];B[cc]C[0.72 0.28 0.00 7.1 v=59 weight=0.00];W[dd]C[0.71 0.29 0.00 7.1 v=100 weight=2.63])
+(;FF[4]GM[1]SZ[11]PB[Black]PW[White]BR[algo=MCTS,v=100,rsym=1]WR[algo=MCTS,v=100,rsym=1]HA[0]DT[20221215-225447~20221215-225452]KM[7.5]RU[koPOSITIONALscoreAREAtaxNONEsui1]C[startTurnIdx=0,initTurnNum=0,gameHash=BAC8F02481E984322E16CC885D8A7525,gtype=normal];B[cd]C[0.51 0.49 0.00 0.9 v=100 weight=1.18];W[hc]C[0.51 0.49 0.00 0.9 v=100 weight=1.04];B[ih]C[0.53 0.47 0.00 1.8 v=100 weight=1.05];W[di]C[0.53 0.47 0.00 1.7 v=100 weight=1.15];B[cg]C[0.54 0.46 0.00 1.8 v=100 weight=1.23];W[ch]C[0.55 0.45 0.00 2.1 v=100 weight=1.49];B[dg]C[0.57 0.43 0.00 2.7 v=100 weight=1.21];W[fi]C[0.57 0.43 0.00 2.6 v=100 weight=0.94];B[id]C[0.56 0.44 0.00 2.4 v=50 weight=0.06];W[ic]C[0.55 0.45 0.00 2.1 v=50 weight=0.00];B[fc]C[0.56 0.44 0.00 2.4 v=50 weight=0.00];W[jd]C[0.59 0.41 0.00 3.1 v=50 weight=1.74];B[je]C[0.63 0.37 0.00 4.4 v=50 weight=0.00];W[ie]C[0.70 0.30 0.00 6.8 v=100 weight=1.31];B[jf]C[0.70 0.30 0.00 6.8 v=99 weight=0.00];W[hd]C[0.70 0.30 0.00 6.7 v=100 weight=1.18];B[hi]C[0.71 0.29 0.00 7.0 v=100 weight=1.57];W[dc]C[0.71 0.29 0.00 6.8 v=76 weight=0.22];B[cc]C[0.72 0.28 0.00 7.1 v=59 weight=0.00];W[dd]C[0.71 0.29 0.00 7.1 v=100 weight=2.63])
 
 HASH: 54579E0A87F182BA544C02BE0164C001
    A B C D E F G H J
@@ -13568,19 +13568,19 @@ usedInitialPosition 0
 hasFullData 1
 targetWeightByTurn 0 0 unrounded 0
 targetWeightByTurn 1 0 unrounded 0
-targetWeightByTurn 2 1.07799 unrounded 1.07799
-targetWeightByTurn 3 0.922009 unrounded 0.922009
+targetWeightByTurn 2 1.07577 unrounded 1.07577
+targetWeightByTurn 3 0.924227 unrounded 0.924227
 targetWeightByTurn 4 0 unrounded 0
 policyTargetsByTurn 0 unreducedNumVisits 200 D7 170 A8 16 B1 10 
 policyTargetsByTurn 1 unreducedNumVisits 200 A3 26 B1 109 C5 41 A8 5 H1 4 H9 1 F1 2 
-policyTargetsByTurn 2 unreducedNumVisits 800 C1 615 A8 65 F1 7 M8 7 E1 5 H1 2 N5 7 E2 2 F12 1 M6 5 L13 0 K1 0 A10 0 N6 1 N9 0 A11 0 E13 0 E9 0 F13 0 A12 0 A3 0 J13 0 
-policyTargetsByTurn 3 unreducedNumVisits 800 A3 552 E1 55 C5 56 H1 22 K1 19 A8 8 F1 7 E2 9 F9 4 A13 4 H9 6 E12 2 A11 4 G10 2 A12 3 F12 1 J4 1 F13 1 pass 0 D1 1 H13 0 
-policyTargetsByTurn 4 unreducedNumVisits 552 A1 453 A8 92 E1 0 F1 0 M8 0 M6 1 N5 0 N6 0 
+policyTargetsByTurn 2 unreducedNumVisits 800 C1 616 A8 69 F1 7 M8 7 E1 5 H1 2 N5 7 E2 2 F12 1 M6 5 L13 0 K1 0 A10 0 N6 1 N9 0 A11 0 E13 0 E9 0 F13 0 A12 0 A3 0 J13 0 
+policyTargetsByTurn 3 unreducedNumVisits 800 A3 551 E1 55 C5 58 H1 22 K1 19 A8 8 F1 7 E2 9 F9 4 A13 4 H9 6 E12 2 A11 4 G10 2 A12 3 F12 1 J4 1 F13 1 pass 0 D1 1 H13 0 
+policyTargetsByTurn 4 unreducedNumVisits 551 A1 445 A8 100 E1 0 F1 0 M8 0 M6 1 N5 0 
 policySurpriseByTurn 0 0.449831
 policySurpriseByTurn 1 0.468849
-policySurpriseByTurn 2 0.580073
-policySurpriseByTurn 3 0.358774
-policySurpriseByTurn 4 0.158317
+policySurpriseByTurn 2 0.573326
+policySurpriseByTurn 3 0.357859
+policySurpriseByTurn 4 0.153239
 policyEntropyByTurn 0 1.45905
 policyEntropyByTurn 1 2.1875
 policyEntropyByTurn 2 2.41223
@@ -13588,14 +13588,14 @@ policyEntropyByTurn 3 2.52675
 policyEntropyByTurn 4 1.3125
 searchEntropyByTurn 0 0.479783
 searchEntropyByTurn 1 1.17632
-searchEntropyByTurn 2 0.605252
-searchEntropyByTurn 3 1.16261
-searchEntropyByTurn 4 0.466532
+searchEntropyByTurn 2 0.614429
+searchEntropyByTurn 3 1.16748
+searchEntropyByTurn 4 0.489139
 whiteValueTargetsByTurn 0 0.131837 0.868119 4.45622e-05 -2.89114 - 
 whiteValueTargetsByTurn 1 0.1228 0.877157 4.32969e-05 -2.99455 - 
-whiteValueTargetsByTurn 2 0.146068 0.853887 4.52606e-05 -2.68355 -2.88641 
-whiteValueTargetsByTurn 3 0.119553 0.880405 4.22888e-05 -3.07787 -2.94068 
-whiteValueTargetsByTurn 4 0.128658 0.871298 4.30748e-05 -2.67381 - 
+whiteValueTargetsByTurn 2 0.145459 0.854495 4.52043e-05 -2.68874 -2.88641 
+whiteValueTargetsByTurn 3 0.118925 0.881033 4.22186e-05 -3.08755 -2.94068 
+whiteValueTargetsByTurn 4 0.127895 0.872062 4.29814e-05 -2.68042 - 
 whiteValueTargetsByTurn 5 1 0 0 25.5 25.5 
 Raw Stats -0.861989 -3.37601 1.45905
 Raw Stats -0.70771 -2.6304 2.1875
@@ -13728,36 +13728,36 @@ mode 0
 beganInEncorePhase 0
 usedInitialPosition 0
 hasFullData 1
-targetWeightByTurn 0 0.853153 unrounded 0.853153
-targetWeightByTurn 1 1.37631 unrounded 1.37631
-targetWeightByTurn 2 0.916125 unrounded 0.916125
-targetWeightByTurn 3 0.854407 unrounded 0.854407
+targetWeightByTurn 0 0.852845 unrounded 0.852845
+targetWeightByTurn 1 1.3773 unrounded 1.3773
+targetWeightByTurn 2 0.915674 unrounded 0.915674
+targetWeightByTurn 3 0.854181 unrounded 0.854181
 targetWeightByTurn 4 0 unrounded 0
 policyTargetsByTurn 0 unreducedNumVisits 800 A1 642 F12 10 F1 18 N7 2 H1 6 E13 2 J1 2 M8 7 E1 4 B9 1 J4 2 E2 1 J3 1 M6 5 N5 5 N6 4 H9 1 A12 1 F9 0 G9 1 C8 0 G10 0 A9 0 E8 0 L2 0 N8 0 
-policyTargetsByTurn 1 unreducedNumVisits 800 A3 189 H1 186 N1 9 H9 23 E1 584 F1 25 L13 4 J4 4 G10 64 D1 4 M6 2 J3 2 D9 1 E2 9 A12 6 K12 1 N8 1 A13 6 K1 2 
+policyTargetsByTurn 1 unreducedNumVisits 800 A3 189 H1 182 N1 9 H9 23 E1 585 F1 25 L13 4 J4 4 G10 64 D1 4 M6 2 J3 2 D9 1 E2 9 A12 6 K12 1 N8 1 A13 6 K1 2 
 policyTargetsByTurn 2 unreducedNumVisits 800 F1 716 E2 9 A3 5 N5 1 A9 0 H1 3 N1 0 D1 0 M8 0 B1 0 M6 0 
 policyTargetsByTurn 3 unreducedNumVisits 800 B1 539 A3 54 G8 12 H1 53 K1 8 H9 14 G10 13 E13 2 K12 2 E2 22 J3 2 pass 2 C8 1 A12 6 A13 8 M8 1 B9 1 N8 0 E8 0 H13 0 N10 0 J4 0 J1 0 
-policyTargetsByTurn 4 unreducedNumVisits 539 E2 26 H1 16 M8 219 F12 48 J4 7 M6 42 N5 54 N6 33 E13 4 J1 7 J3 2 N7 2 A12 2 H9 2 N8 3 G10 1 G9 1 
+policyTargetsByTurn 4 unreducedNumVisits 539 E2 26 H1 16 M8 219 F12 46 J4 7 M6 41 N5 52 N6 32 E13 4 J1 8 J3 2 N7 2 A12 2 H9 2 N8 3 G10 1 G9 1 
 policySurpriseByTurn 0 0.435507
-policySurpriseByTurn 1 1.33555
+policySurpriseByTurn 1 1.33822
 policySurpriseByTurn 2 0.65042
 policySurpriseByTurn 3 0.368171
-policySurpriseByTurn 4 0.951908
+policySurpriseByTurn 4 0.952848
 policyEntropyByTurn 0 2.45374
 policyEntropyByTurn 1 2.15686
 policyEntropyByTurn 2 1.80207
 policyEntropyByTurn 3 2.43989
 policyEntropyByTurn 4 3.05103
 searchEntropyByTurn 0 0.582884
-searchEntropyByTurn 1 1.51156
+searchEntropyByTurn 1 1.51015
 searchEntropyByTurn 2 0.143641
 searchEntropyByTurn 3 1.15575
-searchEntropyByTurn 4 1.83398
-whiteValueTargetsByTurn 0 0.0882025 0.911762 3.58852e-05 -3.32092 -3.50981 
-whiteValueTargetsByTurn 1 0.0710414 0.928925 3.31539e-05 -4.1772 -3.63586 
-whiteValueTargetsByTurn 2 0.089699 0.910265 3.59844e-05 -3.34089 -3.39047 
-whiteValueTargetsByTurn 3 0.0696551 0.93031 3.44981e-05 -4.48902 -3.19064 
-whiteValueTargetsByTurn 4 0.0774434 0.922521 3.59393e-05 -3.36278 - 
+searchEntropyByTurn 4 1.83242
+whiteValueTargetsByTurn 0 0.0880968 0.911867 3.58607e-05 -3.33566 -3.50981 
+whiteValueTargetsByTurn 1 0.0709952 0.928972 3.3148e-05 -4.17795 -3.63586 
+whiteValueTargetsByTurn 2 0.0896481 0.910316 3.59743e-05 -3.3444 -3.39047 
+whiteValueTargetsByTurn 3 0.0695098 0.930456 3.44632e-05 -4.49374 -3.19064 
+whiteValueTargetsByTurn 4 0.077242 0.922722 3.58938e-05 -3.36883 - 
 whiteValueTargetsByTurn 5 1 0 0 16.5 16.5 
 Raw Stats -0.905916 -4.48171 1.89116
 Raw Stats -0.686941 -1.6757 1.17834
@@ -14052,36 +14052,36 @@ mode 0
 beganInEncorePhase 0
 usedInitialPosition 0
 hasFullData 1
-targetWeightByTurn 0 0.717242 unrounded 0.717242
-targetWeightByTurn 1 1.26261 unrounded 1.26261
-targetWeightByTurn 2 1.13451 unrounded 1.13451
-targetWeightByTurn 3 0.65852 unrounded 0.65852
-targetWeightByTurn 4 0.227114 unrounded 0.227114
+targetWeightByTurn 0 0.722144 unrounded 0.722144
+targetWeightByTurn 1 1.25784 unrounded 1.25784
+targetWeightByTurn 2 1.14795 unrounded 1.14795
+targetWeightByTurn 3 0.666743 unrounded 0.666743
+targetWeightByTurn 4 0.205323 unrounded 0.205323
 policyTargetsByTurn 0 unreducedNumVisits 800 A1 701 J4 3 E2 0 E13 8 N7 0 M8 6 F8 0 M6 6 J3 0 H13 0 G9 0 H9 0 N5 1 D13 1 N6 1 L2 0 A12 0 G10 0 
-policyTargetsByTurn 1 unreducedNumVisits 800 E2 434 pass 9 H9 19 M6 6 E12 5 G10 19 B11 22 E13 4 N9 3 B4 4 A12 18 C8 3 N6 2 E1 17 K1 4 E8 2 M8 2 K12 2 J3 2 N7 2 G8 1 A11 1 J1 1 M11 1 M12 1 A9 1 G9 4 L7 1 G13 1 L13 1 N10 1 H8 1 J13 1 H13 1 N11 1 J4 1 N8 1 M13 1 N12 1 F9 0 D13 0 N13 0 N1 0 F8 0 N5 0 M1 0 C9 0 B9 0 
+policyTargetsByTurn 1 unreducedNumVisits 800 E2 433 pass 9 H9 19 M6 6 E12 5 G10 22 B11 26 E13 4 N9 3 B4 4 A12 22 C8 3 N6 2 E1 21 K1 4 E8 2 M8 2 K12 2 J3 2 N7 2 G8 2 A11 1 J1 1 M11 1 M12 1 A9 1 G9 5 L7 1 G13 1 L13 1 N10 1 H8 1 J13 1 H13 1 N11 1 J4 1 N8 1 M13 1 N12 1 F9 0 D13 0 N13 0 N1 0 F8 0 N5 0 M1 0 C9 0 B9 0 
 policyTargetsByTurn 2 unreducedNumVisits 800 E1 636 H9 3 F8 2 J4 1 J1 1 D13 3 G10 1 M8 2 J13 0 E13 1 N5 2 B1 0 M6 2 J3 0 B11 0 G13 4 B4 0 N6 1 C4 0 G9 0 L2 0 E12 0 E8 0 M1 0 N7 0 A11 0 K1 0 C8 0 
-policyTargetsByTurn 3 unreducedNumVisits 800 B1 657 G8 6 G10 19 A11 2 B11 23 H9 8 M12 2 E12 2 J13 2 N10 1 pass 1 M6 1 A12 7 E13 1 G9 1 N12 0 H13 0 H8 0 
-policyTargetsByTurn 4 unreducedNumVisits 657 J4 4 H9 2 M8 368 E13 49 N5 56 G10 2 M6 30 N6 9 D13 1 J1 1 J3 0 N7 0 E12 3 G9 1 G13 1 N8 0 B11 0 K1 0 E2 0 H8 0 L2 0 C8 0 A11 0 B4 0 M11 0 C4 0 F8 0 B9 0 C9 0 
+policyTargetsByTurn 3 unreducedNumVisits 800 B1 657 G8 6 G10 17 A11 2 B11 20 H9 8 M12 2 E12 2 J13 2 N10 1 pass 1 M6 1 A12 6 E13 0 G9 1 N12 0 H13 0 H8 0 
+policyTargetsByTurn 4 unreducedNumVisits 657 J4 4 H9 2 M8 365 E13 57 N5 70 G10 2 M6 36 N6 10 D13 1 J1 1 J3 0 N7 0 E12 3 G9 1 G13 1 N8 0 B11 0 K1 0 E2 0 H8 0 L2 0 C8 0 A11 0 B4 0 M11 0 C4 0 F8 0 B9 0 C9 0 A9 0 
 policySurpriseByTurn 0 0.371136
-policySurpriseByTurn 1 1.34824
+policySurpriseByTurn 1 1.31045
 policySurpriseByTurn 2 0.930131
-policySurpriseByTurn 3 0.246011
-policySurpriseByTurn 4 1.45675
+policySurpriseByTurn 3 0.252911
+policySurpriseByTurn 4 1.40197
 policyEntropyByTurn 0 1.75092
 policyEntropyByTurn 1 3.61923
 policyEntropyByTurn 2 2.8593
 policyEntropyByTurn 3 1.80975
 policyEntropyByTurn 4 3.28702
 searchEntropyByTurn 0 0.213768
-searchEntropyByTurn 1 1.42115
+searchEntropyByTurn 1 1.48358
 searchEntropyByTurn 2 0.233989
-searchEntropyByTurn 3 0.54391
-searchEntropyByTurn 4 1.09886
+searchEntropyByTurn 3 0.507427
+searchEntropyByTurn 4 1.17077
 whiteValueTargetsByTurn 0 0.154853 0.845105 4.22229e-05 -2.3532 -3.44044 
-whiteValueTargetsByTurn 1 0.117055 0.882907 3.7895e-05 -2.75015 -3.21176 
-whiteValueTargetsByTurn 2 0.166092 0.833865 4.22096e-05 -2.30044 -2.5 
-whiteValueTargetsByTurn 3 0.127849 0.872113 3.89814e-05 -2.64807 -2.5 
-whiteValueTargetsByTurn 4 0.136381 0.863578 4.01041e-05 -2.54928 -2.5 
+whiteValueTargetsByTurn 1 0.114581 0.885381 3.75668e-05 -2.7783 -3.21176 
+whiteValueTargetsByTurn 2 0.166081 0.833877 4.22075e-05 -2.30038 -2.5 
+whiteValueTargetsByTurn 3 0.129968 0.869993 3.93086e-05 -2.61874 -2.5 
+whiteValueTargetsByTurn 4 0.138851 0.861109 4.04865e-05 -2.51501 -2.5 
 whiteValueTargetsByTurn 5 1 0 0 7.5 7.5 
 Raw Stats -0.901415 -3.343 0.738021
 Raw Stats -0.766455 -1.9649 3.49587
@@ -14140,4 +14140,4 @@ OOXXXXXX..XXX
  1.000 1.000 1.000 1.000 -1.000 -1.000 1.000 -1.000 0.000 1.000 -1.000 -1.000 1.000
  1.000 -1.000 -1.000 -1.000 -1.000 -1.000 1.000 -1.000 1.000 -1.000 -1.000 -1.000 -1.000
  1.000 1.000 -1.000 -1.000 -1.000 -1.000 -1.000 -1.000 0.000 0.000 -1.000 -1.000 -1.000
-: GPU 0 finishing, processed 47706 rows 47706 batches
+: GPU 0 finishing, processed 47720 rows 47720 batches

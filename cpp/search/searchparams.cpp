@@ -62,7 +62,6 @@ SearchParams::SearchParams()
   :passingBehavior(PassingBehavior::Standard),
    forceWinningPass(false),
    searchAlgo(SearchAlgorithm::MCTS),
-   canPassFirst(true),
    winLossUtilityFactor(1.0),
    staticScoreUtilityFactor(0.3),
    dynamicScoreUtilityFactor(0.0),

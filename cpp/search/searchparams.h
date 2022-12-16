@@ -45,9 +45,6 @@ struct SearchParams {
   std::string getSearchAlgoAsStr() const;
   bool usingAdversarialAlgo() const;
 
-  // Whether we are allowed to be the first player that passes in a game.
-  bool canPassFirst;
-
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
   double staticScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at 0.

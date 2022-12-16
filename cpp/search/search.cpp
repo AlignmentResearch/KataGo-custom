@@ -646,8 +646,9 @@ void Search::runWholeSearch(
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxPlayouts - numPlayouts);
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxVisits - numPlayouts - numNonPlayoutVisits);
 
-        if (runSinglePlayout(*stbuf, upperBoundVisitsLeft)) {
-          numPlayouts = numPlayoutsShared.fetch_add(1, std::memory_order_relaxed);
+        bool finishedPlayout = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
+        if(finishedPlayout) {
+          numPlayouts = numPlayoutsShared.fetch_add((int64_t)1, std::memory_order_relaxed);
           numPlayouts += 1;
         }
         else {

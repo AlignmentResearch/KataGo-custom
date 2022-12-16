@@ -24,11 +24,6 @@ typedef int8_t Player;
 static constexpr Player P_NONE = 0;
 static constexpr Player P_BLACK = 1;
 static constexpr Player P_WHITE = 2;
-static constexpr Player P_ANY = 3;
-
-static inline bool playersMatch(Player p1, Player p2) {
-  return (p1 & p2) > 0;
-}
 
 //Color of a point on the board
 typedef int8_t Color;
@@ -127,7 +122,6 @@ struct Board
   static Hash128 ZOBRIST_SECOND_ENCORE_START_HASH[MAX_ARR_SIZE][4];
   static const Hash128 ZOBRIST_PASS_ENDS_PHASE;
   static const Hash128 ZOBRIST_GAME_IS_OVER;
-  static const Hash128 ZOBRIST_SOMEONE_HAS_PASSED;
 
   //Structs---------------------------------------
 

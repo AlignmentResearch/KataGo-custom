@@ -567,8 +567,6 @@ void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
   }
 
   checkFinalMoveSelection(bot);
-
-  checkPlayoutLogic(bot);
 }
 
 void AMCTSTests::checkFinalMoveSelection(const Search& bot) {

@@ -67,13 +67,6 @@ static void checkPositiveWeightMoves(Search& bot,
     }
   }
 
-  // // print out positiveLocStrs
-  // cout << "positiveLocStrs: " << endl;
-  // for (auto& s : positiveLocStrs) {
-  //   cout << s << " ";
-  // }
-  // cout << endl;
-
   assertContentsEqual(positiveLocStrs, expectedMoves);
 }
 
@@ -138,13 +131,14 @@ void Tests::runPassingTests() {
 
     // Now manually modify the policy to put zero weight on A1, B1, A6, B6
     NNOutput* nnOutput = bot.rootNode->nnOutput.load()->get();
+    set<string> legalMoves{"A1", "B1", "A6", "B6"};
     for (int movePos = 0; movePos < bot.policySize; movePos++) {
       const Loc moveLoc =
           NNPos::posToLoc(movePos, bot.rootBoard.x_size, bot.rootBoard.y_size,
                           bot.nnXLen, bot.nnYLen);
       const string moveLocStr = Location::toString(moveLoc, bot.rootBoard);
 
-      if (set<string>({"A1", "B1", "A6", "B6"}).count(moveLocStr) > 0) {
+      if (legalMoves.count(moveLocStr) > 0) {
         nnOutput->policyProbs[movePos] = -1e9;
       }
     }

@@ -500,6 +500,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     string prevModelName;
     Rand thisLoopSeedRand;
     std::string victimCfgReloadPath = nnVictimPath + "/victim.cfg";
+    std::string lastVictimCfgContents = "";
     std::string logPrefix = "Game loop thread " + to_string(threadIdx) + ": ";
     while(true) {
       if(shouldStop.load())
@@ -521,21 +522,21 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
         if(FileUtils::exists(victimCfgReloadPath)) {
           ConfigParser victimCfg;
-          std::string paramsChangeLog;
           try {
             victimCfg.initialize(victimCfgReloadPath);
             {
               lock_guard<mutex> lock(paramsReloadMutex);
-              logger.write("Reloading with config: " + victimCfg.getAllKeyVals());
-              Setup::loadParams(victimCfg, Setup::SETUP_FOR_OTHER, &paramss);
-              victimCfg.warnUnusedKeys(cerr, &logger);
+              std::string victimCfgContents = victimCfg.getAllKeyVals();
+              if (victimCfgContents != lastVictimCfgContents) {
+                logger.write("Old config:\n" + lastVictimCfgContents);
+                logger.write("Reloading with config:\n" + victimCfgContents);
+                Setup::loadParams(victimCfg, Setup::SETUP_FOR_OTHER, &paramss);
+                victimCfg.warnUnusedKeys(cerr, &logger);
+                lastVictimCfgContents = std::move(victimCfgContents);
+              }
             }  // end of mutex scope
           } catch (const IOError &e) {
             logger.write(logPrefix + "victim config reloading error: " + e.what());
-          }
-
-          if(!paramsChangeLog.empty()) {
-            logger.write(logPrefix + paramsChangeLog);
           }
         }
       } else if (victimplay) {

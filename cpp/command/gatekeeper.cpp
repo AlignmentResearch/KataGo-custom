@@ -45,6 +45,8 @@ namespace {
     string modelNameCandidate;
     NNEvaluator* nnEvalBaseline;
     NNEvaluator* nnEvalCandidate;
+    const SearchParams searchParamsBaseline;
+    const SearchParams searchParamsCandidate;
     MatchPairer* matchPairer;
 
     string testModelDir;
@@ -59,17 +61,21 @@ namespace {
     int numGamesTallied;
     double numBaselineWinPoints;
     double numCandidateWinPoints;
+    // If true, then break the game loop early if one model is going to achieve a majority of points.
+    bool terminateEarlyOnPointMajority;
 
     ofstream* sgfOut;
 
     std::atomic<bool> terminated;
 
   public:
-    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, ofstream* sOut)
+    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
       :modelNameBaseline(nameB),
        modelNameCandidate(nameC),
        nnEvalBaseline(nevalB),
        nnEvalCandidate(nevalC),
+       searchParamsBaseline(searchParamsB),
+       searchParamsCandidate(searchParamsC),
        matchPairer(NULL),
        testModelDir(tModelDir),
        finishedGameQueue(),
@@ -80,20 +86,21 @@ namespace {
        numGamesTallied(0),
        numBaselineWinPoints(0.0),
        numCandidateWinPoints(0.0),
+       terminateEarlyOnPointMajority(terminateEarlyOnPointMaj),
        sgfOut(sOut),
        terminated(false)
     {
-      SearchParams baseParams = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_OTHER);
-
-      drawEquivalentWinsForWhite = baseParams.drawEquivalentWinsForWhite;
-      noResultUtilityForWhite = baseParams.noResultUtilityForWhite;
+      assert(searchParamsBaseline.drawEquivalentWinsForWhite == searchParamsCandidate.drawEquivalentWinsForWhite);
+      assert(searchParamsBaseline.noResultUtilityForWhite == searchParamsCandidate.noResultUtilityForWhite);
+      drawEquivalentWinsForWhite = searchParamsBaseline.drawEquivalentWinsForWhite;
+      noResultUtilityForWhite = searchParamsBaseline.noResultUtilityForWhite;
 
       //Initialize object for randomly pairing bots. Actually since this is only selfplay, this only
       //ever gives is the trivial self-pairing, but we use it also for keeping the game count and some logging.
       bool forSelfPlay = false;
       bool forGateKeeper = true;
       matchPairer = new MatchPairer(
-        cfg, 2, {modelNameBaseline,modelNameCandidate}, {nnEvalBaseline,nnEvalCandidate}, {baseParams, baseParams}, forSelfPlay, forGateKeeper
+        cfg, 2, {modelNameBaseline,modelNameCandidate}, {nnEvalBaseline,nnEvalCandidate}, {searchParamsBaseline, searchParamsCandidate}, forSelfPlay, forGateKeeper
       );
     }
 
@@ -159,7 +166,7 @@ namespace {
         //Terminate games if one side has won enough to guarantee the victory.
         int64_t numGamesRemaining = matchPairer->getNumGamesTotalToGenerate() - numGamesTallied;
         assert(numGamesRemaining >= 0);
-        if(numGamesRemaining > 0) {
+        if(numGamesRemaining > 0 && terminateEarlyOnPointMajority) {
           if(numCandidateWinPoints >= (numBaselineWinPoints + numGamesRemaining)) {
             logger.write("Candidate has already won enough games, terminating remaning games");
             terminated.store(true);
@@ -197,8 +204,74 @@ namespace {
         finishedGameQueue.setReadOnly();
       }
     }
-
   };
+
+  // (for victimplay) Data about evaluation results of an adversary vs a victim.
+  struct AdversaryVsVictimInfo {
+    string adversaryModelName;
+    string victimModelName;
+    string victimCfgContents;
+    double adversaryPoints = 0.0;
+    double victimPoints = 0.0;
+    int numGamesTallied = 0;
+
+    AdversaryVsVictimInfo(
+      string adversaryModelName_ = "",
+      string victimModelName_ = "",
+      string victimCfgContents_ = "",
+      double adversaryPoints_ = 0.0,
+      double victimPoints_ = 0.0,
+      int numGamesTallied_ = 0
+    ) : adversaryModelName(std::move(adversaryModelName_))
+      , victimModelName(std::move(victimModelName_))
+      , victimCfgContents(std::move(victimCfgContents_))
+      , adversaryPoints(adversaryPoints_)
+      , victimPoints(victimPoints_)
+      , numGamesTallied(numGamesTallied_) {}
+
+    // Returns true if `other` describes the same adversary and victim as
+    // `this`.
+    bool isSameMatchup(const AdversaryVsVictimInfo& other) const {
+      return getMatchup() == other.getMatchup();
+    }
+
+   private:
+    tuple<string, string, string> getMatchup() const {
+      return std::tie(adversaryModelName, victimModelName, victimCfgContents);
+    }
+  };
+
+  // Info about model returned by getLatestModelInfo().
+  struct ModelFileInfo {
+    string name;
+    string file;
+    string dir;
+    time_t time;
+  };
+
+  // Returns info about latest model in a directory.
+  // (Wrapper for  LoadModel::findLatestModel().)
+  optional<ModelFileInfo> getLatestModelInfo(
+      Logger& logger,
+      const string& modelsDir,
+      bool allowRandomNet
+  ) {
+    ModelFileInfo info;
+    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time);
+    if (!foundModel || (!allowRandomNet && info.file == "/dev/null")) {
+      return {};
+    }
+    return info;
+  }
+
+  // Sleep for `seconds` seconds.
+  void sleep(size_t seconds) {
+    for (size_t i = 0; i < seconds; i++) {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      if(shouldStop.load())
+        break;
+    }
+  }
 }
 
 
@@ -214,6 +287,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   string testModelsDir;
   string acceptedModelsDir;
   string rejectedModelsDir;
+  string victimModelsDir;
   string sgfOutputDir;
   string selfplayDir;
   bool noAutoRejectOldModels;
@@ -226,6 +300,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     TCLAP::ValueArg<string> sgfOutputDirArg("","sgf-output-dir","Dir to output sgf files",true,string(),"DIR");
     TCLAP::ValueArg<string> acceptedModelsDirArg("","accepted-models-dir","Dir to write good models to",true,string(),"DIR");
     TCLAP::ValueArg<string> rejectedModelsDirArg("","rejected-models-dir","Dir to write bad models to",true,string(),"DIR");
+    TCLAP::ValueArg<string> victimModelsDirArg("","victim-models-dir","(victimplay only) Dir of victim models",victimplay,string(),"DIR");
     TCLAP::ValueArg<string> selfplayDirArg("","selfplay-dir","Dir where selfplay data will be produced if a model passes",false,string(),"DIR");
     TCLAP::SwitchArg noAutoRejectOldModelsArg("","no-autoreject-old-models","Test older models than the latest accepted model");
     TCLAP::SwitchArg quitIfNoNetsToTestArg("","quit-if-no-nets-to-test","Terminate instead of waiting for a new net to test");
@@ -243,6 +318,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     sgfOutputDir = sgfOutputDirArg.getValue();
     acceptedModelsDir = acceptedModelsDirArg.getValue();
     rejectedModelsDir = rejectedModelsDirArg.getValue();
+    victimModelsDir = victimModelsDirArg.getValue();
     selfplayDir = selfplayDirArg.getValue();
     noAutoRejectOldModels = noAutoRejectOldModelsArg.getValue();
     quitIfNoNetsToTest = quitIfNoNetsToTestArg.getValue();
@@ -255,6 +331,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     checkDirNonEmpty("sgf-output-dir",sgfOutputDir);
     checkDirNonEmpty("accepted-models-dir",acceptedModelsDir);
     checkDirNonEmpty("rejected-models-dir",rejectedModelsDir);
+    if (victimplay) {
+      checkDirNonEmpty("victim-models-dir",victimModelsDir);
+    }
 
     //Tolerate this argument being optional
     //checkDirNonEmpty("selfplay-dir",selfplayDir);
@@ -292,6 +371,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   const int maxBoardYSizeUsed = gameRunner->getGameInitializer()->getMaxBoardYSize();
 
   Setup::initializeSession(cfg);
+  vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+  if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
+  else assert(paramss.size() == 1);
 
   //Done loading!
   //------------------------------------------------------------------------------------
@@ -328,83 +410,55 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     Logger::logThreadUncaught("data write loop", &logger, dataWriteLoop);
   };
 
-  // TODO(tomtseng)
-  // the plan:
-  // * pull finding the latest model out of loadLatestNeuralNet
-  // * pull moving model into rejected out of loadLatestNeuralNet
-  // * loading victim cfg in selfplay: you need to move that out to a common
-  //   file because you need to reuse it here. Maybe check the shasum to
-  //   determine whether to refresh the victim?
-  //   * add function called updateParams in setup.h?
-  //     - oof this kinda sucks, ideally we want to log every extra assignment?
-  //       Maybe we just have updateParams() print out the whole config file
-  // * move the actual evaluation stuff out of the while(true) loop b/c we need
-  // to reuse it
-  //
-  // * steps:
-  // *  - find latest test, accepted
-  // *  - if acceptedTime > testTime then reject automatically
-  // *  - find latest victim + victim config
-  // *  - if <acceptedName, victimName, victimCfg.getContents()> are different from
-  //      before, then compute accepted vs. victim
-  // *  - compute test vs. victim, keep the better one
-  auto loadLatestNeuralNet =
-    [&testModelsDir,&rejectedModelsDir,&acceptedModelsDir,&sgfOutputDir,&logger,&cfg,numGameThreads,noAutoRejectOldModels,
-     minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed]() -> NetAndStuff* {
-    Rand rand;
-
-    string testModelName;
-    string testModelFile;
-    string testModelDir;
-    time_t testModelTime;
-    bool foundModel = LoadModel::findLatestModel(testModelsDir, logger, testModelName, testModelFile, testModelDir, testModelTime);
-
-    //No new neural nets yet
-    if(!foundModel || testModelFile == "/dev/null")
-      return NULL;
-
-    logger.write("Found new candidate neural net " + testModelName);
-
-    string acceptedModelName;
-    string acceptedModelFile;
-    string acceptedModelDir;
-    time_t acceptedModelTime;
-    foundModel = LoadModel::findLatestModel(acceptedModelsDir, logger, acceptedModelName, acceptedModelFile, acceptedModelDir, acceptedModelTime);
-    if(!foundModel) {
-      logger.write("Error: No accepted model found in " + acceptedModelsDir);
-      return NULL;
+  // Rejects old test models. Returns true if the test model was rejected.
+  const auto rejectOldTestModel = [noAutoRejectOldModels,&rejectedModelsDir,&logger](
+      const ModelFileInfo& testModelInfo,
+      const ModelFileInfo& acceptedModelInfo
+  ) -> bool {
+    if (acceptedModelInfo.time <= testModelInfo.time || noAutoRejectOldModels) {
+      return false;
     }
-
-    if(acceptedModelTime > testModelTime && !noAutoRejectOldModels) {
-      string renameDest = rejectedModelsDir + "/" + testModelName;
-      logger.write("Rejecting " + testModelDir + " automatically since older than best accepted model");
-      logger.write("Moving " + testModelDir + " to " + renameDest);
-      FileUtils::rename(testModelDir,renameDest);
-      return NULL;
-    }
-
+    string renameDest = rejectedModelsDir + "/" + testModelInfo.name;
+    logger.write("Rejecting " + testModelInfo.name + " automatically since older than best accepted model");
+    logger.write("Moving " + testModelInfo.dir + " to " + renameDest);
+    FileUtils::rename(testModelInfo.dir,renameDest);
+    return true;
+  };
+  const auto loadNNEvaluator = [&logger,numGameThreads,minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed,&cfg](
+      const string& modelName,
+      const string& modelFile,
+      int numSearchThreads
+  ) -> NNEvaluator* {
     // * 2 + 16 just in case to have plenty of room
-    const int maxConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads * 2 + 16;
-    const int expectedConcurrentEvals = cfg.getInt("numSearchThreads") * numGameThreads;
+    const int maxConcurrentEvals = numSearchThreads * numGameThreads * 2 + 16;
+    const int expectedConcurrentEvals = numSearchThreads * numGameThreads;
     const int defaultMaxBatchSize = -1;
     const bool defaultRequireExactNNLen = minBoardXSizeUsed == maxBoardXSizeUsed && minBoardYSizeUsed == maxBoardYSizeUsed;
     const string expectedSha256 = "";
 
-    NNEvaluator* testNNEval = Setup::initializeNNEvaluator(
-      testModelName,testModelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
+    Rand rand;
+    return Setup::initializeNNEvaluator(
+      modelName,modelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
       maxBoardXSizeUsed,maxBoardYSizeUsed,defaultMaxBatchSize,defaultRequireExactNNLen,
       Setup::SETUP_FOR_OTHER
     );
-    logger.write("Loaded candidate neural net " + testModelName + " from: " + testModelFile);
+  };
+  // `terminateGamesEarlyOnPointMajority`: If true, then break the NetAndStuff's
+  // evaluation early if one model is going to win a majority of the time.
+  const auto loadNetAndStuff = [&paramss,&loadNNEvaluator,&sgfOutputDir,&logger,&cfg](
+      const ModelFileInfo& baselineModelInfo,
+      const ModelFileInfo& testModelInfo,
+      bool terminateGamesEarlyOnPointMajority
+  ) -> NetAndStuff* {
+    const SearchParams& victimSearchParams = paramss[0];
+    const SearchParams& advSearchParams = paramss[paramss.size() - 1];
+    NNEvaluator* testNNEval = loadNNEvaluator(testModelInfo.name, testModelInfo.file, advSearchParams.numThreads);
+    logger.write("Loaded candidate neural net " + testModelInfo.name + " from: " + testModelInfo.file);
+    NNEvaluator* baselineNNEval = loadNNEvaluator(baselineModelInfo.name, baselineModelInfo.file, victimSearchParams.numThreads);
+    logger.write("Loaded baseline neural net " + baselineModelInfo.name + " from: " + baselineModelInfo.file);
 
-    NNEvaluator* acceptedNNEval = Setup::initializeNNEvaluator(
-      acceptedModelName,acceptedModelFile,expectedSha256,cfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
-      maxBoardXSizeUsed,maxBoardYSizeUsed,defaultMaxBatchSize,defaultRequireExactNNLen,
-      Setup::SETUP_FOR_OTHER
-    );
-    logger.write("Loaded accepted neural net " + acceptedModelName + " from: " + acceptedModelFile);
-
-    string sgfOutputDirThisModel = sgfOutputDir + "/" + testModelName;
+    Rand rand;
+    string sgfOutputDirThisModel = sgfOutputDir + "/" + testModelInfo.name;
     MakeDir::make(sgfOutputDirThisModel);
     {
       ofstream out;
@@ -418,7 +472,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       sgfOut = new ofstream();
       FileUtils::open(*sgfOut, sgfOutputDirThisModel + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".sgfs");
     }
-    NetAndStuff* newNet = new NetAndStuff(cfg, acceptedModelName, testModelName, testModelDir, acceptedNNEval, testNNEval, sgfOut);
+    NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, testModelInfo.dir, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
 
     //Check for unused config keys
     cfg.warnUnusedKeys(cerr,&logger);
@@ -478,38 +532,37 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   auto gameLoopProtected = [&logger,&gameLoop](int threadIdx) {
     Logger::logThreadUncaught("game loop", &logger, [&](){ gameLoop(threadIdx); });
   };
-
-  //Looping polling for new neural nets and loading them in
-  while(true) {
-    if(shouldStop.load())
-      break;
-
-    assert(netAndStuff == NULL);
-    netAndStuff = loadLatestNeuralNet();
-
+  // Runs NetAndStuff. Returns true if the program should continue executing.
+  const auto evaluateNetAndStuff = [
+    quitIfNoNetsToTest,
+    &netAndStuff,
+    &netAndStuffDataIsWritten,
+    &dataWriteLoopProtected,
+    &netAndStuffMutex,
+    &waitNetAndStuffDataIsWritten,
+    &logger,
+    numGameThreads,
+    &gameLoopProtected
+  ]() -> bool {
     if(netAndStuff == NULL) {
       if(quitIfNoNetsToTest) {
         shouldStop.store(true);
+        return false;
       }
-      else {
-        for(int i = 0; i<4; i++) {
-          std::this_thread::sleep_for(std::chrono::seconds(1));
-          if(shouldStop.load())
-            break;
-        }
-      }
-      continue;
+      return true;
     }
-
     //Check again if we should be stopping, after loading the new net, and quit more quickly.
     if(shouldStop.load()) {
-      delete netAndStuff;
-      netAndStuff = NULL;
-      break;
+      return false;
     }
-
-    //Otherwise, we're not stopped yet, so let's proceeed. Initialize stuff...
     netAndStuffDataIsWritten = false;
+    logger.write(
+      Global::strprintf(
+        "Evaluating %s vs. %s",
+        netAndStuff->modelNameBaseline.c_str(),
+        netAndStuff->modelNameCandidate.c_str()
+      )
+    );
 
     //And spawn off all the threads
     std::thread newThread(dataWriteLoopProtected);
@@ -534,64 +587,197 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         waitNetAndStuffDataIsWritten.wait(lock);
       }
     }
+    return !shouldStop.load();
+  };
 
-    //Don't do anything if the reason we quit was due to signal
-    if(shouldStop.load()) {
+  // Victimplay-only variables
+  AdversaryVsVictimInfo lastAcceptedModelResults;
+  string victimCfgReloadPath = victimModelsDir + "/victim.cfg";
+
+  //Looping polling for new neural nets and loading them in
+  while(true) {
+    if(shouldStop.load())
+      break;
+
+    assert(netAndStuff == NULL);
+    optional<ModelFileInfo> testModelInfo = getLatestModelInfo(logger, testModelsDir, false);
+    const optional<ModelFileInfo> acceptedModelInfo = getLatestModelInfo(logger, acceptedModelsDir, true);
+    if (!acceptedModelInfo.has_value()) {
+      logger.write("Error: No accepted model found in " + acceptedModelsDir);
+      sleep(4);
+      continue;
+    }
+    if (testModelInfo.has_value()) {
+      logger.write("Found new candidate neural net " + testModelInfo->name);
+      if (rejectOldTestModel(*testModelInfo, *acceptedModelInfo)) {
+        testModelInfo.reset();
+      }
+    }
+
+    bool shouldAcceptTestModel = false;
+    string evaluationResultDescription = "";
+    if (victimplay) {
+      const optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(logger, victimModelsDir, false);
+      if (!victimModelInfo.has_value()) {
+        logger.write("Error: No victim model found in " + victimModelsDir);
+        sleep(4);
+        continue;
+      }
+      string victimCfgContents;
+      ConfigParser victimCfg;
+      if(FileUtils::exists(victimCfgReloadPath)) {
+        try {
+          victimCfg.initialize(victimCfgReloadPath);
+        } catch (const IOError &e) {
+          logger.write(string("Victim config reloading error: ") + e.what());
+        }
+        victimCfgContents = victimCfg.getAllKeyVals();
+      }
+
+      if (victimCfgContents != lastAcceptedModelResults.victimCfgContents) {
+        // Update `paramss` with the new victim config.
+        logger.write("Old victim config:\n" + lastAcceptedModelResults.victimCfgContents);
+        logger.write("Reloading with config:\n" + victimCfgContents);
+        Setup::loadParams(victimCfg, Setup::SETUP_FOR_OTHER, &paramss);
+        victimCfg.warnUnusedKeys(cerr, &logger);
+      }
+
+      AdversaryVsVictimInfo acceptedModelMatchup{
+        acceptedModelInfo->name,
+        victimModelInfo->name,
+        victimCfgContents,
+      };
+      if (!acceptedModelMatchup.isSameMatchup(lastAcceptedModelResults)) {
+        // Need to re-evaluate accepted model vs. victim model.
+        netAndStuff = loadNetAndStuff(*victimModelInfo, *acceptedModelInfo, !victimplay);
+        assert(netAndStuff != NULL);
+
+        logger.write("Evaluating accepted model");
+        const bool evaluationShouldContinue = evaluateNetAndStuff();
+        if (!evaluationShouldContinue) {
+          break;
+        }
+
+        lastAcceptedModelResults = std::move(acceptedModelMatchup);
+        lastAcceptedModelResults.adversaryPoints = netAndStuff->numCandidateWinPoints;
+        lastAcceptedModelResults.victimPoints = netAndStuff->numBaselineWinPoints;
+        lastAcceptedModelResults.numGamesTallied = netAndStuff->numGamesTallied;
+        logger.write(
+          Global::strprintf(
+            "Accepted model %s scored %.3f to %.3f in %d games.",
+            lastAcceptedModelResults.adversaryModelName,
+            lastAcceptedModelResults.adversaryPoints,
+            lastAcceptedModelResults.victimPoints,
+            lastAcceptedModelResults.numGamesTallied
+          )
+        );
+        delete netAndStuff;
+        netAndStuff = NULL;
+        if (!evaluationShouldContinue) {
+          break;
+        }
+      }
+
+      if (!testModelInfo.has_value()) {
+        sleep(4);
+        continue;
+      }
+      netAndStuff = loadNetAndStuff(*victimModelInfo, *testModelInfo, !victimplay);
+      assert(netAndStuff != NULL);
+      logger.write("Evaluating test model");
+      const bool evaluationShouldContinue = evaluateNetAndStuff();
+      if (!evaluationShouldContinue) {
+        break;
+      }
+
+      logger.write(
+        Global::strprintf(
+          "Test model %s scored %.3f to %.3f in %d games. (vs. accepted model %s scoring %.3f to %.3f in %d games)",
+          testModelInfo->name,
+          netAndStuff->numCandidateWinPoints,
+          netAndStuff->numBaselineWinPoints,
+          netAndStuff->numGamesTallied,
+          lastAcceptedModelResults.adversaryModelName,
+          lastAcceptedModelResults.adversaryPoints,
+          lastAcceptedModelResults.victimPoints,
+          lastAcceptedModelResults.numGamesTallied
+        )
+      );
+      // The accepted model should either not exist or have played the same
+      // number of games.
+      assert(lastAcceptedModelResults.numGamesTallied == 0 ||
+          netAndStuff->numGamesTallied == lastAcceptedModelResults.numGamesTallied);
+      // Test model wins ties.
+      if(netAndStuff->numCandidateWinPoints + 1e-10 >= lastAcceptedModelResults.adversaryPoints) {
+        shouldAcceptTestModel = true;
+        lastAcceptedModelResults = AdversaryVsVictimInfo{
+          acceptedModelInfo->name,
+          victimModelInfo->name,
+          victimCfgContents,
+          netAndStuff->numCandidateWinPoints,
+          netAndStuff->numBaselineWinPoints,
+          netAndStuff->numGamesTallied,
+        };
+      }
       delete netAndStuff;
       netAndStuff = NULL;
-      break;
-    }
-
-    //Candidate wins ties
-    if(netAndStuff->numBaselineWinPoints > netAndStuff->numCandidateWinPoints + 1e-10) {
+    } else {
+      if (!testModelInfo.has_value()) {
+        sleep(4);
+        continue;
+      }
+      netAndStuff = loadNetAndStuff(*acceptedModelInfo, *testModelInfo, !victimplay);
+      const bool evaluationShouldContinue = evaluateNetAndStuff();
+      if (!evaluationShouldContinue) {
+        break;
+      }
       logger.write(
         Global::strprintf(
-          "Candidate lost match, score %.3f to %.3f in %d games, rejecting candidate %s",
+          "Candidate %s scored %.3f to %.3f in %d games",
+          netAndStuff->modelNameCandidate.c_str(),
           netAndStuff->numCandidateWinPoints,
           netAndStuff->numBaselineWinPoints,
-          netAndStuff->numGamesTallied,
-          netAndStuff->modelNameCandidate.c_str()
+          netAndStuff->numGamesTallied
         )
       );
-
-      string renameDest = rejectedModelsDir + "/" + netAndStuff->modelNameCandidate;
-      logger.write("Moving " + netAndStuff->testModelDir + " to " + renameDest);
-      FileUtils::rename(netAndStuff->testModelDir,renameDest);
+      // Test model wins ties.
+      shouldAcceptTestModel = netAndStuff->numCandidateWinPoints + 1e-10 >= netAndStuff->numBaselineWinPoints;
+      delete netAndStuff;
+      netAndStuff = NULL;
     }
-    else {
-      logger.write(
-        Global::strprintf(
-          "Candidate won match, score %.3f to %.3f in %d games, accepting candidate %s",
-          netAndStuff->numCandidateWinPoints,
-          netAndStuff->numBaselineWinPoints,
-          netAndStuff->numGamesTallied,
-          netAndStuff->modelNameCandidate.c_str()
-        )
-      );
+
+    if (shouldAcceptTestModel) {
+      assert(testModelInfo.has_value());
 
       //Make a bunch of the directories that selfplay will need so that there isn't a race on the selfplay
       //machines to concurrently make it, since sometimes concurrent making of the same directory can corrupt
       //a filesystem
       if(selfplayDir != "") {
-        MakeDir::make(selfplayDir + "/" + netAndStuff->modelNameCandidate);
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        MakeDir::make(selfplayDir + "/" + netAndStuff->modelNameCandidate + "/" + "sgfs");
-        MakeDir::make(selfplayDir + "/" + netAndStuff->modelNameCandidate + "/" + "tdata");
-        MakeDir::make(selfplayDir + "/" + netAndStuff->modelNameCandidate + "/" + "vadata");
+        MakeDir::make(selfplayDir + "/" + testModelInfo->name);
+        sleep(1);
+        MakeDir::make(selfplayDir + "/" + testModelInfo->name + "/" + "sgfs");
+        MakeDir::make(selfplayDir + "/" + testModelInfo->name + "/" + "tdata");
+        MakeDir::make(selfplayDir + "/" + testModelInfo->name + "/" + "vadata");
       }
-      std::this_thread::sleep_for(std::chrono::seconds(2));
+      sleep(2);
 
-      string renameDest = acceptedModelsDir + "/" + netAndStuff->modelNameCandidate;
-      logger.write("Moving " + netAndStuff->testModelDir + " to " + renameDest);
-      FileUtils::rename(netAndStuff->testModelDir,renameDest);
+      string renameDest = acceptedModelsDir + "/" + testModelInfo->name;
+      logger.write(
+          "Accepting model" + testModelInfo->name
+          + "; moving " + testModelInfo->dir + " to " + renameDest);
+      FileUtils::rename(testModelInfo->dir,renameDest);
+    } else if (testModelInfo.has_value()) {
+      logger.write(Global::strprintf("Rejecting model %s", testModelInfo->name));
+      string renameDest = rejectedModelsDir + "/" + testModelInfo->name;
+      logger.write(
+          "Rejecting model " + testModelInfo->name
+          + "; moving " + testModelInfo->dir + " to " + renameDest
+      );
+      FileUtils::rename(testModelInfo->dir,renameDest);
     }
-
-    //Clean up
-    delete netAndStuff;
-    netAndStuff = NULL;
-    //Loop again after a short while
-    std::this_thread::sleep_for(std::chrono::seconds(2));
   }
+  delete netAndStuff;
+  netAndStuff = NULL;
 
   //Delete and clean up everything else
   NeuralNet::globalCleanup();

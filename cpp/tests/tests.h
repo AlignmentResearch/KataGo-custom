@@ -71,6 +71,9 @@ namespace Tests {
 
   //testconfig.cpp
   void runConfigTests(const std::vector<std::string>& args);
+
+  //testpassing.cpp
+  void runPassingTests();
 }
 
 namespace TestCommon {

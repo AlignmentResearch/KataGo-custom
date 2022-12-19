@@ -740,6 +740,11 @@ private:
   );
 
   bool shouldSuppressPass(const SearchNode* n) const;
+  bool shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const std::vector<Color>& passAliveTerritory
+  ) const;
 
   AnalysisData getAnalysisDataOfSingleChild(
     const SearchNode* child, std::vector<Loc>& scratchLocs, std::vector<double>& scratchValues,

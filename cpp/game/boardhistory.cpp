@@ -757,6 +757,19 @@ bool BoardHistory::isLegal(const Board& board, Loc moveLoc, Player movePla) cons
   return true;
 }
 
+bool BoardHistory::existsNonPassingLegalMove(const Board& board, Player movePla) const {
+  // Iterate through all possible non-passing moves
+  // and check if they are legal modulo passing
+  for(int y = 0; y<board.y_size; y++) {
+    for(int x = 0; x<board.x_size; x++) {
+      Loc loc = Location::getLoc(x,y,board.x_size);
+      if (isLegal(board, loc, movePla))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool BoardHistory::isPassForKo(const Board& board, Loc moveLoc, Player movePla) const {
   if(encorePhase > 0 && moveLoc >= 0 && moveLoc < Board::MAX_ARR_SIZE && moveLoc != Board::PASS_LOC) {
     if(board.colors[moveLoc] == getOpp(movePla) && koRecapBlocked[moveLoc] && board.getChainSize(moveLoc) == 1 && board.getNumLiberties(moveLoc) == 1)

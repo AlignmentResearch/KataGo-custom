@@ -45,6 +45,10 @@ struct SearchParams {
   std::string getSearchAlgoAsStr() const;
   bool usingAdversarialAlgo() const;
 
+  // If non-none, determines whether to set the weight of opponent nodes to zero.
+  // By default, this will be false for MCTS and true for adversarial algorithms.
+  std::optional<bool> oppWeightZeroingOverride;
+
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
   double staticScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at 0.

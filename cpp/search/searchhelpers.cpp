@@ -363,10 +363,18 @@ double Search::getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) c
 
 //Hack to encourage well-behaved dame filling behavior under territory scoring
 bool Search::shouldSuppressPass(const SearchNode* n) const {
-  if(!searchParams.fillDameBeforePass || n == NULL || n != rootNode)
+  if(n == NULL || n != rootNode)
     return false;
-  if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
+  if(!rootHistory.existsNonPassingLegalMove(rootBoard, rootPla))
     return false;
+
+  // When using standard passing, we should only suppressPass in territory scoring. Otherwise, short circuit.
+  if(searchParams.passingBehavior == SearchParams::PassingBehavior::Standard) {
+    if(!searchParams.fillDameBeforePass)
+      return false;
+    if(rootHistory.rules.scoringRule != Rules::SCORING_TERRITORY || rootHistory.encorePhase > 0)
+      return false;
+  }
 
   const SearchNode& node = *n;
   const NNOutput* nnOutput = node.getNNOutput();
@@ -380,7 +388,6 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
 
   //Find the pass move
   const SearchNode* passNode = NULL;
-  int64_t passEdgeVisits = 0;
 
   int childrenCapacity;
   const SearchChildPointer* children = node.getChildren(childrenCapacity);
@@ -391,11 +398,10 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     Loc moveLoc = children[i].getMoveLocRelaxed();
     if(moveLoc == Board::PASS_LOC) {
       passNode = child;
-      passEdgeVisits = children[i].getEdgeVisits();
       break;
     }
   }
-  if(passNode == NULL)
+  if(passNode == NULL && searchParams.passingBehavior == SearchParams::PassingBehavior::Standard)
     return false;
 
   double passWeight;
@@ -403,72 +409,136 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
   double passScoreMean;
   double passLead;
   {
-    int64_t passVisits = passNode->stats.visits.load(std::memory_order_acquire);
-    double scoreMeanAvg = passNode->stats.scoreMeanAvg.load(std::memory_order_acquire);
-    double leadAvg = passNode->stats.leadAvg.load(std::memory_order_acquire);
-    double utilityAvg = passNode->stats.utilityAvg.load(std::memory_order_acquire);
-    double childWeight = passNode->stats.getChildWeight(passEdgeVisits,passVisits);
+    int64_t numVisits = node.stats.visits.load(std::memory_order_acquire);
+    double weightSum = node.stats.weightSum.load(std::memory_order_acquire);
+    double scoreMeanAvg = node.stats.scoreMeanAvg.load(std::memory_order_acquire);
+    double leadAvg = node.stats.leadAvg.load(std::memory_order_acquire);
+    double utilityAvg = node.stats.utilityAvg.load(std::memory_order_acquire);
 
-    if(passVisits <= 0 || childWeight <= 1e-10)
+    if(numVisits <= 0 || weightSum <= 1e-10)
       return false;
-    passWeight = childWeight;
+    passWeight = weightSum;
     passUtility = utilityAvg;
     passScoreMean = scoreMeanAvg;
     passLead = leadAvg;
   }
 
-  const double extreme = 0.95;
+  switch(searchParams.passingBehavior) {
+    // Tony Wang's proposal
+    case SearchParams::PassingBehavior::AvoidPassAliveTerritory: {
+      // Find pass-alive territory
+      Color territories[Board::MAX_ARR_SIZE];
+      rootBoard.calculateArea(territories, false, false, false, rootHistory.rules.multiStoneSuicideLegal);
 
-  //Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
-  //or that is adjacent to a pla owned spot, and is not greatly worse than pass.
-  for(int i = 0; i<childrenCapacity; i++) {
-    const SearchNode* child = children[i].getIfAllocated();
-    if(child == NULL)
-      break;
-    Loc moveLoc = children[i].getMoveLocRelaxed();
-    if(moveLoc == Board::PASS_LOC)
-      continue;
-    int pos = NNPos::locToPos(moveLoc,rootBoard.x_size,nnXLen,nnYLen);
-    double plaOwnership = rootPla == P_WHITE ? whiteOwnerMap[pos] : -whiteOwnerMap[pos];
-    bool oppOwned = plaOwnership < -extreme;
-    bool adjToPlaOwned = false;
-    for(int j = 0; j<4; j++) {
-      Loc adj = moveLoc + rootBoard.adj_offsets[j];
-      int adjPos = NNPos::locToPos(adj,rootBoard.x_size,nnXLen,nnYLen);
-      double adjPlaOwnership = rootPla == P_WHITE ? whiteOwnerMap[adjPos] : -whiteOwnerMap[adjPos];
-      if(adjPlaOwnership > extreme) {
-        adjToPlaOwned = true;
-        break;
+      // Iterate through all possible non-passing moves
+      // and check if they are legal modulo passing
+      for(int y = 0; y < rootBoard.y_size; y++) {
+        for(int x = 0; x < rootBoard.x_size; x++) {
+          Loc loc = Location::getLoc(x, y, rootBoard.x_size);
+
+          // Not a legal move, keep looking
+          if(!rootHistory.isLegal(rootBoard, loc, rootPla))
+            continue;
+
+          // Found a legal move that isn't in our own pass-alive territory.
+          // This means we should not pass, i.e. passing should be suppressed.
+          if(!playersMatch(territories[loc], rootPla)) {
+            return true;
+          }
+        }
       }
+      return false;
     }
-    if(oppOwned && !adjToPlaOwned)
-      continue;
+    // Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
+    // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
+    case SearchParams::PassingBehavior::LastResort:
+    case SearchParams::PassingBehavior::Standard: {
+      const double extreme = 0.95;
 
-    int64_t edgeVisits = children[i].getEdgeVisits();
+      //Suppress pass if we find a move that is not a spot that the opponent almost certainly owns
+      //or that is adjacent to a pla owned spot, and is not greatly worse than pass.
+      for(int i = 0; i<childrenCapacity; i++) {
+        const SearchNode* child = children[i].getIfAllocated();
+        if(child == NULL)
+          break;
+        Loc moveLoc = children[i].getMoveLocRelaxed();
+        if(moveLoc == Board::PASS_LOC)
+          continue;
+        int pos = NNPos::locToPos(moveLoc,rootBoard.x_size,nnXLen,nnYLen);
+        double plaOwnership = rootPla == P_WHITE ? whiteOwnerMap[pos] : -whiteOwnerMap[pos];
+        bool oppOwned = plaOwnership < -extreme;
+        bool adjToPlaOwned = false;
+        for(int j = 0; j<4; j++) {
+          Loc adj = moveLoc + rootBoard.adj_offsets[j];
+          int adjPos = NNPos::locToPos(adj,rootBoard.x_size,nnXLen,nnYLen);
+          double adjPlaOwnership = rootPla == P_WHITE ? whiteOwnerMap[adjPos] : -whiteOwnerMap[adjPos];
+          if(adjPlaOwnership > extreme) {
+            adjToPlaOwned = true;
+            break;
+          }
+        }
+        if(oppOwned && !adjToPlaOwned)
+          continue;
 
-    double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
-    double leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
-    double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
-    double childWeight = child->stats.getChildWeight(edgeVisits);
+        int64_t edgeVisits = children[i].getEdgeVisits();
 
-    //Too few visits - reject move
-    if((edgeVisits <= 500 && childWeight <= 2 * sqrt(passWeight)) || childWeight <= 1e-10)
-      continue;
+        double scoreMeanAvg = child->stats.scoreMeanAvg.load(std::memory_order_acquire);
+        double leadAvg = child->stats.leadAvg.load(std::memory_order_acquire);
+        double utilityAvg = child->stats.utilityAvg.load(std::memory_order_acquire);
+        double childWeight = child->stats.getChildWeight(edgeVisits);
 
-    double utility = utilityAvg;
-    double scoreMean = scoreMeanAvg;
-    double lead = leadAvg;
+        //Too few visits - reject move
+        if((edgeVisits <= 500 && childWeight <= 2 * sqrt(passWeight)) || childWeight <= 1e-10)
+          continue;
 
-    if(rootPla == P_WHITE
-       && utility > passUtility - 0.1
-       && scoreMean > passScoreMean - 0.5
-       && lead > passLead - 0.5)
-      return true;
-    if(rootPla == P_BLACK
-       && utility < passUtility + 0.1
-       && scoreMean < passScoreMean + 0.5
-       && lead < passLead + 0.5)
-      return true;
+        double utility = utilityAvg;
+        double scoreMean = scoreMeanAvg;
+        double lead = leadAvg;
+
+        if(rootPla == P_WHITE
+          && utility > passUtility - 0.1
+          && scoreMean > passScoreMean - 0.5
+          && lead > passLead - 0.5)
+          return true;
+        if(rootPla == P_BLACK
+          && utility < passUtility + 0.1
+          && scoreMean < passScoreMean + 0.5
+          && lead < passLead + 0.5)
+          return true;
+      }
+      return false;
+    }
+    // Use "oracle" access to the score in the hypothetical where the opponent responds by passing.
+    // If we lose in this hypothetical, then suppress passing.
+    case SearchParams::PassingBehavior::NoSuicide: {
+      Board boardCopy(rootBoard);
+      BoardHistory historyCopy(rootHistory);
+
+      Player opp = getOpp(n->nextPla);
+      historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, n->nextPla);
+      historyCopy.makeBoardMoveTolerant(boardCopy, Board::PASS_LOC, opp);
+      historyCopy.endAndScoreGameNow(boardCopy);
+
+      float margin = historyCopy.finalWhiteMinusBlackScore;
+      bool whiteWillWin = margin > 0.0f;
+      bool oppIsWhite = getOpp(n->nextPla) == P_WHITE;
+      bool oppWillWin = whiteWillWin == oppIsWhite;
+      return oppWillWin;
+    }
+    // Suppress passing if we're behind.
+    case SearchParams::PassingBehavior::OnlyWhenAhead: {
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin < 0.0;
+    }
+    // Suppress passing if we're ahead.
+    case SearchParams::PassingBehavior::OnlyWhenBehind: {
+      double whiteWin = node.stats.winLossValueAvg.load(std::memory_order_acquire);
+      double rootWin = rootPla == P_WHITE ? whiteWin : -whiteWin;
+      return rootWin > 0.0;
+    }
+    default:
+      ASSERT_UNREACHABLE;
   }
   return false;
 }
@@ -496,12 +566,6 @@ void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeP
     for(int i = 0; i<numRelativeProbs; i++)
       buf[i] /= sum;
   }
-}
-
-double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
-  double rawHalflives = (rootHistory.initialTurnNumber + rootHistory.moveHistory.size()) / halflife;
-  double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
-  return value + (earlyValue - value) * pow(0.5, halflives);
 }
 
 double Search::calculateTemperature(

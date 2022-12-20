@@ -16,6 +16,8 @@ executors:
       # docker push humancompatibleai/goattack:cpp-build-deps
       - image: humancompatibleai/goattack:cpp-build-deps
     resource_class: xlarge
+    environment:
+      NUM_CPUS: 8
   cpp-gpu:
     machine: true
     resource_class: humancompatibleai/go-attack-linux-gpu
@@ -42,7 +44,7 @@ commands:
 
       - run:
           name: make
-          command: cd cpp && make clean && make -j
+          command: cd cpp && make clean && make -j ${NUM_CPUS}
   memory-monitor:
     description: "Memory Monitor"
     parameters:
@@ -66,8 +68,8 @@ jobs:
   cpp-unit-test-cpuonly:
     executor: cpp
     steps:
-      - cpp-dependencies
       - memory-monitor
+      - cpp-dependencies
 
       - run:
           name: katago runtests

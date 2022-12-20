@@ -649,7 +649,7 @@ private:
     bool allowDirectPolicyMoves, bool alwaysComputeLcb, bool neverUseLcb,
     double lcbBuf[NNPos::MAX_NN_POLICY_SIZE], double radiusBuf[NNPos::MAX_NN_POLICY_SIZE]
   ) const;
-  bool Search::clipAndScalePlaySelectionValues(
+  bool clipAndScalePlaySelectionValues(
     std::vector<double>& playSelectionValues,
     const int numChildren,
     const double scaleMaxToAtLeast

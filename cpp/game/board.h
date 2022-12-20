@@ -25,6 +25,10 @@ static constexpr Player P_NONE = 0;
 static constexpr Player P_BLACK = 1;
 static constexpr Player P_WHITE = 2;
 
+static inline bool playersMatch(Player p1, Player p2) {
+  return (p1 & p2) > 0;
+}
+
 //Color of a point on the board
 typedef int8_t Color;
 static constexpr Color C_EMPTY = 0;

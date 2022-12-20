@@ -498,12 +498,6 @@ void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeP
   }
 }
 
-double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
-  double rawHalflives = (rootHistory.initialTurnNumber + rootHistory.moveHistory.size()) / halflife;
-  double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
-  return value + (earlyValue - value) * pow(0.5, halflives);
-}
-
 double Search::calculateTemperature(
   double halflife, double earlyValue, double value, int numMoves
 ) const {

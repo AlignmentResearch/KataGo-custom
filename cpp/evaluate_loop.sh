@@ -1,25 +1,72 @@
 #!/bin/bash -eu
-if [[ $# -lt 1 || $# -gt 5 ]]
-then
-    echo "Usage: $0 BASE_DIR OUTPUT_DIR [KATAGO_BIN='/engines/KataGo-custom/cpp/katago GO_ATTACK_ROOT='/go_attack' VICTIM_LIST='' VICTIM_DIR='BASE_DIR/victims'  PREDICTOR_DIR='']"
+
+usage() {
+    echo "Usage: $0 [--victim-list VICTIM_LIST] [-victim-dir VICTIM_DIR]"
+    echo "          [--prediction-dir PREDICTOR_DIR] [--katago-bin KATAGO_BIN]"
+    echo "          [--go-attack-root GO_ATTACK_ROOT] BASE_DIR OUTPUT_DIR"
+    echo
+    echo "positional arguments:"
+    echo " BASE_DIR The root of the training run, containing selfplay data, models and"
+    echo " related directories."
+    echo " OUTPUT_DIR The directory to output results to."
+    echo
+    echo "optional arguments:"
+    echo "  -v VICTIM_LIST, --victim-list VICTIM_LIST"
+    echo "    A comma-separated list of models in VICTIM_DIR to use."
+    echo "    If empty, the most recent model will be used."
+    echo "  -d VICTIM_DIR, --victim-dir VICTIM_DIR"
+    echo "    The directory containing the victim models."
+    echo "    Default: BASE_DIR/victims"
+    echo "  -p PREDICTOR_DIR, --prediction-dir PREDICTOR_DIR"
+    echo "    The path containing predictor models, if applicable."
+    echo "  -k KATAGO_BIN, --katago-bin KATAGO_BIN"
+    echo "    The path to the KataGo binary."
+    echo "    Default: '/engines/KataGo-custom/cpp/katago'"
+    echo "  -g GO_ATTACK_ROOT, --go-attack-root GO_ATTACK_ROOT"
+    echo "    The root directory of the go-attack repository."
+    echo "    Default: '/go_attack'"
+    echo
+    echo "Optional arguments should be specified before positional arguments."
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
-    echo "BASE_DIR is the root of the training run, containing selfplay data, models and related directories."
-    echo "VICTIM_LIST is a space or comma-separated list of models in VICTIM_DIR. If empty the most recent model will be used."
-    echo "PREDICTOR_DIR is the path containing predictor models, if applicable."
-    exit 0
+}
+
+VICTIM_LIST=""
+VICTIMS_DIR=""
+PREDICTOR_DIR=""
+KATAGO_BIN="/engines/KataGo-custom/cpp/katago"
+GO_ATTACK_ROOT="/go_attack"
+
+# Command line flag parsing (https://stackoverflow.com/a/33826763/4865149)
+while true; do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    -v|--victim-list) VICTIM_LIST="$2"; shift 2 ;;
+    -d|--victim-dir) VICTIMS_DIR="$2"; shift 2 ;;
+    -p|--prediction-dir) PREDICTOR_DIR="$2"; shift 2 ;;
+    -k|--katago-bin) KATAGO_BIN="$2"; shift 2 ;;
+    -g|--go-attack-root) GO_ATTACK_ROOT="$2"; shift 2 ;;
+    -*) echo "Unknown parameter passed: $1"; usage; exit 1 ;;
+    *) break ;;
+  esac
+done
+
+NUM_POSITIONAL_ARGUMENTS=2
+if [ $# -ne ${NUM_POSITIONAL_ARGUMENTS} ]; then
+  echo "Wrong number of positional arguments. Expected ${NUM_POSITIONAL_ARGUMENTS}, got $#"
+  echo "Positional arguments: $@"
+  usage
+  exit 1
 fi
 
 BASE_DIR="$1"
-PREDICTOR_DIR=${2:-}
 MODELS_DIR="$BASE_DIR"/models
 OUTPUT_DIR="$2"
 mkdir -p "$OUTPUT_DIR"/logs
 mkdir -p "$OUTPUT_DIR"/sgfs
-KATAGO_BIN="${3:-'/engines/KataGo-custom/cpp/katago'}"
-GO_ATTACK_ROOT="${4:-'/go_attack'}"
-VICTIM_LIST="${5:-''}"
-VICTIMS_DIR="${6:-"$BASE_DIR"/victims}"
-PREDICTOR_DIR="${7:-''}"
+
+if [ -z "$VICTIMS_DIR" ]; then
+    VICTIMS_DIR="$BASE_DIR"/victims
+fi
 
 LAST_STEP=0
 SLEEP_INTERVAL=30

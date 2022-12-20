@@ -217,6 +217,7 @@ add_executable(katago
   tests/testconfig.cpp
   tests/testamcts.cpp
   tests/testmisc.cpp
+  tests/testpassing.cpp
   tests/testnnevalcanary.cpp
   tests/testrules.cpp
   tests/testscore.cpp

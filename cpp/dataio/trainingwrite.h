@@ -4,6 +4,7 @@
 #include "../dataio/numpywrite.h"
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nninterface.h"
+#include "../search/search.h"
 
 STRUCT_NAMED_PAIR(Loc,loc,int16_t,policyTarget,PolicyTargetMove);
 STRUCT_NAMED_PAIR(std::vector<PolicyTargetMove>*,policyTargets,int64_t,unreducedNumVisits,PolicyTarget);
@@ -95,6 +96,7 @@ struct FinishedGameData {
   std::vector<double> searchEntropyByTurn;
   std::vector<ValueTargets> whiteValueTargetsByTurn; //Except this one, we may have some of
   std::vector<NNRawStats> nnRawStatsByTurn;
+
   Color* finalFullArea;
   Color* finalOwnership;
   bool* finalSekiAreas;

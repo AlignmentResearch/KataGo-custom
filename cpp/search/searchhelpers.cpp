@@ -473,10 +473,48 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
   return false;
 }
 
+void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize) {
+  assert(numRelativeProbs > 0);
+  assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
+
+  double maxValue = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    if(relativeProbs[i] > maxValue)
+      maxValue = relativeProbs[i];
+  }
+  assert(maxValue > 0.0);
+
+  double logMaxValue = log(maxValue);
+  double sum = 0.0;
+  for(int i = 0; i<numRelativeProbs; i++) {
+    //Numerically stable way to raise to power and normalize
+    buf[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
+    sum += buf[i];
+  }
+  assert(sum > 0.0);
+  if(normalize) {
+    for(int i = 0; i<numRelativeProbs; i++)
+      buf[i] /= sum;
+  }
+}
+
 double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
   double rawHalflives = (rootHistory.initialTurnNumber + rootHistory.moveHistory.size()) / halflife;
   double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
   return value + (earlyValue - value) * pow(0.5, halflives);
+}
+
+double Search::calculateTemperature(
+  double halflife, double earlyValue, double value, int numMoves
+) const {
+  double rawHalflives = numMoves / halflife;
+  double halflives = rawHalflives * 19.0 / sqrt(rootBoard.x_size*rootBoard.y_size);
+  return value + (earlyValue - value) * pow(0.5, halflives);
+}
+
+double Search::interpolateEarly(double halflife, double earlyValue, double value) const {
+  const int numMoves = rootHistory.initialTurnNumber + rootHistory.moveHistory.size();
+  return calculateTemperature(halflife, earlyValue, value, numMoves);
 }
 
 void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNode* child, int64_t edgeVisits, Loc moveLoc, double& lcbBuf, double& radiusBuf) const {

@@ -35,6 +35,7 @@ struct SearchChildPointer;
 struct SubtreeValueBiasTable;
 struct SearchNodeTable;
 
+
 //Per-thread state
 struct SearchThread {
   int threadIdx;
@@ -426,6 +427,7 @@ private:
   //----------------------------------------------------------------------------------------
 public:
   static uint32_t chooseIndexWithTemperature(Rand& rand, const double* relativeProbs, int numRelativeProbs, double temperature);
+  static void temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize = true);
   static void computeDirichletAlphaDistribution(int policySize, const float* policyProbs, double* alphaDistr);
   static void addDirichletNoise(const SearchParams& searchParams, Rand& rand, int policySize, float* policyProbs);
 private:
@@ -452,6 +454,7 @@ private:
   public: double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const; private:
   bool shouldSuppressPass(const SearchNode* n) const;
 
+  double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
 
   // LCB helpers
@@ -645,6 +648,16 @@ private:
     std::vector<Loc>& locs, std::vector<double>& playSelectionValues, std::vector<double>* retVisitCounts, double scaleMaxToAtLeast,
     bool allowDirectPolicyMoves, bool alwaysComputeLcb, bool neverUseLcb,
     double lcbBuf[NNPos::MAX_NN_POLICY_SIZE], double radiusBuf[NNPos::MAX_NN_POLICY_SIZE]
+  ) const;
+  bool clipAndScalePlaySelectionValues(
+    std::vector<double>& playSelectionValues,
+    const int numChildren,
+    const double scaleMaxToAtLeast
+  ) const;
+  bool shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const std::vector<Color>& passAliveTerritory
   ) const;
 
   AnalysisData getAnalysisDataOfSingleChild(

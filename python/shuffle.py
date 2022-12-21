@@ -217,7 +217,8 @@ def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_
         start,
         stop
       )
-      record_writer.write(example.SerializeToString())
+      if record_writer is not None:
+        record_writer.write(example.SerializeToString())
 
   jsonfilename = os.path.splitext(filename)[0] + ".json"
   with open(jsonfilename,"w") as f:
@@ -296,7 +297,7 @@ if __name__ == '__main__':
   parser.add_argument('-num-processes', type=int, required=True, help='Number of multiprocessing processes')
   parser.add_argument('-batch-size', type=int, required=True, help='Batch size to write training examples in')
   parser.add_argument('-ensure-batch-multiple', type=int, required=False, help='Ensure each file is a multiple of this many batches')
-  parser.add_argument('-worker-group-size', type=int, required=False, help='Internally, target having many rows per parallel sharding worker (doesnt affect merge)')
+  parser.add_argument('-worker-group-size', type=int, required=False, help='Internally, target having many rows per parallel sharding worker (does not affect merge)')
   parser.add_argument('-exclude', required=False, help='Text file with npzs to ignore, one per line')
   parser.add_argument('-exclude-prefix', required=False, help='Prefix to concat to lines in exclude to produce the full file path')
   parser.add_argument('-only-include-md5-path-prop-lbound', type=float, required=False, help='Just before sharding, include only filepaths hashing to float >= this')

@@ -88,6 +88,7 @@ FinishedGameData::FinishedGameData()
    policyTargetsByTurn(),
    whiteValueTargetsByTurn(),
    nnRawStatsByTurn(),
+
    finalFullArea(NULL),
    finalOwnership(NULL),
    finalSekiAreas(NULL),

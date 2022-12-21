@@ -20,6 +20,20 @@ int64_t Search::getRootVisits() const {
   return n;
 }
 
+// Returns whether the move `moveLoc` should be suppressed and not selected.
+//
+// `suppressPass` should be the result of `shouldSuppressPass()`, and
+// `passAliveTerritories` should be the result of `Board::calculateArea()`.
+bool Search::shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const vector<Color>& passAliveTerritories
+) const {
+  return (suppressPass && moveLoc == Board::PASS_LOC)
+    || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
+        && passAliveTerritories[moveLoc] == rootPla);
+}
+
 bool Search::getPlaySelectionValues(
   vector<Loc>& locs, vector<double>& playSelectionValues, double scaleMaxToAtLeast
 ) const {
@@ -75,6 +89,16 @@ bool Search::getPlaySelectionValues(
   double totalChildWeight = 0.0;
   double maxChildWeight = 0.0;
   const bool suppressPass = shouldSuppressPass(&node);
+  // AvoidPassAliveTerritory pass suppression can push the bot to start playing
+  // in its own pass-alive territory, a blatantly bad tactic. We should suppress
+  // those bad moves. More info at
+  // https://github.com/HumanCompatibleAI/KataGo-custom/issues/58
+  const bool suppressPassAliveTerritory =
+    searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory;
+  vector<Color> territories(suppressPassAliveTerritory ? Board::MAX_ARR_SIZE : 0);
+  if (suppressPassAliveTerritory) {
+    rootBoard.calculateArea(territories.data(), false, false, false, rootHistory.rules.multiStoneSuicideLegal);
+  }
 
   //Store up basic weights
   int childrenCapacity;
@@ -92,7 +116,7 @@ bool Search::getPlaySelectionValues(
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
       maxChildWeight = childWeight;
-    if(suppressPass && moveLoc == Board::PASS_LOC) {
+    if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
       playSelectionValues.push_back(0.0);
       if(retVisitCounts != NULL)
         (*retVisitCounts).push_back(0.0);
@@ -150,7 +174,7 @@ bool Search::getPlaySelectionValues(
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
       Loc moveLoc = children[i].getMoveLocRelaxed();
-      if(suppressPass && moveLoc == Board::PASS_LOC) {
+      if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
         playSelectionValues[i] = 0;
         continue;
       }
@@ -219,15 +243,21 @@ bool Search::getPlaySelectionValues(
   //If we have no children, then use the policy net directly. Only for the root, though, if calling this on any subtree
   //then just require that we have children, for implementation simplicity (since it requires that we have a board and a boardhistory too)
   //(and we also use isAllowedRootMove and avoidMoveUntilByLoc)
-  if(numChildren == 0) {
+  //We also use this branch if all of our children correspond to suppressed moves.
+  if(numChildren == 0 || *std::max_element(playSelectionValues.begin(), playSelectionValues.end()) == 0.0) {
     if(nnOutput == NULL || &node != rootNode || !allowDirectPolicyMoves)
       return false;
+    locs.clear();
+    playSelectionValues.clear();
+    numChildren = 0;
+    if(retVisitCounts != NULL)
+      (*retVisitCounts).clear();
 
     bool obeyAllowedRootMove = true;
     while(true) {
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
-        if(suppressPass && moveLoc == Board::PASS_LOC) {
+        if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
@@ -254,6 +284,35 @@ bool Search::getPlaySelectionValues(
     }
   }
 
+  const bool clipSucceeded = clipAndScalePlaySelectionValues(
+    playSelectionValues, numChildren, scaleMaxToAtLeast
+  );
+  if (!clipSucceeded && (suppressPass || suppressPassAliveTerritory)) {
+    // If all play values are bad due to suppressing all the high-value moves,
+    // then just pass. (Not sure if this actually happens in practice.)
+    logger->write("WARNING: No moves found, perhaps due to move suppression. Returning pass.");
+    bool passMoveExists = false;
+    for(size_t i = 0; i < locs.size(); i++) {
+      if (locs[i] == Board::PASS_LOC) {
+        playSelectionValues[i] = 1.0;
+        passMoveExists = true;
+        break;
+      }
+    }
+    if (!passMoveExists) {
+      locs.push_back(Board::PASS_LOC);
+      playSelectionValues.push_back(1.0);
+    }
+    return true;
+  }
+  return clipSucceeded;
+}
+
+bool Search::clipAndScalePlaySelectionValues(
+  std::vector<double>& playSelectionValues,
+  const int numChildren,
+  const double scaleMaxToAtLeast
+) const {
   //Might happen absurdly rarely if we both have no children and don't properly have an nnOutput
   //but have a hash collision or something so we "found" an nnOutput anyways.
   //Could also happen if we have avoidMoveUntilByLoc pruning all the allowed moves.
@@ -901,6 +960,13 @@ void Search::getAnalysisData(
   );
 
   vector<MoreNodeStats> statsBuf(numChildren);
+  std::vector<double> selectionProbs(playSelectionValues.size());
+
+  double temp = interpolateEarly(
+    searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
+  );
+  temperatureScaleProbs(playSelectionValues.data(), playSelectionValues.size(), temp, selectionProbs.data());
+
   for(int i = 0; i<numChildren; i++) {
     const SearchNode* child = children[i];
     int64_t edgeVisits = childrenEdgeVisits[i];
@@ -911,6 +977,8 @@ void Search::getAnalysisData(
       parentScoreMean, parentScoreStdev, parentLead, maxPVDepth
     );
     data.playSelectionValue = playSelectionValues[i];
+    data.selectionProb = selectionProbs[i];
+
     //Make sure data.lcb is from white's perspective, for consistency with everything else
     //In lcbBuf, it's from self perspective, unlike values at nodes.
     data.lcb = node.nextPla == P_BLACK ? -lcbBuf[i] : lcbBuf[i];
@@ -1672,7 +1740,6 @@ std::pair<std::vector<double>,std::vector<double>> Search::getAverageAndStandard
   return std::make_pair(ownershipToOutput, ownershipStdevToOutput);
 }
 
-
 bool Search::getAnalysisJson(
   const Player perspective,
   int analysisPVLen,
@@ -1686,10 +1753,9 @@ bool Search::getAnalysisJson(
   bool includeTree,
   json& ret
 ) const {
-  static constexpr int OUTPUT_PRECISION = 8;
-
   const Board& board = rootBoard;
   const BoardHistory& hist = rootHistory;
+  static constexpr int OUTPUT_PRECISION = 8;
 
   // Stats for all the individual moves
   auto build = [&](const SearchNode* node, auto&& dfs) -> json {

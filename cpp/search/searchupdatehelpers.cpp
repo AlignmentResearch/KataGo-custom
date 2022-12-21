@@ -97,7 +97,7 @@ void Search::addCurrentNNOutputAsLeafValue(SearchNode& node, bool assumeNoExisti
 
 double Search::computeWeightFromNode(const SearchNode& node) const {
   // If doing AMCTS, we weight opponent nodes as zero.
-  if (searchParams.usingAdversarialAlgo() && node.nextPla != rootNode->nextPla) {
+  if (node.nextPla != rootNode->nextPla && searchParams.oppWeightZeroingOverride.value_or(searchParams.usingAdversarialAlgo())) {
     return 0.0;
   }
   const NNOutput* nnOutput = node.getNNOutput();

@@ -83,6 +83,8 @@ namespace Tests {
   //testmisc.cpp
   void runCollectFilesTests();
   void runLoadModelTests();
+  //testpassing.cpp
+  void runPassingTests();
 }
 
 namespace TestCommon {

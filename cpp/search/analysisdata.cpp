@@ -4,6 +4,7 @@ AnalysisData::AnalysisData()
   :move(Board::NULL_LOC),
    numVisits(0),
    playSelectionValue(0.0),
+   selectionProb(0.0),
    lcb(0.0),
    radius(0.0),
    utility(0.0),
@@ -33,6 +34,7 @@ AnalysisData::AnalysisData(const AnalysisData& other)
   :move(other.move),
    numVisits(other.numVisits),
    playSelectionValue(other.playSelectionValue),
+   selectionProb(other.selectionProb),
    lcb(other.lcb),
    radius(other.radius),
    utility(other.utility),
@@ -62,6 +64,7 @@ AnalysisData::AnalysisData(AnalysisData&& other) noexcept
   :move(other.move),
    numVisits(other.numVisits),
    playSelectionValue(other.playSelectionValue),
+   selectionProb(other.selectionProb),
    lcb(other.lcb),
    radius(other.radius),
    utility(other.utility),
@@ -96,6 +99,7 @@ AnalysisData& AnalysisData::operator=(const AnalysisData& other) {
   move = other.move;
   numVisits = other.numVisits;
   playSelectionValue = other.playSelectionValue;
+  selectionProb = other.selectionProb;
   lcb = other.lcb;
   radius = other.radius;
   utility = other.utility;
@@ -128,6 +132,7 @@ AnalysisData& AnalysisData::operator=(AnalysisData&& other) noexcept {
   move = other.move;
   numVisits = other.numVisits;
   playSelectionValue = other.playSelectionValue;
+  selectionProb = other.selectionProb;
   lcb = other.lcb;
   radius = other.radius;
   utility = other.utility;

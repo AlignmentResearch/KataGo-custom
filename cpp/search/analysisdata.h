@@ -11,6 +11,7 @@ struct AnalysisData {
   Loc move;
   int64_t numVisits;
   double playSelectionValue; //Similar units to visits, but might have LCB adjustments
+  double selectionProb; // Temperature-adjusted probability of selecting this move
   double lcb; //In units of utility
   double radius; //In units of utility
   double utility; //From -1 to 1 or -1.25 to -1.25 or other similar bounds, depending on score utility

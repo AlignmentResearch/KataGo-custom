@@ -37,7 +37,7 @@ KATAGO_BIN="/engines/KataGo-custom/cpp/katago"
 GO_ATTACK_ROOT="/go_attack"
 
 # Command line flag parsing (https://stackoverflow.com/a/33826763/4865149)
-while true; do
+while [ -n "${1-}" ]; do
   case $1 in
     -h|--help) usage; exit 0 ;;
     -v|--victim-list) VICTIM_LIST="$2"; shift 2 ;;
@@ -85,56 +85,52 @@ do
         VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | tail -n 1)
     fi
 
+    # Split the string VICTIM_LIST into an array victim_array:
     # https://stackoverflow.com/a/10586169/7086623
     IFS=', ' read -r -a victim_array <<< "${VICTIM_LIST}"
 
-    # Get directories in models/ in *natural sorted order* and see if any are new.
-    # This means that the numeric components of the directory names will be sorted based
-    # on their numeric value, not as strings, so early models will be evaluated first.
-    MODELS=$(ls -v "$MODELS_DIR")
+    LATEST_MODEL_DIR=$(ls -v "$MODELS_DIR" | grep "\-s[0-9]\+" | tail --lines 1)
 
-    if [[ -z "$MODELS" || -z "$VICTIM_LIST" ]]; then
+    if [[ -z "$LATEST_MODEL_DIR" || -z "$VICTIM_LIST" ]]; then
         echo "Waiting for an adversary and a victim to exist..."
         sleep $SLEEP_INTERVAL
         continue
     fi
 
     for VICTIM in "${victim_array[@]}"; do
-        for MODEL_DIR in $MODELS; do
-            if [[ "$MODEL_DIR" =~ -s([0-9]+) ]]; then
-                # The first capture group is the step number
-                STEP=${BASH_REMATCH[1]}
+        if [[ "$LATEST_MODEL_DIR" =~ -s([0-9]+) ]]; then
+            # The first capture group is the step number
+            STEP=${BASH_REMATCH[1]}
 
-                # Have we evaluated this model yet?
-                if [ "$STEP" -gt "$LAST_STEP" ]; then
-                    # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
-                    VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
-                    EXTRA_CONFIG="numGamesTotal=100,numGameThreads=10,maxMovesPerGame=300"
+            # Have we evaluated this model yet?
+            if [ "$STEP" -gt "$LAST_STEP" ]; then
+                # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
+                VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
+                EXTRA_CONFIG="numGamesTotal=10,maxMovesPerGame=10"
 
-                    if [ -n "$PREDICTOR_DIR" ]; then
-                        # https://stackoverflow.com/questions/4561895/how-to-recursively-find-the-latest-modified-file-in-a-directory
-                        PREDICTOR=$(find $PREDICTOR_DIR -name *.bin.gz -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
-                        EXTRA_CONFIG+=",predictorPath=$PREDICTOR"
-                    fi
-
-                    # Run the evaluation
-                    echo "Evaluating model $MODEL_DIR against victim $VICTIM_NAME"
-                    $KATAGO_BIN match \
-                        -config $GO_ATTACK_ROOT/configs/match-1gpu.cfg \
-                        -config "$VICTIMS_DIR"/victim.cfg \
-                        -override-config "$EXTRA_CONFIG" \
-                        -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \
-                        -override-config botName0="victim-$VICTIM_NAME" \
-                        -override-config nnModelFile1="$MODELS_DIR"/"$MODEL_DIR"/model.bin.gz \
-                        -override-config botName1="adv-$MODEL_DIR" \
-                        -sgf-output-dir "$OUTPUT_DIR"/sgfs/"$VICTIM_NAME"_"$MODEL_DIR" \
-                        2>&1 | tee "$OUTPUT_DIR"/logs/"$VICTIM_NAME"_"$MODEL_DIR".log
-
-                    # Update the last step
-                    LAST_STEP="$STEP"
+                if [ -n "$PREDICTOR_DIR" ]; then
+                    # https://stackoverflow.com/questions/4561895/how-to-recursively-find-the-latest-modified-file-in-a-directory
+                    PREDICTOR=$(find $PREDICTOR_DIR -name *.bin.gz -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -f2- -d" ")
+                    EXTRA_CONFIG+=",predictorPath=$PREDICTOR"
                 fi
+
+                # Run the evaluation
+                echo "Evaluating model $LATEST_MODEL_DIR against victim $VICTIM_NAME"
+                $KATAGO_BIN match \
+                    -config $GO_ATTACK_ROOT/configs/match-1gpu.cfg \
+                    -config "$VICTIMS_DIR"/victim.cfg \
+                    -override-config "$EXTRA_CONFIG" \
+                    -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \
+                    -override-config botName0="victim-$VICTIM_NAME" \
+                    -override-config nnModelFile1="$MODELS_DIR"/"$LATEST_MODEL_DIR"/model.bin.gz \
+                    -override-config botName1="adv-$LATEST_MODEL_DIR" \
+                    -sgf-output-dir "$OUTPUT_DIR"/sgfs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR" \
+                    2>&1 | tee "$OUTPUT_DIR"/logs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR".log
+
+                # Update the last step
+                LAST_STEP="$STEP"
             fi
-        done
+        fi
     done
     sleep $SLEEP_INTERVAL
 done

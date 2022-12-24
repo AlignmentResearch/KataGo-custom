@@ -106,7 +106,7 @@ do
             if [ "$STEP" -gt "$LAST_STEP" ]; then
                 # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
                 VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
-                EXTRA_CONFIG="numGamesTotal=10,maxMovesPerGame=10"
+                EXTRA_CONFIG="numGamesTotal=100"
 
                 if [ -n "$PREDICTOR_DIR" ]; then
                     # https://stackoverflow.com/questions/4561895/how-to-recursively-find-the-latest-modified-file-in-a-directory

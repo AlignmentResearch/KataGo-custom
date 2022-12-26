@@ -254,10 +254,11 @@ namespace {
   optional<ModelFileInfo> getLatestModelInfo(
       Logger& logger,
       const string& modelsDir,
-      bool allowRandomNet
+      bool allowRandomNet,
+      bool checkDirsOnly = true
   ) {
     ModelFileInfo info;
-    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time);
+    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time, checkDirsOnly);
     if (!foundModel || (!allowRandomNet && info.file == "/dev/null")) {
       return {};
     }
@@ -300,7 +301,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     TCLAP::ValueArg<string> sgfOutputDirArg("","sgf-output-dir","Dir to output sgf files",true,string(),"DIR");
     TCLAP::ValueArg<string> acceptedModelsDirArg("","accepted-models-dir","Dir to write good models to",true,string(),"DIR");
     TCLAP::ValueArg<string> rejectedModelsDirArg("","rejected-models-dir","Dir to write bad models to",true,string(),"DIR");
-    TCLAP::ValueArg<string> victimModelsDirArg("","victim-models-dir","(victimplay only) Dir of victim models",victimplay,string(),"DIR");
+    TCLAP::ValueArg<string> victimModelsDirArg("","victim-models-dir","Dir of victim models",true,string(),"DIR");
     TCLAP::ValueArg<string> selfplayDirArg("","selfplay-dir","Dir where selfplay data will be produced if a model passes",false,string(),"DIR");
     TCLAP::SwitchArg noAutoRejectOldModelsArg("","no-autoreject-old-models","Test older models than the latest accepted model");
     TCLAP::SwitchArg quitIfNoNetsToTestArg("","quit-if-no-nets-to-test","Terminate instead of waiting for a new net to test");
@@ -308,6 +309,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     cmd.add(sgfOutputDirArg);
     cmd.add(acceptedModelsDirArg);
     cmd.add(rejectedModelsDirArg);
+    if (victimplay) {
+      cmd.add(victimModelsDirArg);
+    }
     cmd.add(selfplayDirArg);
     cmd.setShortUsageArgLimit();
     cmd.add(noAutoRejectOldModelsArg);
@@ -593,14 +597,22 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       break;
 
     assert(netAndStuff == NULL);
-    const optional<ModelFileInfo> acceptedModelInfo = getLatestModelInfo(logger, acceptedModelsDir, true);
+    const optional<ModelFileInfo> acceptedModelInfo = getLatestModelInfo(
+        logger,
+        acceptedModelsDir,
+        true /*allowRandomNet*/
+    );
     if (!acceptedModelInfo.has_value()) {
       logger.write("Error: No accepted model found in " + acceptedModelsDir);
       sleep(4);
       continue;
     }
 
-    optional<ModelFileInfo> testModelInfo = getLatestModelInfo(logger, testModelsDir, false);
+    optional<ModelFileInfo> testModelInfo = getLatestModelInfo(
+        logger,
+        testModelsDir,
+        false /*allowRandomNet*/
+    );
     if (testModelInfo.has_value()) {
       logger.write("Found new candidate neural net " + testModelInfo->name);
       if (rejectOldTestModel(*testModelInfo, *acceptedModelInfo)) {
@@ -612,7 +624,12 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
     bool shouldAcceptTestModel = false;
     if (victimplay) {
-      const optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(logger, victimModelsDir, false);
+      const optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(
+          logger,
+          victimModelsDir,
+          false /*allowRandomNet*/,
+          false /*checkDirsOnly*/
+      );
       if (!victimModelInfo.has_value()) {
         logger.write("Error: No victim model found in " + victimModelsDir);
         sleep(4);
@@ -664,7 +681,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         logger.write(
           Global::strprintf(
             "Accepted model %s scored %.3f to %.3f in %d games.",
-            lastAcceptedModelResults.adversaryModelName,
+            lastAcceptedModelResults.adversaryModelName.c_str(),
             lastAcceptedModelResults.adversaryPoints,
             lastAcceptedModelResults.victimPoints,
             lastAcceptedModelResults.numGamesTallied
@@ -692,11 +709,11 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       logger.write(
         Global::strprintf(
           "Test model %s scored %.3f to %.3f in %d games. (vs. accepted model %s scored %.3f to %.3f in %d games)",
-          testModelInfo->name,
+          testModelInfo->name.c_str(),
           netAndStuff->numCandidateWinPoints,
           netAndStuff->numBaselineWinPoints,
           netAndStuff->numGamesTallied,
-          lastAcceptedModelResults.adversaryModelName,
+          lastAcceptedModelResults.adversaryModelName.c_str(),
           lastAcceptedModelResults.adversaryPoints,
           lastAcceptedModelResults.victimPoints,
           lastAcceptedModelResults.numGamesTallied

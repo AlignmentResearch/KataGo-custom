@@ -41,7 +41,9 @@ tuner : (OpenCL only) Run tuning to find and optimize parameters that work on yo
 ---Selfplay training subcommands---------
 
 selfplay : Play selfplay games and generate training data.
-gatekeeper : Poll directory for new nets and match them against the latest net so far.
+victimplay : Play victimplay games and generate training data.
+gatekeeper : Poll directory for new nets and match them against the latest net so far. (selfplay only)
+victimplaygatekeeper : Same as gatekeeper, but for victimplay.
 
 ---Testing/debugging subcommands-------------
 evalsgf : Utility/debug tool, analyze a single position of a game from an SGF file.
@@ -75,6 +77,8 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::evalsgf(subArgs);
   else if(subcommand == "gatekeeper")
     return MainCmds::gatekeeper(subArgs);
+  else if(subcommand == "victimplaygatekeeper")
+    return MainCmds::gatekeeper(subArgs, true);
   else if(subcommand == "genconfig")
     return MainCmds::genconfig(subArgs,args[0]);
   else if(subcommand == "gtp")

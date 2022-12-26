@@ -250,7 +250,7 @@ namespace {
   };
 
   // Returns info about latest model in a directory.
-  // (Wrapper for  LoadModel::findLatestModel().)
+  // (Wrapper for LoadModel::findLatestModel().)
   optional<ModelFileInfo> getLatestModelInfo(
       Logger& logger,
       const string& modelsDir,
@@ -532,9 +532,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   auto gameLoopProtected = [&logger,&gameLoop](int threadIdx) {
     Logger::logThreadUncaught("game loop", &logger, [&](){ gameLoop(threadIdx); });
   };
-  // Runs NetAndStuff. Returns true if the program should continue executing.
+  // Runs netAndStuff games. May quit early, in which case `shouldStop` will be
+  // true.
   const auto evaluateNetAndStuff = [
-    quitIfNoNetsToTest,
     &netAndStuff,
     &netAndStuffDataIsWritten,
     &dataWriteLoopProtected,
@@ -543,17 +543,11 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     &logger,
     numGameThreads,
     &gameLoopProtected
-  ]() -> bool {
-    if(netAndStuff == NULL) {
-      if(quitIfNoNetsToTest) {
-        shouldStop.store(true);
-        return false;
-      }
-      return true;
-    }
+  ]() {
+    assert(netAndStuff != NULL);
     //Check again if we should be stopping, after loading the new net, and quit more quickly.
     if(shouldStop.load()) {
-      return false;
+      return;
     }
     netAndStuffDataIsWritten = false;
     logger.write(
@@ -587,7 +581,6 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         waitNetAndStuffDataIsWritten.wait(lock);
       }
     }
-    return !shouldStop.load();
   };
 
   // Victimplay-only variables
@@ -612,6 +605,8 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       if (rejectOldTestModel(*testModelInfo, *acceptedModelInfo)) {
         testModelInfo.reset();
       }
+    } else if (quitIfNoNetsToTest) {
+      break;
     }
 
     bool shouldAcceptTestModel = false;
@@ -655,11 +650,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       if (!acceptedModelMatchup.isSameMatchup(lastAcceptedModelResults)) {
         // Need to re-evaluate accepted model vs. victim model.
         netAndStuff = loadNetAndStuff(*victimModelInfo, *acceptedModelInfo, !victimplay);
-        assert(netAndStuff != NULL);
-
         logger.write("Evaluating accepted model");
-        const bool evaluationShouldContinue = evaluateNetAndStuff();
-        if (!evaluationShouldContinue) {
+        evaluateNetAndStuff();
+        if (shouldStop.load()) {
           break;
         }
 
@@ -678,9 +671,6 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         );
         delete netAndStuff;
         netAndStuff = NULL;
-        if (!evaluationShouldContinue) {
-          break;
-        }
       }
 
       if (!testModelInfo.has_value()) {
@@ -688,10 +678,9 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         continue;
       }
       netAndStuff = loadNetAndStuff(*victimModelInfo, *testModelInfo, !victimplay);
-      assert(netAndStuff != NULL);
       logger.write("Evaluating test model");
-      const bool evaluationShouldContinue = evaluateNetAndStuff();
-      if (!evaluationShouldContinue) {
+      evaluateNetAndStuff();
+      if (shouldStop.load()) {
         break;
       }
 
@@ -732,8 +721,8 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         continue;
       }
       netAndStuff = loadNetAndStuff(*acceptedModelInfo, *testModelInfo, !victimplay);
-      const bool evaluationShouldContinue = evaluateNetAndStuff();
-      if (!evaluationShouldContinue) {
+      evaluateNetAndStuff();
+      if (shouldStop.load()) {
         break;
       }
       logger.write(

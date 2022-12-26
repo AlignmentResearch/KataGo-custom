@@ -758,11 +758,10 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
       string renameDest = acceptedModelsDir + "/" + testModelInfo->name;
       logger.write(
-          "Accepting model" + testModelInfo->name
+          "Accepting model " + testModelInfo->name
           + "; moving " + testModelInfo->dir + " to " + renameDest);
       FileUtils::rename(testModelInfo->dir,renameDest);
     } else if (testModelInfo.has_value()) {
-      logger.write(Global::strprintf("Rejecting model %s", testModelInfo->name));
       string renameDest = rejectedModelsDir + "/" + testModelInfo->name;
       logger.write(
           "Rejecting model " + testModelInfo->name

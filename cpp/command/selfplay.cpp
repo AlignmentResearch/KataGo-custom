@@ -530,7 +530,12 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
               if (victimCfgContents != lastVictimCfgContents) {
                 logger.write("Old config:\n" + lastVictimCfgContents);
                 logger.write("Reloading with config:\n" + victimCfgContents);
-                Setup::loadParams(victimCfg, Setup::SETUP_FOR_OTHER, &paramss);
+                Setup::loadParams(
+                    victimCfg,
+                    Setup::SETUP_FOR_OTHER,
+                    &paramss,
+                    false /*applyDefaultParams*/
+                );
                 victimCfg.warnUnusedKeys(cerr, &logger);
                 lastVictimCfgContents = std::move(victimCfgContents);
               }

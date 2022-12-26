@@ -364,7 +364,8 @@ vector<SearchParams> Setup::loadParams(
 void Setup::loadParams(
   ConfigParser& cfg,
   setup_for_t setupFor,
-  vector<SearchParams>* paramss
+  vector<SearchParams>* paramss,
+  bool applyDefaultParams
 ) {
   assert(paramss != nullptr);
   int numBots = 1;
@@ -379,7 +380,7 @@ void Setup::loadParams(
 
     if(cfg.contains("trackPassProb"+idxStr)) params.queryMoveLoc = cfg.getBool("trackPassProb"+idxStr) ? Board::PASS_LOC : Board::NULL_LOC;
     else if (cfg.contains("trackPassProb"))  params.queryMoveLoc = cfg.getBool("trackPassProb") ? Board::PASS_LOC : Board::NULL_LOC;
-    else params.queryMoveLoc = Board::NULL_LOC;
+    else if(applyDefaultParams)              params.queryMoveLoc = Board::NULL_LOC;
 
     if(cfg.contains("passingBehavior"+idxStr)) params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"+idxStr));
     else if (cfg.contains("passingBehavior"))  params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"));
@@ -400,17 +401,17 @@ void Setup::loadParams(
 
     if(cfg.contains("maxPlayoutsPondering"+idxStr)) params.maxPlayoutsPondering = cfg.getInt64("maxPlayoutsPondering"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayoutsPondering"))   params.maxPlayoutsPondering = cfg.getInt64("maxPlayoutsPondering",        (int64_t)1, (int64_t)1 << 50);
-    else                                            params.maxPlayoutsPondering = (int64_t)1 << 50;
+    else if(applyDefaultParams)                     params.maxPlayoutsPondering = (int64_t)1 << 50;
     if(cfg.contains("maxVisitsPondering"+idxStr)) params.maxVisitsPondering = cfg.getInt64("maxVisitsPondering"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxVisitsPondering"))   params.maxVisitsPondering = cfg.getInt64("maxVisitsPondering",        (int64_t)1, (int64_t)1 << 50);
-    else                                          params.maxVisitsPondering = (int64_t)1 << 50;
+    else if(applyDefaultParams)                   params.maxVisitsPondering = (int64_t)1 << 50;
     if(cfg.contains("maxTimePondering"+idxStr)) params.maxTimePondering = cfg.getDouble("maxTimePondering"+idxStr, 0.0, 1.0e20);
     else if(cfg.contains("maxTimePondering"))   params.maxTimePondering = cfg.getDouble("maxTimePondering",        0.0, 1.0e20);
-    else                                        params.maxTimePondering = 1.0e20;
+    else if(applyDefaultParams)                 params.maxTimePondering = 1.0e20;
 
     if(cfg.contains("lagBuffer"+idxStr)) params.lagBuffer = cfg.getDouble("lagBuffer"+idxStr, 0.0, 3600.0);
     else if(cfg.contains("lagBuffer"))   params.lagBuffer = cfg.getDouble("lagBuffer",        0.0, 3600.0);
-    else                                 params.lagBuffer = 0.0;
+    else if(applyDefaultParams)          params.lagBuffer = 0.0;
 
     if(cfg.contains("searchFactorAfterOnePass"+idxStr)) params.searchFactorAfterOnePass = cfg.getDouble("searchFactorAfterOnePass"+idxStr, 0.0, 1.0);
     else if(cfg.contains("searchFactorAfterOnePass"))   params.searchFactorAfterOnePass = cfg.getDouble("searchFactorAfterOnePass",        0.0, 1.0);
@@ -418,256 +419,253 @@ void Setup::loadParams(
     else if(cfg.contains("searchFactorAfterTwoPass"))   params.searchFactorAfterTwoPass = cfg.getDouble("searchFactorAfterTwoPass",        0.0, 1.0);
 
     if(cfg.contains("numSearchThreads"+idxStr)) params.numThreads = cfg.getInt("numSearchThreads"+idxStr, 1, 4096);
-    else                                        params.numThreads = cfg.getInt("numSearchThreads",        1, 4096);
+    else if(applyDefaultParams)                 params.numThreads = cfg.getInt("numSearchThreads",        1, 4096);
 
     if(cfg.contains("winLossUtilityFactor"+idxStr)) params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("winLossUtilityFactor"))   params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor",        0.0, 1.0);
-    else                                            params.winLossUtilityFactor = 1.0;
+    else if(applyDefaultParams)                     params.winLossUtilityFactor = 1.0;
     if(cfg.contains("staticScoreUtilityFactor"+idxStr)) params.staticScoreUtilityFactor = cfg.getDouble("staticScoreUtilityFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("staticScoreUtilityFactor"))   params.staticScoreUtilityFactor = cfg.getDouble("staticScoreUtilityFactor",        0.0, 1.0);
-    else                                                params.staticScoreUtilityFactor = 0.1;
+    else if(applyDefaultParams)                         params.staticScoreUtilityFactor = 0.1;
     if(cfg.contains("dynamicScoreUtilityFactor"+idxStr)) params.dynamicScoreUtilityFactor = cfg.getDouble("dynamicScoreUtilityFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("dynamicScoreUtilityFactor"))   params.dynamicScoreUtilityFactor = cfg.getDouble("dynamicScoreUtilityFactor",        0.0, 1.0);
-    else                                                 params.dynamicScoreUtilityFactor = 0.3;
+    else if(applyDefaultParams)                          params.dynamicScoreUtilityFactor = 0.3;
     if(cfg.contains("noResultUtilityForWhite"+idxStr)) params.noResultUtilityForWhite = cfg.getDouble("noResultUtilityForWhite"+idxStr, -1.0, 1.0);
     else if(cfg.contains("noResultUtilityForWhite"))   params.noResultUtilityForWhite = cfg.getDouble("noResultUtilityForWhite",        -1.0, 1.0);
-    else                                               params.noResultUtilityForWhite = 0.0;
+    else if(applyDefaultParams)                        params.noResultUtilityForWhite = 0.0;
     if(cfg.contains("drawEquivalentWinsForWhite"+idxStr)) params.drawEquivalentWinsForWhite = cfg.getDouble("drawEquivalentWinsForWhite"+idxStr, 0.0, 1.0);
     else if(cfg.contains("drawEquivalentWinsForWhite"))   params.drawEquivalentWinsForWhite = cfg.getDouble("drawEquivalentWinsForWhite",        0.0, 1.0);
-    else                                                  params.drawEquivalentWinsForWhite = 0.5;
+    else if(applyDefaultParams)                           params.drawEquivalentWinsForWhite = 0.5;
 
     if(cfg.contains("dynamicScoreCenterZeroWeight"+idxStr)) params.dynamicScoreCenterZeroWeight = cfg.getDouble("dynamicScoreCenterZeroWeight"+idxStr, 0.0, 1.0);
     else if(cfg.contains("dynamicScoreCenterZeroWeight"))   params.dynamicScoreCenterZeroWeight = cfg.getDouble("dynamicScoreCenterZeroWeight",        0.0, 1.0);
-    else params.dynamicScoreCenterZeroWeight = 0.20;
+    else if(applyDefaultParams)                             params.dynamicScoreCenterZeroWeight = 0.20;
     if(cfg.contains("dynamicScoreCenterScale"+idxStr)) params.dynamicScoreCenterScale = cfg.getDouble("dynamicScoreCenterScale"+idxStr, 0.2, 5.0);
     else if(cfg.contains("dynamicScoreCenterScale"))   params.dynamicScoreCenterScale = cfg.getDouble("dynamicScoreCenterScale",        0.2, 5.0);
-    else params.dynamicScoreCenterScale = 0.75;
+    else if(applyDefaultParams)                        params.dynamicScoreCenterScale = 0.75;
 
     if(cfg.contains("cpuctExploration"+idxStr)) params.cpuctExploration = cfg.getDouble("cpuctExploration"+idxStr, 0.0, 10.0);
     else if(cfg.contains("cpuctExploration"))   params.cpuctExploration = cfg.getDouble("cpuctExploration",        0.0, 10.0);
-    else                                        params.cpuctExploration = 1.0;
+    else if(applyDefaultParams)                 params.cpuctExploration = 1.0;
     if(cfg.contains("cpuctExplorationLog"+idxStr)) params.cpuctExplorationLog = cfg.getDouble("cpuctExplorationLog"+idxStr, 0.0, 10.0);
     else if(cfg.contains("cpuctExplorationLog"))   params.cpuctExplorationLog = cfg.getDouble("cpuctExplorationLog",        0.0, 10.0);
-    else                                           params.cpuctExplorationLog = 0.45;
+    else if(applyDefaultParams)                    params.cpuctExplorationLog = 0.45;
     if(cfg.contains("cpuctExplorationBase"+idxStr)) params.cpuctExplorationBase = cfg.getDouble("cpuctExplorationBase"+idxStr, 10.0, 100000.0);
     else if(cfg.contains("cpuctExplorationBase"))   params.cpuctExplorationBase = cfg.getDouble("cpuctExplorationBase",        10.0, 100000.0);
-    else                                            params.cpuctExplorationBase = 500.0;
+    else if(applyDefaultParams)                     params.cpuctExplorationBase = 500.0;
 
     if(cfg.contains("cpuctUtilityStdevPrior"+idxStr)) params.cpuctUtilityStdevPrior = cfg.getDouble("cpuctUtilityStdevPrior"+idxStr, 0.0, 10.0);
     else if(cfg.contains("cpuctUtilityStdevPrior"))   params.cpuctUtilityStdevPrior = cfg.getDouble("cpuctUtilityStdevPrior",        0.0, 10.0);
-    else                                              params.cpuctUtilityStdevPrior = 0.40;
+    else if(applyDefaultParams)                       params.cpuctUtilityStdevPrior = 0.40;
     if(cfg.contains("cpuctUtilityStdevPriorWeight"+idxStr)) params.cpuctUtilityStdevPriorWeight = cfg.getDouble("cpuctUtilityStdevPriorWeight"+idxStr, 0.0, 100.0);
     else if(cfg.contains("cpuctUtilityStdevPriorWeight"))   params.cpuctUtilityStdevPriorWeight = cfg.getDouble("cpuctUtilityStdevPriorWeight",        0.0, 100.0);
-    else                                                    params.cpuctUtilityStdevPriorWeight = 2.0;
+    else if(applyDefaultParams)                             params.cpuctUtilityStdevPriorWeight = 2.0;
     if(cfg.contains("cpuctUtilityStdevScale"+idxStr)) params.cpuctUtilityStdevScale = cfg.getDouble("cpuctUtilityStdevScale"+idxStr, 0.0, 1.0);
     else if(cfg.contains("cpuctUtilityStdevScale"))   params.cpuctUtilityStdevScale = cfg.getDouble("cpuctUtilityStdevScale",        0.0, 1.0);
-    else                                              params.cpuctUtilityStdevScale = ((setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? 0.85 : 0.0);
+    else if(applyDefaultParams)                       params.cpuctUtilityStdevScale = ((setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? 0.85 : 0.0);
 
 
     if(cfg.contains("fpuReductionMax"+idxStr)) params.fpuReductionMax = cfg.getDouble("fpuReductionMax"+idxStr, 0.0, 2.0);
     else if(cfg.contains("fpuReductionMax"))   params.fpuReductionMax = cfg.getDouble("fpuReductionMax",        0.0, 2.0);
-    else params.fpuReductionMax = 0.2;
+    else if(applyDefaultParams)                params.fpuReductionMax = 0.2;
     if(cfg.contains("fpuLossProp"+idxStr)) params.fpuLossProp = cfg.getDouble("fpuLossProp"+idxStr, 0.0, 1.0);
     else if(cfg.contains("fpuLossProp"))   params.fpuLossProp = cfg.getDouble("fpuLossProp",        0.0, 1.0);
-    else                                   params.fpuLossProp = 0.0;
+    else if(applyDefaultParams)            params.fpuLossProp = 0.0;
     if(cfg.contains("fpuParentWeight"+idxStr)) params.fpuParentWeight = cfg.getDouble("fpuParentWeight"+idxStr,        0.0, 1.0);
     else if(cfg.contains("fpuParentWeight"))   params.fpuParentWeight = cfg.getDouble("fpuParentWeight",        0.0, 1.0);
-    else                                       params.fpuParentWeight = 0.0;
+    else if(applyDefaultParams)                params.fpuParentWeight = 0.0;
 
 
     if(cfg.contains("valueWeightExponent"+idxStr)) params.valueWeightExponent = cfg.getDouble("valueWeightExponent"+idxStr, 0.0, 1.0);
-    else if(cfg.contains("valueWeightExponent")) params.valueWeightExponent = cfg.getDouble("valueWeightExponent", 0.0, 1.0);
-    else params.valueWeightExponent = 0.5;
+    else if(cfg.contains("valueWeightExponent"))   params.valueWeightExponent = cfg.getDouble("valueWeightExponent", 0.0, 1.0);
+    else if(applyDefaultParams)                    params.valueWeightExponent = 0.5;
     if(cfg.contains("useNoisePruning"+idxStr)) params.useNoisePruning = cfg.getBool("useNoisePruning"+idxStr);
     else if(cfg.contains("useNoisePruning"))   params.useNoisePruning = cfg.getBool("useNoisePruning");
-    else                                       params.useNoisePruning = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
+    else if(applyDefaultParams)                params.useNoisePruning = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
     if(cfg.contains("noisePruneUtilityScale"+idxStr)) params.noisePruneUtilityScale = cfg.getDouble("noisePruneUtilityScale"+idxStr, 0.001, 10.0);
     else if(cfg.contains("noisePruneUtilityScale"))   params.noisePruneUtilityScale = cfg.getDouble("noisePruneUtilityScale", 0.001, 10.0);
-    else                                              params.noisePruneUtilityScale = 0.15;
+    else if(applyDefaultParams)                       params.noisePruneUtilityScale = 0.15;
     if(cfg.contains("noisePruningCap"+idxStr)) params.noisePruningCap = cfg.getDouble("noisePruningCap"+idxStr, 0.0, 1e50);
     else if(cfg.contains("noisePruningCap"))   params.noisePruningCap = cfg.getDouble("noisePruningCap", 0.0, 1e50);
-    else                                       params.noisePruningCap = 1e50;
+    else if(applyDefaultParams)                params.noisePruningCap = 1e50;
 
 
     if(cfg.contains("useUncertainty"+idxStr)) params.useUncertainty = cfg.getBool("useUncertainty"+idxStr);
     else if(cfg.contains("useUncertainty"))   params.useUncertainty = cfg.getBool("useUncertainty");
-    else                                      params.useUncertainty = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
+    else if(applyDefaultParams)               params.useUncertainty = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
     if(cfg.contains("uncertaintyCoeff"+idxStr)) params.uncertaintyCoeff = cfg.getDouble("uncertaintyCoeff"+idxStr, 0.0001, 1.0);
     else if(cfg.contains("uncertaintyCoeff"))   params.uncertaintyCoeff = cfg.getDouble("uncertaintyCoeff", 0.0001, 1.0);
-    else                                        params.uncertaintyCoeff = 0.25;
+    else if(applyDefaultParams)                 params.uncertaintyCoeff = 0.25;
     if(cfg.contains("uncertaintyExponent"+idxStr)) params.uncertaintyExponent = cfg.getDouble("uncertaintyExponent"+idxStr, 0.0, 2.0);
     else if(cfg.contains("uncertaintyExponent"))   params.uncertaintyExponent = cfg.getDouble("uncertaintyExponent", 0.0, 2.0);
-    else                                           params.uncertaintyExponent = 1.0;
+    else if(applyDefaultParams)                    params.uncertaintyExponent = 1.0;
     if(cfg.contains("uncertaintyMaxWeight"+idxStr)) params.uncertaintyMaxWeight = cfg.getDouble("uncertaintyMaxWeight"+idxStr, 1.0, 100.0);
     else if(cfg.contains("uncertaintyMaxWeight"))   params.uncertaintyMaxWeight = cfg.getDouble("uncertaintyMaxWeight", 1.0, 100.0);
-    else                                            params.uncertaintyMaxWeight = 8.0;
+    else if(applyDefaultParams)                     params.uncertaintyMaxWeight = 8.0;
 
 
     if(cfg.contains("rootNoiseEnabled"+idxStr)) params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled"+idxStr);
     else if(cfg.contains("rootNoiseEnabled"))   params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled");
-    else                                        params.rootNoiseEnabled = false;
+    else if(applyDefaultParams)                 params.rootNoiseEnabled = false;
     if(cfg.contains("rootDirichletNoiseTotalConcentration"+idxStr))
       params.rootDirichletNoiseTotalConcentration = cfg.getDouble("rootDirichletNoiseTotalConcentration"+idxStr, 0.001, 10000.0);
     else if(cfg.contains("rootDirichletNoiseTotalConcentration"))
       params.rootDirichletNoiseTotalConcentration = cfg.getDouble("rootDirichletNoiseTotalConcentration", 0.001, 10000.0);
-    else
+    else if(applyDefaultParams)
       params.rootDirichletNoiseTotalConcentration = 10.83;
     if(cfg.contains("rootDirichletNoiseWeight"+idxStr)) params.rootDirichletNoiseWeight = cfg.getDouble("rootDirichletNoiseWeight"+idxStr, 0.0, 1.0);
     else if(cfg.contains("rootDirichletNoiseWeight"))   params.rootDirichletNoiseWeight = cfg.getDouble("rootDirichletNoiseWeight",        0.0, 1.0);
-    else                                                params.rootDirichletNoiseWeight = 0.25;
+    else if(applyDefaultParams)                         params.rootDirichletNoiseWeight = 0.25;
 
     if(cfg.contains("rootPolicyTemperature"+idxStr)) params.rootPolicyTemperature = cfg.getDouble("rootPolicyTemperature"+idxStr, 0.01, 100.0);
     else if(cfg.contains("rootPolicyTemperature"))   params.rootPolicyTemperature = cfg.getDouble("rootPolicyTemperature",        0.01, 100.0);
-    else                                             params.rootPolicyTemperature = 1.0;
+    else if(applyDefaultParams)                      params.rootPolicyTemperature = 1.0;
     if(cfg.contains("rootPolicyTemperatureEarly"+idxStr)) params.rootPolicyTemperatureEarly = cfg.getDouble("rootPolicyTemperatureEarly"+idxStr, 0.01, 100.0);
     else if(cfg.contains("rootPolicyTemperatureEarly"))   params.rootPolicyTemperatureEarly = cfg.getDouble("rootPolicyTemperatureEarly",        0.01, 100.0);
-    else                                                  params.rootPolicyTemperatureEarly = params.rootPolicyTemperature;
+    else if(applyDefaultParams)                           params.rootPolicyTemperatureEarly = params.rootPolicyTemperature;
     if(cfg.contains("rootFpuReductionMax"+idxStr)) params.rootFpuReductionMax = cfg.getDouble("rootFpuReductionMax"+idxStr, 0.0, 2.0);
     else if(cfg.contains("rootFpuReductionMax"))   params.rootFpuReductionMax = cfg.getDouble("rootFpuReductionMax",        0.0, 2.0);
-    else                                           params.rootFpuReductionMax = params.rootNoiseEnabled ? 0.0 : 0.1;
+    else if(applyDefaultParams)                    params.rootFpuReductionMax = params.rootNoiseEnabled ? 0.0 : 0.1;
     if(cfg.contains("rootFpuLossProp"+idxStr)) params.rootFpuLossProp = cfg.getDouble("rootFpuLossProp"+idxStr, 0.0, 1.0);
     else if(cfg.contains("rootFpuLossProp"))   params.rootFpuLossProp = cfg.getDouble("rootFpuLossProp",        0.0, 1.0);
-    else                                       params.rootFpuLossProp = params.fpuLossProp;
+    else if(applyDefaultParams)                params.rootFpuLossProp = params.fpuLossProp;
     if(cfg.contains("rootNumSymmetriesToSample"+idxStr)) params.rootNumSymmetriesToSample = cfg.getInt("rootNumSymmetriesToSample"+idxStr, 1, SymmetryHelpers::NUM_SYMMETRIES);
     else if(cfg.contains("rootNumSymmetriesToSample"))   params.rootNumSymmetriesToSample = cfg.getInt("rootNumSymmetriesToSample",        1, SymmetryHelpers::NUM_SYMMETRIES);
-    else                                                 params.rootNumSymmetriesToSample = 1;
+    else if(applyDefaultParams)                          params.rootNumSymmetriesToSample = 1;
     if(cfg.contains("rootSymmetryPruning"+idxStr)) params.rootSymmetryPruning = cfg.getBool("rootSymmetryPruning"+idxStr);
     else if(cfg.contains("rootSymmetryPruning"))   params.rootSymmetryPruning = cfg.getBool("rootSymmetryPruning");
-    else                                           params.rootSymmetryPruning = (setupFor == SETUP_FOR_ANALYSIS || setupFor == SETUP_FOR_GTP);
+    else if(applyDefaultParams)                    params.rootSymmetryPruning = (setupFor == SETUP_FOR_ANALYSIS || setupFor == SETUP_FOR_GTP);
 
     if(cfg.contains("rootDesiredPerChildVisitsCoeff"+idxStr)) params.rootDesiredPerChildVisitsCoeff = cfg.getDouble("rootDesiredPerChildVisitsCoeff"+idxStr, 0.0, 100.0);
     else if(cfg.contains("rootDesiredPerChildVisitsCoeff"))   params.rootDesiredPerChildVisitsCoeff = cfg.getDouble("rootDesiredPerChildVisitsCoeff",        0.0, 100.0);
-    else                                                      params.rootDesiredPerChildVisitsCoeff = 0.0;
+    else if(applyDefaultParams)                               params.rootDesiredPerChildVisitsCoeff = 0.0;
 
     if(cfg.contains("chosenMoveTemperature"+idxStr)) params.chosenMoveTemperature = cfg.getDouble("chosenMoveTemperature"+idxStr, 0.0, 5.0);
     else if(cfg.contains("chosenMoveTemperature"))   params.chosenMoveTemperature = cfg.getDouble("chosenMoveTemperature",        0.0, 5.0);
-    else                                             params.chosenMoveTemperature = 0.1;
+    else if(applyDefaultParams)                      params.chosenMoveTemperature = 0.1;
     if(cfg.contains("chosenMoveTemperatureEarly"+idxStr))
       params.chosenMoveTemperatureEarly = cfg.getDouble("chosenMoveTemperatureEarly"+idxStr, 0.0, 5.0);
     else if(cfg.contains("chosenMoveTemperatureEarly"))
       params.chosenMoveTemperatureEarly = cfg.getDouble("chosenMoveTemperatureEarly",        0.0, 5.0);
-    else
+    else if(applyDefaultParams)
       params.chosenMoveTemperatureEarly = 0.5;
     if(cfg.contains("chosenMoveTemperatureHalflife"+idxStr))
       params.chosenMoveTemperatureHalflife = cfg.getDouble("chosenMoveTemperatureHalflife"+idxStr, 0.1, 100000.0);
     else if(cfg.contains("chosenMoveTemperatureHalflife"))
       params.chosenMoveTemperatureHalflife = cfg.getDouble("chosenMoveTemperatureHalflife",        0.1, 100000.0);
-    else
+    else if(applyDefaultParams)
       params.chosenMoveTemperatureHalflife = 19;
     if(cfg.contains("chosenMoveSubtract"+idxStr)) params.chosenMoveSubtract = cfg.getDouble("chosenMoveSubtract"+idxStr, 0.0, 1.0e10);
     else if(cfg.contains("chosenMoveSubtract"))   params.chosenMoveSubtract = cfg.getDouble("chosenMoveSubtract",        0.0, 1.0e10);
-    else                                          params.chosenMoveSubtract = 0.0;
+    else if(applyDefaultParams)                   params.chosenMoveSubtract = 0.0;
     if(cfg.contains("chosenMovePrune"+idxStr)) params.chosenMovePrune = cfg.getDouble("chosenMovePrune"+idxStr, 0.0, 1.0e10);
     else if(cfg.contains("chosenMovePrune"))   params.chosenMovePrune = cfg.getDouble("chosenMovePrune",        0.0, 1.0e10);
-    else                                       params.chosenMovePrune = 1.0;
+    else if(applyDefaultParams)                params.chosenMovePrune = 1.0;
 
     if(cfg.contains("useLcbForSelection"+idxStr)) params.useLcbForSelection = cfg.getBool("useLcbForSelection"+idxStr);
     else if(cfg.contains("useLcbForSelection"))   params.useLcbForSelection = cfg.getBool("useLcbForSelection");
-    else                                          params.useLcbForSelection = true;
+    else if(applyDefaultParams)                   params.useLcbForSelection = true;
 
     if(cfg.contains("useLcbForSelfplayMove"+idxStr)) params.useLcbForSelfplayMove = cfg.getBool("useLcbForSelfplayMove"+idxStr);
     else if(cfg.contains("useLcbForSelfplayMove"))   params.useLcbForSelfplayMove = cfg.getBool("useLcbForSelfplayMove");
-    else                                             params.useLcbForSelfplayMove = false;
+    else if(applyDefaultParams)                      params.useLcbForSelfplayMove = false;
 
     if(cfg.contains("lcbStdevs"+idxStr)) params.lcbStdevs = cfg.getDouble("lcbStdevs"+idxStr, 1.0, 12.0);
     else if(cfg.contains("lcbStdevs"))   params.lcbStdevs = cfg.getDouble("lcbStdevs",        1.0, 12.0);
-    else                                 params.lcbStdevs = 5.0;
+    else if(applyDefaultParams)          params.lcbStdevs = 5.0;
     if(cfg.contains("minVisitPropForLCB"+idxStr)) params.minVisitPropForLCB = cfg.getDouble("minVisitPropForLCB"+idxStr, 0.0, 1.0);
     else if(cfg.contains("minVisitPropForLCB"))   params.minVisitPropForLCB = cfg.getDouble("minVisitPropForLCB",        0.0, 1.0);
-    else                                          params.minVisitPropForLCB = 0.15;
+    else if(applyDefaultParams)                   params.minVisitPropForLCB = 0.15;
     //For distributed and selfplay, we default to buggy LCB for the moment since it has effects on the policy training target.
     if(cfg.contains("useNonBuggyLcb"+idxStr)) params.useNonBuggyLcb = cfg.getBool("useNonBuggyLcb"+idxStr);
     else if(cfg.contains("useNonBuggyLcb"))   params.useNonBuggyLcb = cfg.getBool("useNonBuggyLcb");
-    else                                      params.useNonBuggyLcb = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
+    else if(applyDefaultParams)               params.useNonBuggyLcb = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
 
 
     if(cfg.contains("rootEndingBonusPoints"+idxStr)) params.rootEndingBonusPoints = cfg.getDouble("rootEndingBonusPoints"+idxStr, -1.0, 1.0);
     else if(cfg.contains("rootEndingBonusPoints"))   params.rootEndingBonusPoints = cfg.getDouble("rootEndingBonusPoints",        -1.0, 1.0);
-    else                                             params.rootEndingBonusPoints = 0.5;
+    else if(applyDefaultParams)                      params.rootEndingBonusPoints = 0.5;
     if(cfg.contains("rootPruneUselessMoves"+idxStr)) params.rootPruneUselessMoves = cfg.getBool("rootPruneUselessMoves"+idxStr);
     else if(cfg.contains("rootPruneUselessMoves"))   params.rootPruneUselessMoves = cfg.getBool("rootPruneUselessMoves");
-    else                                             params.rootPruneUselessMoves = true;
+    else if(applyDefaultParams)                      params.rootPruneUselessMoves = true;
     if(cfg.contains("conservativePass"+idxStr)) params.conservativePass = cfg.getBool("conservativePass"+idxStr);
     else if(cfg.contains("conservativePass"))   params.conservativePass = cfg.getBool("conservativePass");
-    else                                        params.conservativePass = false;
+    else if(applyDefaultParams)                 params.conservativePass = false;
     if(cfg.contains("fillDameBeforePass"+idxStr)) params.fillDameBeforePass = cfg.getBool("fillDameBeforePass"+idxStr);
     else if(cfg.contains("fillDameBeforePass"))   params.fillDameBeforePass = cfg.getBool("fillDameBeforePass");
-    else                                          params.fillDameBeforePass = false;
+    else if(applyDefaultParams)                   params.fillDameBeforePass = false;
     //Controlled by GTP directly, not used in any other mode
     params.avoidMYTDaggerHackPla = C_EMPTY;
     if(cfg.contains("wideRootNoise"+idxStr)) params.wideRootNoise = cfg.getDouble("wideRootNoise"+idxStr, 0.0, 5.0);
     else if(cfg.contains("wideRootNoise"))   params.wideRootNoise = cfg.getDouble("wideRootNoise", 0.0, 5.0);
-    else                                     params.wideRootNoise = (setupFor == SETUP_FOR_ANALYSIS ? Setup::DEFAULT_ANALYSIS_WIDE_ROOT_NOISE : 0.00);
+    else if(applyDefaultParams)              params.wideRootNoise = (setupFor == SETUP_FOR_ANALYSIS ? Setup::DEFAULT_ANALYSIS_WIDE_ROOT_NOISE : 0.00);
 
     if(cfg.contains("playoutDoublingAdvantage"+idxStr)) params.playoutDoublingAdvantage = cfg.getDouble("playoutDoublingAdvantage"+idxStr,-3.0,3.0);
     else if(cfg.contains("playoutDoublingAdvantage"))   params.playoutDoublingAdvantage = cfg.getDouble("playoutDoublingAdvantage",-3.0,3.0);
-    else                                                params.playoutDoublingAdvantage = 0.0;
+    else if(applyDefaultParams)                         params.playoutDoublingAdvantage = 0.0;
     if(cfg.contains("playoutDoublingAdvantagePla"+idxStr)) params.playoutDoublingAdvantagePla = parsePlayer("playoutDoublingAdvantagePla",cfg.getString("playoutDoublingAdvantagePla"+idxStr));
     else if(cfg.contains("playoutDoublingAdvantagePla"))   params.playoutDoublingAdvantagePla = parsePlayer("playoutDoublingAdvantagePla",cfg.getString("playoutDoublingAdvantagePla"));
-    else                                                   params.playoutDoublingAdvantagePla = C_EMPTY;
+    else if(applyDefaultParams)                            params.playoutDoublingAdvantagePla = C_EMPTY;
 
     if(cfg.contains("avoidRepeatedPatternUtility"+idxStr)) params.avoidRepeatedPatternUtility = cfg.getDouble("avoidRepeatedPatternUtility"+idxStr, -3.0, 3.0);
     else if(cfg.contains("avoidRepeatedPatternUtility"))   params.avoidRepeatedPatternUtility = cfg.getDouble("avoidRepeatedPatternUtility", -3.0, 3.0);
-    else                                                   params.avoidRepeatedPatternUtility = 0.0;
+    else if(applyDefaultParams)                            params.avoidRepeatedPatternUtility = 0.0;
 
     if(cfg.contains("nnPolicyTemperature"+idxStr))
       params.nnPolicyTemperature = cfg.getFloat("nnPolicyTemperature"+idxStr,0.01f,5.0f);
     else if(cfg.contains("nnPolicyTemperature"))
       params.nnPolicyTemperature = cfg.getFloat("nnPolicyTemperature",0.01f,5.0f);
-    else
+    else if(applyDefaultParams)
       params.nnPolicyTemperature = 1.0f;
 
     if(cfg.contains("antiMirror"+idxStr)) params.antiMirror = cfg.getBool("antiMirror"+idxStr);
     else if(cfg.contains("antiMirror"))   params.antiMirror = cfg.getBool("antiMirror");
-    else                                  params.antiMirror = false;
+    else if(applyDefaultParams)           params.antiMirror = false;
 
     if(cfg.contains("subtreeValueBiasFactor"+idxStr)) params.subtreeValueBiasFactor = cfg.getDouble("subtreeValueBiasFactor"+idxStr, 0.0, 1.0);
-    else if(cfg.contains("subtreeValueBiasFactor")) params.subtreeValueBiasFactor = cfg.getDouble("subtreeValueBiasFactor", 0.0, 1.0);
-    else params.subtreeValueBiasFactor = 0.35;
+    else if(cfg.contains("subtreeValueBiasFactor"))   params.subtreeValueBiasFactor = cfg.getDouble("subtreeValueBiasFactor", 0.0, 1.0);
+    else if(applyDefaultParams)                       params.subtreeValueBiasFactor = 0.35;
     if(cfg.contains("subtreeValueBiasFreeProp"+idxStr)) params.subtreeValueBiasFreeProp = cfg.getDouble("subtreeValueBiasFreeProp"+idxStr, 0.0, 1.0);
-    else if(cfg.contains("subtreeValueBiasFreeProp")) params.subtreeValueBiasFreeProp = cfg.getDouble("subtreeValueBiasFreeProp", 0.0, 1.0);
-    else params.subtreeValueBiasFreeProp = 0.8;
+    else if(cfg.contains("subtreeValueBiasFreeProp"))   params.subtreeValueBiasFreeProp = cfg.getDouble("subtreeValueBiasFreeProp", 0.0, 1.0);
+    else if(applyDefaultParams)                         params.subtreeValueBiasFreeProp = 0.8;
     if(cfg.contains("subtreeValueBiasWeightExponent"+idxStr)) params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent"+idxStr, 0.0, 1.0);
-    else if(cfg.contains("subtreeValueBiasWeightExponent")) params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent", 0.0, 1.0);
-    else params.subtreeValueBiasWeightExponent = 0.8;
+    else if(cfg.contains("subtreeValueBiasWeightExponent"))   params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent", 0.0, 1.0);
+    else if(applyDefaultParams)                               params.subtreeValueBiasWeightExponent = 0.8;
 
     if(cfg.contains("mutexPoolSize"+idxStr)) params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize"+idxStr, 1, 1 << 24);
     else if(cfg.contains("mutexPoolSize"))   params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize",        1, 1 << 24);
-    else                                     params.mutexPoolSize = 16384;
+    else if(applyDefaultParams)              params.mutexPoolSize = 16384;
     if(cfg.contains("numVirtualLossesPerThread"+idxStr)) params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread"+idxStr, 0.01, 1000.0);
     else if(cfg.contains("numVirtualLossesPerThread"))   params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread",        0.01, 1000.0);
-    else                                                 params.numVirtualLossesPerThread = 1.0;
+    else if(applyDefaultParams)                          params.numVirtualLossesPerThread = 1.0;
 
     if(cfg.contains("treeReuseCarryOverTimeFactor"+idxStr)) params.treeReuseCarryOverTimeFactor = cfg.getDouble("treeReuseCarryOverTimeFactor"+idxStr,0.0,1.0);
     else if(cfg.contains("treeReuseCarryOverTimeFactor"))   params.treeReuseCarryOverTimeFactor = cfg.getDouble("treeReuseCarryOverTimeFactor",0.0,1.0);
-    else                                                    params.treeReuseCarryOverTimeFactor = 0.0;
+    else if(applyDefaultParams)                             params.treeReuseCarryOverTimeFactor = 0.0;
     if(cfg.contains("overallocateTimeFactor"+idxStr)) params.overallocateTimeFactor = cfg.getDouble("overallocateTimeFactor"+idxStr,0.01,100.0);
     else if(cfg.contains("overallocateTimeFactor"))   params.overallocateTimeFactor = cfg.getDouble("overallocateTimeFactor",0.01,100.0);
-    else                                              params.overallocateTimeFactor = 1.0;
+    else if(applyDefaultParams)                       params.overallocateTimeFactor = 1.0;
     if(cfg.contains("midgameTimeFactor"+idxStr)) params.midgameTimeFactor = cfg.getDouble("midgameTimeFactor"+idxStr,0.01,100.0);
     else if(cfg.contains("midgameTimeFactor"))   params.midgameTimeFactor = cfg.getDouble("midgameTimeFactor",0.01,100.0);
-    else                                         params.midgameTimeFactor = 1.0;
+    else if(applyDefaultParams)                  params.midgameTimeFactor = 1.0;
     if(cfg.contains("midgameTurnPeakTime"+idxStr)) params.midgameTurnPeakTime = cfg.getDouble("midgameTurnPeakTime"+idxStr,0.0,1000.0);
     else if(cfg.contains("midgameTurnPeakTime"))   params.midgameTurnPeakTime = cfg.getDouble("midgameTurnPeakTime",0.0,1000.0);
-    else                                           params.midgameTurnPeakTime = 130.0;
+    else if(applyDefaultParams)                    params.midgameTurnPeakTime = 130.0;
     if(cfg.contains("endgameTurnTimeDecay"+idxStr)) params.endgameTurnTimeDecay = cfg.getDouble("endgameTurnTimeDecay"+idxStr,0.0,1000.0);
     else if(cfg.contains("endgameTurnTimeDecay"))   params.endgameTurnTimeDecay = cfg.getDouble("endgameTurnTimeDecay",0.0,1000.0);
-    else                                            params.endgameTurnTimeDecay = 100.0;
+    else if(applyDefaultParams)                     params.endgameTurnTimeDecay = 100.0;
     if(cfg.contains("obviousMovesTimeFactor"+idxStr)) params.obviousMovesTimeFactor = cfg.getDouble("obviousMovesTimeFactor"+idxStr,0.01,1.0);
     else if(cfg.contains("obviousMovesTimeFactor"))   params.obviousMovesTimeFactor = cfg.getDouble("obviousMovesTimeFactor",0.01,1.0);
-    else                                              params.obviousMovesTimeFactor = 1.0;
+    else if(applyDefaultParams)                       params.obviousMovesTimeFactor = 1.0;
     if(cfg.contains("obviousMovesPolicyEntropyTolerance"+idxStr)) params.obviousMovesPolicyEntropyTolerance = cfg.getDouble("obviousMovesPolicyEntropyTolerance"+idxStr,0.001,2.0);
     else if(cfg.contains("obviousMovesPolicyEntropyTolerance"))   params.obviousMovesPolicyEntropyTolerance = cfg.getDouble("obviousMovesPolicyEntropyTolerance",0.001,2.0);
-    else                                                          params.obviousMovesPolicyEntropyTolerance = 0.30;
+    else if(applyDefaultParams)                                   params.obviousMovesPolicyEntropyTolerance = 0.30;
     if(cfg.contains("obviousMovesPolicySurpriseTolerance"+idxStr)) params.obviousMovesPolicySurpriseTolerance = cfg.getDouble("obviousMovesPolicySurpriseTolerance"+idxStr,0.001,2.0);
     else if(cfg.contains("obviousMovesPolicySurpriseTolerance"))   params.obviousMovesPolicySurpriseTolerance = cfg.getDouble("obviousMovesPolicySurpriseTolerance",0.001,2.0);
-    else                                                           params.obviousMovesPolicySurpriseTolerance = 0.15;
+    else if(applyDefaultParams)                                    params.obviousMovesPolicySurpriseTolerance = 0.15;
     if(cfg.contains("futileVisitsThreshold"+idxStr)) params.futileVisitsThreshold = cfg.getDouble("futileVisitsThreshold"+idxStr,0.01,1.0);
     else if(cfg.contains("futileVisitsThreshold"))   params.futileVisitsThreshold = cfg.getDouble("futileVisitsThreshold",0.01,1.0);
-    else                                             params.futileVisitsThreshold = 0.0;
-
-
-    paramss->push_back(params);
+    else if(applyDefaultParams)                      params.futileVisitsThreshold = 0.0;
   }
 }
 

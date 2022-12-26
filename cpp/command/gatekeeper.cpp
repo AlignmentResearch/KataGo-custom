@@ -593,13 +593,14 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       break;
 
     assert(netAndStuff == NULL);
-    optional<ModelFileInfo> testModelInfo = getLatestModelInfo(logger, testModelsDir, false);
     const optional<ModelFileInfo> acceptedModelInfo = getLatestModelInfo(logger, acceptedModelsDir, true);
     if (!acceptedModelInfo.has_value()) {
       logger.write("Error: No accepted model found in " + acceptedModelsDir);
       sleep(4);
       continue;
     }
+
+    optional<ModelFileInfo> testModelInfo = getLatestModelInfo(logger, testModelsDir, false);
     if (testModelInfo.has_value()) {
       logger.write("Found new candidate neural net " + testModelInfo->name);
       if (rejectOldTestModel(*testModelInfo, *acceptedModelInfo)) {
@@ -610,7 +611,6 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     }
 
     bool shouldAcceptTestModel = false;
-    string evaluationResultDescription = "";
     if (victimplay) {
       const optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(logger, victimModelsDir, false);
       if (!victimModelInfo.has_value()) {
@@ -623,23 +623,10 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       if(FileUtils::exists(victimCfgReloadPath)) {
         try {
           victimCfg.initialize(victimCfgReloadPath);
+          victimCfgContents = victimCfg.getAllKeyVals();
         } catch (const IOError &e) {
           logger.write(string("Victim config reloading error: ") + e.what());
         }
-        victimCfgContents = victimCfg.getAllKeyVals();
-      }
-
-      if (victimCfgContents != lastAcceptedModelResults.victimCfgContents) {
-        // Update `paramss` with the new victim config.
-        logger.write("Old victim config:\n" + lastAcceptedModelResults.victimCfgContents);
-        logger.write("Reloading with config:\n" + victimCfgContents);
-        Setup::loadParams(
-            victimCfg,
-            Setup::SETUP_FOR_OTHER,
-            &paramss,
-            false /*applyDefaultParams*/
-        );
-        victimCfg.warnUnusedKeys(cerr, &logger);
       }
 
       AdversaryVsVictimInfo acceptedModelMatchup{
@@ -648,7 +635,21 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         victimCfgContents,
       };
       if (!acceptedModelMatchup.isSameMatchup(lastAcceptedModelResults)) {
-        // Need to re-evaluate accepted model vs. victim model.
+        // We need to re-evaluate accepted model vs. victim model.
+
+        if (victimCfgContents != lastAcceptedModelResults.victimCfgContents) {
+          // Update `paramss` with the new victim config.
+          logger.write("Old victim config:\n" + lastAcceptedModelResults.victimCfgContents);
+          logger.write("Reloading with config:\n" + victimCfgContents);
+          Setup::loadParams(
+              victimCfg,
+              Setup::SETUP_FOR_OTHER,
+              &paramss,
+              false /*applyDefaultParams*/
+          );
+          victimCfg.warnUnusedKeys(cerr, &logger);
+        }
+
         netAndStuff = loadNetAndStuff(*victimModelInfo, *acceptedModelInfo, !victimplay);
         logger.write("Evaluating accepted model");
         evaluateNetAndStuff();
@@ -677,6 +678,10 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         sleep(4);
         continue;
       }
+      // Evaluate new test model vs. victim.
+      // We don't need to check for victimCfg updates here; if victimCfg
+      // changed, then it should've been reloaded when re-evaluating the
+      // accepted model.
       netAndStuff = loadNetAndStuff(*victimModelInfo, *testModelInfo, !victimplay);
       logger.write("Evaluating test model");
       evaluateNetAndStuff();
@@ -686,7 +691,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
       logger.write(
         Global::strprintf(
-          "Test model %s scored %.3f to %.3f in %d games. (vs. accepted model %s scoring %.3f to %.3f in %d games)",
+          "Test model %s scored %.3f to %.3f in %d games. (vs. accepted model %s scored %.3f to %.3f in %d games)",
           testModelInfo->name,
           netAndStuff->numCandidateWinPoints,
           netAndStuff->numBaselineWinPoints,
@@ -697,15 +702,12 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
           lastAcceptedModelResults.numGamesTallied
         )
       );
-      // The accepted model should either not exist or have played the same
-      // number of games.
-      assert(lastAcceptedModelResults.numGamesTallied == 0 ||
-          netAndStuff->numGamesTallied == lastAcceptedModelResults.numGamesTallied);
+      assert(netAndStuff->numGamesTallied == lastAcceptedModelResults.numGamesTallied);
       // Test model wins ties.
       if(netAndStuff->numCandidateWinPoints + 1e-10 >= lastAcceptedModelResults.adversaryPoints) {
         shouldAcceptTestModel = true;
         lastAcceptedModelResults = AdversaryVsVictimInfo{
-          acceptedModelInfo->name,
+          testModelInfo->name,
           victimModelInfo->name,
           victimCfgContents,
           netAndStuff->numCandidateWinPoints,
@@ -742,7 +744,6 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
     if (shouldAcceptTestModel) {
       assert(testModelInfo.has_value());
-
       //Make a bunch of the directories that selfplay will need so that there isn't a race on the selfplay
       //machines to concurrently make it, since sometimes concurrent making of the same directory can corrupt
       //a filesystem

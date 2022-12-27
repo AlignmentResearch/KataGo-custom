@@ -1,20 +1,72 @@
 #!/bin/bash -eu
-if [[ $# -lt 1 || $# -gt 2 ]]
-then
-    echo "Usage: $0 BASE_DIR [PREDICTOR_DIR]"
+
+usage() {
+    echo "Usage: $0 [--victim-list VICTIM_LIST] [-victim-dir VICTIM_DIR]"
+    echo "          [--prediction-dir PREDICTOR_DIR] [--katago-bin KATAGO_BIN]"
+    echo "          [--go-attack-root GO_ATTACK_ROOT] BASE_DIR OUTPUT_DIR"
+    echo
+    echo "positional arguments:"
+    echo " BASE_DIR The root of the training run, containing selfplay data, models and"
+    echo " related directories."
+    echo " OUTPUT_DIR The directory to output results to."
+    echo
+    echo "optional arguments:"
+    echo "  -v VICTIM_LIST, --victim-list VICTIM_LIST"
+    echo "    A comma-separated list of models in VICTIM_DIR to use."
+    echo "    If empty, the most recent model will be used."
+    echo "  -d VICTIM_DIR, --victim-dir VICTIM_DIR"
+    echo "    The directory containing the victim models."
+    echo "    Default: BASE_DIR/victims"
+    echo "  -p PREDICTOR_DIR, --prediction-dir PREDICTOR_DIR"
+    echo "    The path containing predictor models, if applicable."
+    echo "  -k KATAGO_BIN, --katago-bin KATAGO_BIN"
+    echo "    The path to the KataGo binary."
+    echo "    Default: '/engines/KataGo-custom/cpp/katago'"
+    echo "  -g GO_ATTACK_ROOT, --go-attack-root GO_ATTACK_ROOT"
+    echo "    The root directory of the go-attack repository."
+    echo "    Default: '/go_attack'"
+    echo
+    echo "Optional arguments should be specified before positional arguments."
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
-    echo "BASE_DIR is the root of the training run, containing selfplay data, models and related directories."
-    echo "PREDICTOR_DIR is the path containing predictor models, if applicable."
-    exit 0
+}
+
+VICTIM_LIST=""
+VICTIMS_DIR=""
+PREDICTOR_DIR=""
+KATAGO_BIN="/engines/KataGo-custom/cpp/katago"
+GO_ATTACK_ROOT="/go_attack"
+
+# Command line flag parsing (https://stackoverflow.com/a/33826763/4865149)
+while [ -n "${1-}" ]; do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    -v|--victim-list) VICTIM_LIST="$2"; shift 2 ;;
+    -d|--victim-dir) VICTIMS_DIR="$2"; shift 2 ;;
+    -p|--prediction-dir) PREDICTOR_DIR="$2"; shift 2 ;;
+    -k|--katago-bin) KATAGO_BIN="$2"; shift 2 ;;
+    -g|--go-attack-root) GO_ATTACK_ROOT="$2"; shift 2 ;;
+    -*) echo "Unknown parameter passed: $1"; usage; exit 1 ;;
+    *) break ;;
+  esac
+done
+
+NUM_POSITIONAL_ARGUMENTS=2
+if [ $# -ne ${NUM_POSITIONAL_ARGUMENTS} ]; then
+  echo "Wrong number of positional arguments. Expected ${NUM_POSITIONAL_ARGUMENTS}, got $#"
+  echo "Positional arguments: $@"
+  usage
+  exit 1
 fi
 
 BASE_DIR="$1"
-PREDICTOR_DIR=${2:-}
 MODELS_DIR="$BASE_DIR"/models
-VICTIMS_DIR="$BASE_DIR"/victims
-OUTPUT_DIR="$BASE_DIR"/eval
+OUTPUT_DIR="$2"
 mkdir -p "$OUTPUT_DIR"/logs
 mkdir -p "$OUTPUT_DIR"/sgfs
+
+if [ -z "$VICTIMS_DIR" ]; then
+    VICTIMS_DIR="$BASE_DIR"/victims
+fi
 
 LAST_STEP=0
 SLEEP_INTERVAL=30
@@ -26,22 +78,27 @@ do
         sleep 10
         continue
     fi
-    # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
-    VICTIM=$(ls -Art "$VICTIMS_DIR" | tail -n 1)
 
-    # Get directories in models/ in *natural sorted order* and see if any are new.
-    # This means that the numeric components of the directory names will be sorted based
-    # on their numeric value, not as strings, so early models will be evaluated first.
-    MODELS=$(ls -v "$MODELS_DIR")
+    if [[ -z "$VICTIM_LIST" ]]
+    then
+        # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
+        VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | tail -n 1)
+    fi
 
-    if [[ -z "$MODELS" || -z "$VICTIM" ]]; then
+    # Split the string VICTIM_LIST into an array victim_array:
+    # https://stackoverflow.com/a/10586169/7086623
+    IFS=', ' read -r -a victim_array <<< "${VICTIM_LIST}"
+
+    LATEST_MODEL_DIR=$(ls -v "$MODELS_DIR" | grep "\-s[0-9]\+" | tail --lines 1)
+
+    if [[ -z "$LATEST_MODEL_DIR" || -z "$VICTIM_LIST" ]]; then
         echo "Waiting for an adversary and a victim to exist..."
         sleep $SLEEP_INTERVAL
         continue
     fi
 
-    for MODEL_DIR in $MODELS; do
-        if [[ "$MODEL_DIR" =~ -s([0-9]+) ]]; then
+    for VICTIM in "${victim_array[@]}"; do
+        if [[ "$LATEST_MODEL_DIR" =~ -s([0-9]+) ]]; then
             # The first capture group is the step number
             STEP=${BASH_REMATCH[1]}
 
@@ -58,15 +115,17 @@ do
                 fi
 
                 # Run the evaluation
-                echo "Evaluating model $MODEL_DIR against victim $VICTIM_NAME"
-                /engines/KataGo-custom/cpp/katago match \
-                    -config /go_attack/configs/match-1gpu.cfg \
+                echo "Evaluating model $LATEST_MODEL_DIR against victim $VICTIM_NAME"
+                $KATAGO_BIN match \
+                    -config $GO_ATTACK_ROOT/configs/match-1gpu.cfg \
                     -config "$VICTIMS_DIR"/victim.cfg \
                     -override-config "$EXTRA_CONFIG" \
                     -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \
-                    -override-config nnModelFile1="$MODELS_DIR"/"$MODEL_DIR"/model.bin.gz \
-                    -sgf-output-dir "$OUTPUT_DIR"/sgfs/"$VICTIM_NAME"_"$MODEL_DIR" \
-                    2>&1 | tee "$OUTPUT_DIR"/logs/"$VICTIM_NAME"_"$MODEL_DIR".log
+                    -override-config botName0="victim-$VICTIM_NAME" \
+                    -override-config nnModelFile1="$MODELS_DIR"/"$LATEST_MODEL_DIR"/model.bin.gz \
+                    -override-config botName1="adv-$LATEST_MODEL_DIR" \
+                    -sgf-output-dir "$OUTPUT_DIR"/sgfs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR" \
+                    2>&1 | tee "$OUTPUT_DIR"/logs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR".log
 
                 # Update the last step
                 LAST_STEP="$STEP"

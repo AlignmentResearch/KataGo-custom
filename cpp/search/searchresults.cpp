@@ -15,6 +15,20 @@ using nlohmann::json;
 
 static const int64_t MIN_VISITS_FOR_LCB = 3;
 
+// Returns whether the move `moveLoc` should be suppressed and not selected.
+//
+// `suppressPass` should be the result of `shouldSuppressPass()`, and
+// `passAliveTerritories` should be the result of `Board::calculateArea()`.
+bool Search::shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const vector<Color>& passAliveTerritories
+) const {
+  return (suppressPass && moveLoc == Board::PASS_LOC)
+    || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
+        && playersMatch(passAliveTerritories[moveLoc], rootPla));
+}
+
 bool Search::getPlaySelectionValues(
   vector<Loc>& locs, vector<double>& playSelectionValues, double scaleMaxToAtLeast
 ) const {
@@ -70,6 +84,16 @@ bool Search::getPlaySelectionValues(
   double totalChildWeight = 0.0;
   double maxChildWeight = 0.0;
   const bool suppressPass = shouldSuppressPass(&node);
+  // AvoidPassAliveTerritory pass suppression can push the bot to start playing
+  // in its own pass-alive territory, a blatantly bad tactic. We should suppress
+  // those bad moves. More info at
+  // https://github.com/HumanCompatibleAI/KataGo-custom/issues/58
+  const bool suppressPassAliveTerritory =
+    searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory;
+  vector<Color> territories(suppressPassAliveTerritory ? Board::MAX_ARR_SIZE : 0);
+  if (suppressPassAliveTerritory) {
+    rootBoard.calculateArea(territories.data(), false, false, false, rootHistory.rules.multiStoneSuicideLegal);
+  }
 
   //Store up basic weights
   int childrenCapacity;
@@ -87,7 +111,7 @@ bool Search::getPlaySelectionValues(
     totalChildWeight += childWeight;
     if(childWeight > maxChildWeight)
       maxChildWeight = childWeight;
-    if(suppressPass && moveLoc == Board::PASS_LOC) {
+    if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
       playSelectionValues.push_back(0.0);
       if(retVisitCounts != NULL)
         (*retVisitCounts).push_back(0.0);
@@ -140,7 +164,8 @@ bool Search::getPlaySelectionValues(
 
     for(int i = 0; i<numChildren; i++) {
       const SearchNode* child = children[i].getIfAllocated();
-      if(suppressPass && child->prevMoveLoc == Board::PASS_LOC) {
+      const Loc moveLoc = child->prevMoveLoc;
+      if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
         playSelectionValues[i] = 0;
         continue;
       }
@@ -204,15 +229,21 @@ bool Search::getPlaySelectionValues(
   //If we have no children, then use the policy net directly. Only for the root, though, if calling this on any subtree
   //then just require that we have children, for implementation simplicity (since it requires that we have a board and a boardhistory too)
   //(and we also use isAllowedRootMove and avoidMoveUntilByLoc)
-  if(numChildren == 0) {
+  //We also use this branch if all of our children correspond to suppressed moves.
+  if(numChildren == 0 || *std::max_element(playSelectionValues.begin(), playSelectionValues.end()) == 0.0) {
     if(nnOutput == NULL || &node != rootNode || !allowDirectPolicyMoves)
       return false;
+    locs.clear();
+    playSelectionValues.clear();
+    numChildren = 0;
+    if(retVisitCounts != NULL)
+      (*retVisitCounts).clear();
 
     bool obeyAllowedRootMove = true;
     while(true) {
       for(int movePos = 0; movePos<policySize; movePos++) {
         Loc moveLoc = NNPos::posToLoc(movePos,rootBoard.x_size,rootBoard.y_size,nnXLen,nnYLen);
-        if(suppressPass && moveLoc == Board::PASS_LOC) {
+        if(shouldSuppressMove(moveLoc, suppressPass, territories)) {
           continue;
         }
         const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
@@ -239,9 +270,28 @@ bool Search::getPlaySelectionValues(
     }
   }
 
-  return clipAndScalePlaySelectionValues(
+  const bool clipSucceeded = clipAndScalePlaySelectionValues(
     playSelectionValues, numChildren, scaleMaxToAtLeast
   );
+  if (!clipSucceeded && (suppressPass || suppressPassAliveTerritory)) {
+    // If all play values are bad due to suppressing all the high-value moves,
+    // then just pass. (Not sure if this actually happens in practice.)
+    logger->write("WARNING: No moves found, perhaps due to move suppression. Returning pass.");
+    bool passMoveExists = false;
+    for(size_t i = 0; i < locs.size(); i++) {
+      if (locs[i] == Board::PASS_LOC) {
+        playSelectionValues[i] = 1.0;
+        passMoveExists = true;
+        break;
+      }
+    }
+    if (!passMoveExists) {
+      locs.push_back(Board::PASS_LOC);
+      playSelectionValues.push_back(1.0);
+    }
+    return true;
+  }
+  return clipSucceeded;
 }
 
 bool Search::clipAndScalePlaySelectionValues(

@@ -353,6 +353,8 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   MakeDir::make(acceptedModelsDir);
   MakeDir::make(rejectedModelsDir);
   MakeDir::make(sgfOutputDir);
+  if (victimModelsDir != "")
+    MakeDir::make(victimModelsDir);
   if(selfplayDir != "")
     MakeDir::make(selfplayDir);
 
@@ -603,7 +605,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         true /*allowRandomNet*/
     );
     if (!acceptedModelInfo.has_value()) {
-      logger.write("Error: No accepted model found in " + acceptedModelsDir);
+      logger.write("No accepted model found in " + acceptedModelsDir);
       sleep(4);
       continue;
     }
@@ -631,7 +633,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
           false /*checkDirsOnly*/
       );
       if (!victimModelInfo.has_value()) {
-        logger.write("Error: No victim model found in " + victimModelsDir);
+        logger.write("No victim model found in " + victimModelsDir);
         sleep(4);
         continue;
       }

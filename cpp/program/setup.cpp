@@ -368,9 +368,10 @@ void Setup::loadParams(
   bool applyDefaultParams
 ) {
   assert(paramss != nullptr);
-  int numBots = 1;
+  int numBots = applyDefaultParams ? 1 : paramss->size();
   if(cfg.contains("numBots"))
     numBots = cfg.getInt("numBots",1,MAX_BOT_PARAMS_FROM_CFG);
+  assert(numBots > 0);
   paramss->resize(numBots);
 
   for(int i = 0; i<numBots; i++) {

@@ -627,7 +627,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
     bool shouldAcceptTestModel = false;
     if (victimplay) {
-      const optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(
+      optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(
           logger,
           victimModelsDir,
           false /*allowRandomNet*/,
@@ -638,6 +638,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         sleep(4);
         continue;
       }
+      victimModelInfo->name = "victim-" + victimModelInfo->name;
       string victimCfgContents;
       ConfigParser victimCfg;
       if(FileUtils::exists(victimCfgReloadPath)) {

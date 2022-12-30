@@ -379,6 +379,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
 
   Setup::initializeSession(cfg);
   vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+  vector<SearchParams> originalParamss = paramss;
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
   else assert(paramss.size() == 1);
 
@@ -662,7 +663,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
           // Update `paramss` with the new victim config.
           logger.write("Old victim config:\n" + lastAcceptedModelResults.victimCfgContents);
           logger.write("Reloading with config:\n" + victimCfgContents);
-          paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+          paramss = originalParamss;
           Setup::loadParams(
               victimCfg,
               Setup::SETUP_FOR_OTHER,

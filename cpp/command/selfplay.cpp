@@ -185,6 +185,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   assert(!(victimplay && switchNetsMidGame));
 
   vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+  const vector<SearchParams> originalParamss = paramss;
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
   else assert(paramss.size() == 1);
 
@@ -481,6 +482,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &forkData,
     maxGamesTotal,
     &paramss,
+    &originalParamss,
     &baseParams,
     &paramsReloadMutex,
     &gameSeedBase,
@@ -531,7 +533,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
               if (victimCfgContents != lastVictimCfgContents) {
                 logger.write("Old victim config:\n" + lastVictimCfgContents);
                 logger.write("Reloading with config:\n" + victimCfgContents);
-                paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
+                paramss = originalParamss;
                 Setup::loadParams(
                     victimCfg,
                     Setup::SETUP_FOR_OTHER,

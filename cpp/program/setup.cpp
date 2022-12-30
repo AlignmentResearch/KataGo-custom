@@ -391,6 +391,9 @@ void Setup::loadParams(
     if(cfg.contains("searchAlgorithm"+idxStr)) params.searchAlgo = SearchParams::strToSearchAlgo(cfg.getString("searchAlgorithm"+idxStr));
     else if (cfg.contains("searchAlgorithm"))  params.searchAlgo = SearchParams::strToSearchAlgo(cfg.getString("searchAlgorithm"));
 
+    if(cfg.contains("oppVisitsOverride"+idxStr)) params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride"+idxStr, (int64_t)1, (int64_t)1 << 50);
+    else if (cfg.contains("oppVisitsOverride"))  params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride",        (int64_t)1, (int64_t)1 << 50);
+
     if(cfg.contains("canPassFirst"+idxStr)) params.canPassFirst = cfg.getBool("canPassFirst"+idxStr);
 
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);

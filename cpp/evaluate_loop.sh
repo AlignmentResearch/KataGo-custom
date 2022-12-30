@@ -82,7 +82,7 @@ do
     if [[ -z "$VICTIM_LIST" ]]
     then
         # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
-        VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | tail -n 1)
+        VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | grep "\.gz" | tail --lines 1)
     fi
 
     # Split the string VICTIM_LIST into an array victim_array:

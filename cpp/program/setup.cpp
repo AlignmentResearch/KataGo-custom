@@ -420,7 +420,7 @@ void Setup::loadParams(
     else if(cfg.contains("searchFactorAfterTwoPass"))   params.searchFactorAfterTwoPass = cfg.getDouble("searchFactorAfterTwoPass",        0.0, 1.0);
 
     if(cfg.contains("numSearchThreads"+idxStr)) params.numThreads = cfg.getInt("numSearchThreads"+idxStr, 1, 4096);
-    else if(applyDefaultParams)                 params.numThreads = cfg.getInt("numSearchThreads",        1, 4096);
+    else if(cfg.contains("numSearchThreads"))   params.numThreads = cfg.getInt("numSearchThreads",        1, 4096);
 
     if(cfg.contains("winLossUtilityFactor"+idxStr)) params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("winLossUtilityFactor"))   params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor",        0.0, 1.0);

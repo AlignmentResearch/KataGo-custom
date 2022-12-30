@@ -1684,7 +1684,13 @@ int MainCmds::gtp(const vector<string>& args) {
   engine->setOrResetBoardSize(cfg,logger,seedRand,defaultBoardXSize,defaultBoardYSize,logger.isLoggingToStderr());
 
   //If nobody specified any time limit in any way, then assume a relatively fast time control
-  if(!cfg.contains("maxPlayouts") && !cfg.contains("maxVisits") && !cfg.contains("maxTime")) {
+  if(!cfg.contains("maxPlayouts")
+      && !cfg.contains("maxPlayouts0")
+      && !cfg.contains("maxVisits")
+      && !cfg.contains("maxVisits0")
+      && !cfg.contains("maxTime")
+      && !cfg.contains("maxTime0")
+  ) {
     double mainTime = 1.0;
     double byoYomiTime = 5.0;
     int byoYomiPeriods = 5;

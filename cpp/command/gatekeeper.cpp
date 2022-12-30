@@ -662,6 +662,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
           // Update `paramss` with the new victim config.
           logger.write("Old victim config:\n" + lastAcceptedModelResults.victimCfgContents);
           logger.write("Reloading with config:\n" + victimCfgContents);
+          paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
           Setup::loadParams(
               victimCfg,
               Setup::SETUP_FOR_OTHER,

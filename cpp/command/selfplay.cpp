@@ -475,6 +475,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &gameRunner,
     &manager,
     &logger,
+    &cfg,
     switchNetsMidGame,
     &numGamesStarted,
     &forkData,
@@ -528,8 +529,9 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
               lock_guard<mutex> lock(paramsReloadMutex);
               std::string victimCfgContents = victimCfg.getAllKeyVals();
               if (victimCfgContents != lastVictimCfgContents) {
-                logger.write("Old config:\n" + lastVictimCfgContents);
+                logger.write("Old victim config:\n" + lastVictimCfgContents);
                 logger.write("Reloading with config:\n" + victimCfgContents);
+                paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
                 Setup::loadParams(
                     victimCfg,
                     Setup::SETUP_FOR_OTHER,

@@ -537,7 +537,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
                 Setup::loadParams(
                     victimCfg,
                     Setup::SETUP_FOR_OTHER,
-                    &paramss,
+                    paramss,
                     false /*applyDefaultParams*/
                 );
                 victimCfg.warnUnusedKeys(cerr, &logger);

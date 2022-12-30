@@ -667,7 +667,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
           Setup::loadParams(
               victimCfg,
               Setup::SETUP_FOR_OTHER,
-              &paramss,
+              paramss,
               false /*applyDefaultParams*/
           );
           victimCfg.warnUnusedKeys(cerr, &logger);

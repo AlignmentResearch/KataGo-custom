@@ -357,25 +357,24 @@ vector<SearchParams> Setup::loadParams(
   setup_for_t setupFor
 ) {
   vector<SearchParams> paramss;
-  loadParams(cfg, setupFor, &paramss);
+  loadParams(cfg, setupFor, paramss);
   return paramss;
 }
 
 void Setup::loadParams(
   ConfigParser& cfg,
   setup_for_t setupFor,
-  vector<SearchParams>* paramss,
+  vector<SearchParams>& paramss,
   bool applyDefaultParams
 ) {
-  assert(paramss != nullptr);
-  int numBots = applyDefaultParams ? 1 : paramss->size();
+  int numBots = applyDefaultParams ? 1 : paramss.size();
   if(cfg.contains("numBots"))
     numBots = cfg.getInt("numBots",1,MAX_BOT_PARAMS_FROM_CFG);
   assert(numBots > 0);
-  paramss->resize(numBots);
+  paramss.resize(numBots);
 
   for(int i = 0; i<numBots; i++) {
-    SearchParams& params = (*paramss)[i];
+    SearchParams& params = paramss[i];
 
     string idxStr = Global::intToString(i);
 

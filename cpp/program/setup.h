@@ -69,7 +69,7 @@ namespace Setup {
   void loadParams(
     ConfigParser& cfg,
     setup_for_t setupFor,
-    std::vector<SearchParams>* paramss,
+    std::vector<SearchParams>& paramss,
     bool applyDefaultParams = true
   );
   SearchParams loadSingleParams(

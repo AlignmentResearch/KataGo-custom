@@ -476,7 +476,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &gameRunner,
     &manager,
     &logger,
-    &cfg,
     switchNetsMidGame,
     &numGamesStarted,
     &forkData,

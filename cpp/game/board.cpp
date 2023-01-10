@@ -469,7 +469,7 @@ bool Board::isLegalIgnoringKo(Loc loc, Player pla, bool isMultiStoneSuicideLegal
 }
 
 //Check if this location contains a simple eye for the specified player.
-bool Board::isSimpleEye(Loc loc, Player pla) const
+bool Board::isSimpleEye(Loc loc, Player pla, bool allowFalseEye) const
 {
   if(colors[loc] != C_EMPTY)
     return false;
@@ -484,6 +484,10 @@ bool Board::isSimpleEye(Loc loc, Player pla) const
       against_wall = true;
     else if(colors[adj] != pla)
       return false;
+  }
+
+  if (allowFalseEye) {
+    return true;
   }
 
   //Check that opponent does not own too many diagonal points

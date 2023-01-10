@@ -626,9 +626,11 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           if(!rootHistory.isLegalModuloPassing(rootBoard, loc, rootPla))
             continue;
 
-          // Found a legal move that isn't in our own pass-alive territory.
-          // This means we should not pass, i.e. passing should be suppressed.
-          if(!playersMatch(territories[loc], rootPla)) {
+          // Found a legal move that isn't in our own pass-alive territory,
+          // isn't one of our eyes, and won't put the location in atari.
+          if(!playersMatch(territories[loc], rootPla)
+              && !rootBoard.isSimpleEye(loc, rootPla, true /*allowFalseEye*/)
+              && rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) != 1) {
             return true;
           }
         }

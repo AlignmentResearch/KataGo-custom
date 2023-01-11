@@ -26,7 +26,9 @@ bool Search::shouldSuppressMove(
 ) const {
   return (suppressPass && moveLoc == Board::PASS_LOC)
     || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
-        && playersMatch(passAliveTerritories[moveLoc], rootPla));
+        && (playersMatch(passAliveTerritories[moveLoc], rootPla)
+          || rootBoard.isSimpleEye(moveLoc, rootPla, true /*allowFalseEye*/)
+          || rootBoard.getNumLibertiesAfterPlay(moveLoc, rootPla, 2) <= 1));
 }
 
 bool Search::getPlaySelectionValues(
@@ -630,7 +632,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           // isn't one of our eyes, and won't put the location in atari.
           if(!playersMatch(territories[loc], rootPla)
               && !rootBoard.isSimpleEye(loc, rootPla, true /*allowFalseEye*/)
-              && rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) != 1) {
+              && rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) > 1) {
             return true;
           }
         }

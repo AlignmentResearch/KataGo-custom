@@ -27,8 +27,9 @@ bool Search::shouldSuppressMove(
   return (suppressPass && moveLoc == Board::PASS_LOC)
     || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
         && (playersMatch(passAliveTerritories[moveLoc], rootPla)
-          || rootBoard.isSimpleEye(moveLoc, rootPla, true /*allowFalseEye*/)
-          || rootBoard.getNumLibertiesAfterPlay(moveLoc, rootPla, 2) <= 1));
+          || rootBoard.isSimpleEye(moveLoc, rootPla)
+          || (rootBoard.getNumLibertiesAfterPlay(moveLoc, rootPla, 2) <= 1
+              && !rootBoard.wouldBeCapture(moveLoc, rootPla))));
 }
 
 bool Search::getPlaySelectionValues(
@@ -631,8 +632,9 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           // Found a legal move that isn't in our own pass-alive territory,
           // isn't one of our eyes, and won't put the location in atari.
           if(!playersMatch(territories[loc], rootPla)
-              && !rootBoard.isSimpleEye(loc, rootPla, true /*allowFalseEye*/)
-              && rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) > 1) {
+              && !rootBoard.isSimpleEye(loc, rootPla)
+              && (rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) > 1
+                  || rootBoard.wouldBeCapture(loc, rootPla))) {
             return true;
           }
         }

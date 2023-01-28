@@ -26,10 +26,7 @@ bool Search::shouldSuppressMove(
 ) const {
   return (suppressPass && moveLoc == Board::PASS_LOC)
     || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
-        && (playersMatch(passAliveTerritories[moveLoc], rootPla)
-          || rootBoard.isSimpleEye(moveLoc, rootPla)
-          || (rootBoard.getNumLibertiesAfterPlay(moveLoc, rootPla, 2) <= 1
-              && !rootBoard.wouldBeCapture(moveLoc, rootPla))));
+        && playersMatch(passAliveTerritories[moveLoc], rootPla));
 }
 
 bool Search::getPlaySelectionValues(

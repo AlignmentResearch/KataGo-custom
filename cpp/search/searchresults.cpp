@@ -630,8 +630,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
           // isn't one of our eyes, and won't put the location in atari.
           if(!playersMatch(territories[loc], rootPla)
               && !rootBoard.isSimpleEye(loc, rootPla)
-              && (rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) > 1
-                  || rootBoard.wouldBeCapture(loc, rootPla))) {
+              && rootBoard.getNumLibertiesAfterPlay(loc, rootPla, 2) > 1) {
             return true;
           }
         }

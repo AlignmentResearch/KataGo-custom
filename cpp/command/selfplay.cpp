@@ -191,6 +191,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   SearchParams baseParams = paramss[0];
   mutex paramsReloadMutex;
+  std::string lastVictimCfgContents = "";
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
@@ -502,7 +503,6 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     string prevModelName;
     Rand thisLoopSeedRand;
     std::string victimCfgReloadPath = nnVictimPath + "/victim.cfg";
-    std::string lastVictimCfgContents = "";
     std::string logPrefix = "Game loop thread " + to_string(threadIdx) + ": ";
     while(true) {
       if(shouldStop.load())

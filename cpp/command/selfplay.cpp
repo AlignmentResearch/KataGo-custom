@@ -485,6 +485,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &originalParamss,
     &baseParams,
     &paramsReloadMutex,
+    &lastVictimCfgContents,
     &gameSeedBase,
     &victimplay,
     &reloadVictims,

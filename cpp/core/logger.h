@@ -56,7 +56,6 @@ class Logger {
   std::vector<std::ostream*> ostreams;
   std::vector<std::ofstream*> files;
   std::vector<LogBuf*> logBufs;
-  std::string logHeader;
   std::mutex mutex;
 
   bool isDisabled;

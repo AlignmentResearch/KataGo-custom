@@ -55,7 +55,7 @@ static bool endsWithAnySuffix(const string& path, const vector<string>& suffixes
   return false;
 }
 
-bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string& modelName, string& modelFile, string& modelDir, time_t& modelTime) {
+bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string& modelName, string& modelFile, string& modelDir, time_t& modelTime, bool checkDirsOnly) {
   namespace gfs = ghc::filesystem;
   (void)logger;
 
@@ -64,6 +64,9 @@ bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string&
   gfs::path latestPath;
   for(const auto& dirEntry: gfs::recursive_directory_iterator(gfs::u8path(modelsDir))) {
     gfs::path filePath = dirEntry.path();
+    if(checkDirsOnly && !gfs::is_directory(filePath))
+      continue;
+  
     if(gfs::is_regular_file(filePath) && endsWithAnySuffix(filePath.filename().u8string(), ACCEPTABLE_MODEL_SUFFIXES)) {
       gfs::file_time_type thisTime = gfs::last_write_time(filePath);
       if(!hasLatestTime || thisTime > latestTime) {

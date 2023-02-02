@@ -445,15 +445,17 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     if (acceptedModelInfo.time <= testModelInfo.time || noAutoRejectOldModels) {
       return false;
     }
-
-    if(acceptedModelTime > testModelTime && !noAutoRejectOldModels) {
-      string renameDest = rejectedModelsDir + "/" + testModelName;
-      logger.write("Rejecting " + testModelDir + " automatically since older than best accepted model");
-      logger.write("Moving " + testModelDir + " to " + renameDest);
-      FileUtils::rename(testModelDir,renameDest);
-      return NULL;
-    }
-
+    string renameDest = rejectedModelsDir + "/" + testModelInfo.name;
+    logger.write("Rejecting " + testModelInfo.name + " automatically since older than best accepted model");
+    logger.write("Moving " + testModelInfo.dir + " to " + renameDest);
+    FileUtils::rename(testModelInfo.dir,renameDest);
+    return true;
+  };
+  const auto loadNNEvaluator = [&logger,numGameThreads,minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed,&cfg](
+      const string& modelName,
+      const string& modelFile,
+      int numSearchThreads
+  ) -> NNEvaluator* {
     // * 2 + 16 just in case to have plenty of room
     const int maxConcurrentEvals = numSearchThreads * numGameThreads * 2 + 16;
     const int expectedConcurrentEvals = numSearchThreads * numGameThreads;

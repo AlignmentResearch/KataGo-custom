@@ -45,6 +45,9 @@ struct SearchParams {
   std::string getSearchAlgoAsStr() const;
   bool usingAdversarialAlgo() const;
 
+  // Overrides the number of visits we use in AMCTS-R to simulate the victim.
+  std::optional<int> oppVisitsOverride;
+
   // If non-none, determines whether to set the weight of opponent nodes to zero.
   // By default, this will be false for MCTS and true for adversarial algorithms.
   std::optional<bool> oppWeightZeroingOverride;

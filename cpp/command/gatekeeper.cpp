@@ -498,16 +498,6 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       sgfOut = new ofstream();
       FileUtils::open(*sgfOut, sgfOutputDirThisModel + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".sgfs");
     }
-    NetAndStuff* newNet = new NetAndStuff(
-      cfg,
-      acceptedModelName,
-      testModelName,
-      testModelFile,
-      testModelDir,
-      acceptedNNEval,
-      testNNEval,
-      sgfOut
-    );
     NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, testModelInfo.dir, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
 
     //Check for unused config keys

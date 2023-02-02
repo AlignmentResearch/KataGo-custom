@@ -70,7 +70,7 @@ namespace {
     std::atomic<bool> terminated;
 
   public:
-    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, ofstream* sOut)
+    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
       :modelNameBaseline(nameB),
        modelNameCandidate(nameC),
        nnEvalBaseline(nevalB),
@@ -78,7 +78,6 @@ namespace {
        searchParamsBaseline(searchParamsB),
        searchParamsCandidate(searchParamsC),
        matchPairer(NULL),
-       testModelFile(tModelFile),
        testModelDir(tModelDir),
        finishedGameQueue(),
        numGameThreads(0),

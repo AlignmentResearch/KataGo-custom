@@ -5,7 +5,7 @@ namespace MainCmds {
   int benchmark(const std::vector<std::string>& args);
   int contribute(const std::vector<std::string>& args);
   int evalsgf(const std::vector<std::string>& args);
-  int gatekeeper(const std::vector<std::string>& args);
+  int gatekeeper(const std::vector<std::string>& args, bool victimplay = false);
   int genconfig(const std::vector<std::string>& args, const std::string& firstCommand);
   int gtp(const std::vector<std::string>& args);
   int tuner(const std::vector<std::string>& args);

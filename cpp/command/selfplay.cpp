@@ -188,10 +188,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   const vector<SearchParams> originalParamss = paramss;
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
   else assert(paramss.size() == 1);
-
   SearchParams baseParams = paramss[0];
-  mutex paramsReloadMutex;
   std::string lastVictimCfgContents = "";
+  // Multithreaded use of paramss and lastVictimCfgContents should be guarded
+  // with paramsReloadMutex to avoid races.
+  mutex paramsReloadMutex;
 
   //Initialize object for randomizing game settings and running games
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);

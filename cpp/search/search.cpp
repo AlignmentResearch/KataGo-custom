@@ -1027,6 +1027,7 @@ void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeP
   }
   assert(maxValue > 0.0);
 
+  // Special case for zero temperature to avoid division by zero.
   if (temperature == 0.0) {
     for(int i = 0; i<numRelativeProbs; i++) {
       buf[i] = 0.0;

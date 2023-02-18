@@ -1018,27 +1018,28 @@ class Model:
     self.blocks = []
 
     block_kind = config["block_kind"]
+    conv_size = config.get("conv_size", 3)
 
     for i in range(len(block_kind)):
       (name,kind) = block_kind[i]
       if kind == "regular":
         residual = self.res_conv_block(
-          name,trunk,mask,mask_sum,diam=3,main_channels=trunk_num_channels,mid_channels=mid_num_channels)
+          name,trunk,mask,mask_sum,diam=conv_size,main_channels=trunk_num_channels,mid_channels=mid_num_channels)
         trunk = self.merge_residual(name,trunk,residual)
-        self.blocks.append(("ordinary_block",name,3,trunk_num_channels,mid_num_channels))
+        self.blocks.append(("ordinary_block",name,conv_size,trunk_num_channels,mid_num_channels))
       elif kind == "dilated":
         residual = self.dilated_res_conv_block(
-          name,trunk,mask,mask_sum,diam=3,main_channels=trunk_num_channels,mid_channels=regular_num_channels, dilated_mid_channels=dilated_num_channels, dilation=2
+          name,trunk,mask,mask_sum,diam=conv_size,main_channels=trunk_num_channels,mid_channels=regular_num_channels, dilated_mid_channels=dilated_num_channels, dilation=2
         )
         trunk = self.merge_residual(name,trunk,residual)
-        self.blocks.append(("dilated_block",name,3,trunk_num_channels,regular_num_channels,dilated_num_channels,3))
+        self.blocks.append(("dilated_block",name,conv_size,trunk_num_channels,regular_num_channels,dilated_num_channels,3))
       elif kind == "gpool":
         residual = self.global_res_conv_block(
           name,trunk,mask,mask_sum,mask_sum_hw,mask_sum_hw_sqrt,
-          diam=3,main_channels=trunk_num_channels,mid_channels=regular_num_channels, global_mid_channels=gpool_num_channels
+          diam=conv_size,main_channels=trunk_num_channels,mid_channels=regular_num_channels, global_mid_channels=gpool_num_channels
         )
         trunk = self.merge_residual(name,trunk,residual)
-        self.blocks.append(("gpool_block",name,3,trunk_num_channels,regular_num_channels,gpool_num_channels))
+        self.blocks.append(("gpool_block",name,conv_size,trunk_num_channels,regular_num_channels,gpool_num_channels))
       else:
         assert(False)
 

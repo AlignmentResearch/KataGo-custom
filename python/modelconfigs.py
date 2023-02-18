@@ -192,6 +192,22 @@ b20c256 = {
   "v2_size":112
 }
 
+b20c256conv5 = {
+  ...b20c256,
+  "conv_size": 5
+}
+
+b20c256conv7 = {
+  ...b20c256,
+  "conv_size": 7
+}
+
+b20c256conv9 = {
+  ...b20c256,
+  "conv_size": 9
+}
+
+
 b30c320 = {
   "version":10,
   "support_japanese_rules":True,
@@ -454,6 +470,9 @@ config_of_name = {
   "b10c128": b10c128,
   "b15c192": b15c192,
   "b20c256": b20c256,
+  "b20c256conv5": b20c256conv5,
+  "b20c256conv7": b20c256conv7,
+  "b20c256conv9": b20c256conv9,
   "b30c320": b30c320,
   "b40c256": b40c256,
   "b40c384": b40c384,

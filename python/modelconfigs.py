@@ -193,17 +193,17 @@ b20c256 = {
 }
 
 b20c256conv5 = {
-  ...b20c256,
+  **b20c256,
   "conv_size": 5
 }
 
 b20c256conv7 = {
-  ...b20c256,
+  **b20c256,
   "conv_size": 7
 }
 
 b20c256conv9 = {
-  ...b20c256,
+  **b20c256,
   "conv_size": 9
 }
 

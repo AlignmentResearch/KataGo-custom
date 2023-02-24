@@ -505,11 +505,11 @@ Search::Search(
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
     assert(oppNNEval != nullptr);
-    assert(!oppParams.usingAdversarialAlgo());
 
     oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
       ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
       : 1;
+    assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
     oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
     oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
   }

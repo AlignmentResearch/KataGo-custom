@@ -1448,3 +1448,9 @@ for name, base_config in list(config_of_name.items()):
   config["intermediate_head_blocks"] = len(config["block_kind"])
   config["trunk_normless"] = True
   config_of_name[name+"-bnh"] = config
+
+for name, base_config in list(config_of_name.items()):
+    config = base_config.copy()
+    for size in [5,7,9]:
+        config["conv_kernel_size"] = size
+        config_of_name[f"{name}-conv{size}"]

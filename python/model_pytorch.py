@@ -351,12 +351,12 @@ class KataValueHeadGPool(torch.nn.Module):
         return out
 
 class KataConvAndGPool(torch.nn.Module):
-    def __init__(self, c_in, c_out, c_gpool, config, activation):
+    def __init__(self, c_in, c_out, c_gpool, config, activation, kernel_size):
         super(KataConvAndGPool, self).__init__()
         self.norm_kind = config["norm_kind"]
         self.activation = activation
-        self.conv1r = torch.nn.Conv2d(c_in, c_out, kernel_size=3, padding="same", bias=False)
-        self.conv1g = torch.nn.Conv2d(c_in, c_gpool, kernel_size=3, padding="same", bias=False)
+        self.conv1r = torch.nn.Conv2d(c_in, c_out, kernel_size=kernel_size, padding="same", bias=False)
+        self.conv1g = torch.nn.Conv2d(c_in, c_gpool, kernel_size=kernel_size, padding="same", bias=False)
         self.normg = NormMask(
             c_gpool,
             config=config,
@@ -574,10 +574,11 @@ class NormActConv(torch.nn.Module):
 
         if c_gpool is not None:
             if config["use_attention_pool"]:
-                self.convpool = KataConvAndAttentionPool(c_in=c_in, c_out=c_out, c_gpool=c_gpool, config=config, activation=activation)
+                assert kernel_size == 3, "Not yet implemented for kernel_size != 3"
+                self.convpool = KataConvAndAttentionPool(c_in=c_in, c_out=c_out, c_gpool=c_gpool, config=config, activation=activation, kernel_size=kernel_size)
                 self.conv = None
             else:
-                self.convpool = KataConvAndGPool(c_in=c_in, c_out=c_out, c_gpool=c_gpool, config=config, activation=activation)
+                self.convpool = KataConvAndGPool(c_in=c_in, c_out=c_out, c_gpool=c_gpool, config=config, activation=activation, kernel_size=kernel_size)
                 self.conv = None
         else:
             self.conv = torch.nn.Conv2d(c_in, c_out, kernel_size=kernel_size, padding="same", bias=False)
@@ -658,6 +659,7 @@ class ResBlock(torch.nn.Module):
         c_gpool: Optional[int],
         config: modelconfigs.ModelConfig,
         activation: str,
+        kernel_size: int,
     ):
         super(ResBlock, self).__init__()
         self.name = name
@@ -668,7 +670,7 @@ class ResBlock(torch.nn.Module):
             c_gpool=c_gpool,
             config=config,
             activation=activation,
-            kernel_size=3,
+            kernel_size=kernel_size,
             fixup_use_gamma=False,
         )
         self.normactconv2 = NormActConv(
@@ -677,7 +679,7 @@ class ResBlock(torch.nn.Module):
             c_gpool=None,
             config=config,
             activation=activation,
-            kernel_size=3,
+            kernel_size=kernel_size,
             fixup_use_gamma=True,
         )
 
@@ -1297,6 +1299,7 @@ class Model(torch.nn.Module):
         self.c_v1 = config["v1_num_channels"]
         self.c_v2 = config["v2_size"]
         self.c_sv2 = config["sbv2_num_channels"]
+        self.conv_kernel_size = config.get("conv_kernel_size", 3)
         self.num_scorebeliefs = config["num_scorebeliefs"]
         self.num_total_blocks = len(self.block_kind)
         self.pos_len = pos_len
@@ -1330,6 +1333,9 @@ class Model(torch.nn.Module):
                 use_gpool_this_block = True
                 block_kind = block_kind[:-5]
 
+            if block_kind != "regular":
+                assert kernel_size == 3, f"{block_kind} not yet implemented with kernel_size != 3"
+
             if block_kind == "regular":
                 self.blocks.append(ResBlock(
                     name=block_name,
@@ -1338,6 +1344,7 @@ class Model(torch.nn.Module):
                     c_gpool=(self.c_gpool if use_gpool_this_block else None),
                     config=self.config,
                     activation=self.activation,
+                    kernel_size=conv_kernel_size,
                 ))
             elif block_kind == "bottle1" or block_kind == "bottle":
                 self.blocks.append(BottleneckResBlock(

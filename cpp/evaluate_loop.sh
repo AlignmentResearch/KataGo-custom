@@ -68,7 +68,7 @@ if [ -z "$VICTIMS_DIR" ]; then
     VICTIMS_DIR="$BASE_DIR"/victims
 fi
 
-LAST_STEP=0
+LAST_STEP=-1
 SLEEP_INTERVAL=30
 while true
 do

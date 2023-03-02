@@ -548,11 +548,23 @@ void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeP
   assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
 
   double maxValue = 0.0;
+  int maxValueIndex = 0;
   for(int i = 0; i<numRelativeProbs; i++) {
-    if(relativeProbs[i] > maxValue)
+    if(relativeProbs[i] > maxValue) {
       maxValue = relativeProbs[i];
+      maxValueIndex = i;
+    }
   }
   assert(maxValue > 0.0);
+
+  // Special case for zero temperature to avoid division by zero.
+  if (temperature == 0.0) {
+    for(int i = 0; i<numRelativeProbs; i++) {
+      buf[i] = 0.0;
+    }
+    buf[maxValueIndex] = 1.0;
+    return;
+  }
 
   double logMaxValue = log(maxValue);
   double sum = 0.0;

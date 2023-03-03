@@ -513,8 +513,7 @@ Search::Search(
       // we'll have infinite recursion.
       assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
       oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
-      SearchParams oppOppParams = oppParams.usingAdversarialAlgo() ? searchParams : SearchParams();
-      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model", oppOppParams);
+      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
     }
   }
 

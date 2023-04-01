@@ -258,7 +258,12 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   bool reloadVictims = false;
 
   if(victimplay) {
-    if(FileUtils::isDirectory(nnVictimPath)) {
+    // If victim path doesn't exist yet and isn't a gzip file, assume it's a
+    // directory that has not yet been created yet.
+    const bool isDirectory =
+      (!FileUtils::exists(nnVictimPath) && !Global::isSuffix(nnVictimPath, ".gz"))
+      || FileUtils::isDirectory(nnVictimPath);
+    if(isDirectory) {
       reloadVictims = true;
     } else {
       singleVictim.reset(loadNN("victim", nnVictimPath));
@@ -403,6 +408,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     time_t modelTime;
 
     // Keep trying to load the model until we succeed
+    while (!FileUtils::exists(modelPath)) {
+      loadLogger.write(humanModelName + " model path " + modelPath + " does not exist yet, waiting 30 sec...");
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
     while (
       !LoadModel::findLatestModel(modelPath, loadLogger, modelName, modelFile, modelDir, modelTime, false) ||
       (!allowRandom && modelName == "random")

@@ -284,7 +284,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
-    [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
+    [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,selfplayProportion,
      &loadNN,
      &modelsDir,&outputDir,&victimOutputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
@@ -373,8 +373,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
     tdataWriter->forVictimplay = victimplay;
     vdataWriter->forVictimplay = victimplay;
-    tDataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
-    vDataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
+    tdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
+    vdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
 
     tdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
     vdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
@@ -497,6 +497,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &manager,
     &logger,
     switchNetsMidGame,
+    selfplayProportion,
     &numGamesStarted,
     &forkData,
     maxGamesTotal,
@@ -652,8 +653,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
             "Game #" + Global::int64ToString(gameIdx) +
             " selfplay W - B score: " +
             Global::floatToString(gameData->finalWhiteMinusBlackScore()) +
-            "; adv_" + advSearchParams.getSearchAlgoAsStr() +
-                "@" + Global::intToString(advSearchParams.maxVisits)
+            "; adv_" + curAdvSearchParams.getSearchAlgoAsStr() +
+                "@" + Global::intToString(curAdvSearchParams.maxVisits)
           );
         }
       } else {

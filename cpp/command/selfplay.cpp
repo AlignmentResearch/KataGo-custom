@@ -364,8 +364,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
     );
 
-    tdataWriter->forVictimPlay = victimplay;
-    vdataWriter->forVictimPlay = victimplay;
+    tdataWriter->forVictimplay = victimplay;
+    vdataWriter->forVictimplay = victimplay;
+    tDataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
+    vDataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
 
     tdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
     vdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");

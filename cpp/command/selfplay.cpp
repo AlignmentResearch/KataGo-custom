@@ -184,6 +184,13 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
   assert(!(victimplay && switchNetsMidGame));
 
+  // Proportion of selfplay games to include during victimplay training.
+  const bool selfplayProportion =
+    cfg.contains("selfplayProportion") ?
+    cfg.getDouble("selfplayProportion") :
+    0.0;
+  assert(victimplay || selfplayProportion == 0.0);
+
   vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
   const vector<SearchParams> originalParamss = paramss;
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
@@ -617,13 +624,36 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       } else if(victimplay) {
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
-        gameData = runOneVictimplayGame(
-          curVictimNNEval.get(), nnEval,
-          curVictimSearchParams, curAdvSearchParams,
-          gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
-          gameRunner, shouldStopFunc, logger,
-          gameIdx, seed, curPredictorNNEval.get()
-        );
+        if (thisLoopSeedRand.nextDouble() >= selfplayProportion) {
+          gameData = runOneVictimplayGame(
+            curVictimNNEval.get(), nnEval,
+            curVictimSearchParams, curAdvSearchParams,
+            gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
+            gameRunner, shouldStopFunc, logger,
+            gameIdx, seed, curPredictorNNEval.get()
+          );
+        } else {  // selfplay game
+          MatchPairer::BotSpec botSpecB;
+          botSpecB.botIdx = 1;
+          botSpecB.botName = nnEval->getModelName();
+          botSpecB.nnEval = nnEval;
+          botSpecB.baseParams = curAdvSearchParams;
+          MatchPairer::BotSpec botSpecW = botSpecB;
+          gameData = gameRunner->runGame(
+            seed, botSpecB, botSpecW, forkData, NULL, logger,
+            shouldStopFunc,
+            nullptr,
+            nullptr,
+            nullptr
+          );
+          logger.write(
+            "Game #" + Global::int64ToString(gameIdx) +
+            " selfplay W - B score: " +
+            Global::floatToString(gameData->finalWhiteMinusBlackScore()) +
+            "; adv_" + advSearchParams.getSearchAlgoAsStr() +
+                "@" + Global::intToString(advSearchParams.maxVisits)
+          );
+        }
       } else {
         manager->countOneGameStarted(nnEval);
         MatchPairer::BotSpec botSpecB;

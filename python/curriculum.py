@@ -190,16 +190,10 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     return win_score
 
 
-def get_name_to_colors(game: sgf.Sgf_game) -> Dict[str, Color]:
-    """Returns dict mapping player name to color."""
-    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
-    return {game.get_player_name(color.value.lower()): color for color in colors}
-
-
 def is_selfplay_game(game: sgf.Sgf_game) -> bool:
     """Returns true if the game is a selfplay game for the adversary."""
-    player_names = list(get_name_to_colors(game).keys())
-    assert len(player_names) == 2
+    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    player_names = [game.get_player_name(color.value.lower()) for color in colors]
     if player_names[0] != player_names[1]:
         return False
     if is_name_victim(player_names[0]):
@@ -211,7 +205,10 @@ def is_selfplay_game(game: sgf.Sgf_game) -> bool:
 
 def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, Color, Color]:
     """Returns a tuple of victim name, victim color and adversary color."""
-    name_to_colors = get_name_to_colors(game)
+    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    name_to_colors: Mapping[str, Color] = {
+        game.get_player_name(color.value.lower()): color for color in colors
+    }
     victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
     if len(victim_names) != 1:
         raise ValueError("Found '{len(victim_names)}' != 1 victims: %s", victim_names)

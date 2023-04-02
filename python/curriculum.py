@@ -198,7 +198,7 @@ def get_name_to_colors(game: sgf.Sgf_game) -> Dict[str, Color]:
 
 def is_selfplay_game(game: sgf.Sgf_game) -> bool:
     """Returns true if the game is a selfplay game for the adversary."""
-    player_names = get_name_to_colors(game).keys()
+    player_names = list(get_name_to_colors(game).keys())
     assert len(player_names) == 2
     if player_names[0] != player_names[1]:
         return False

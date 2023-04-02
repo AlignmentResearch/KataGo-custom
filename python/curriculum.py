@@ -190,12 +190,28 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
     return win_score
 
 
+def get_name_to_colors(game: sgf.Sgf_game) -> Dict[str, Color]:
+    """Returns dict mapping player name to color."""
+    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    return {game.get_player_name(color.value.lower()): color for color in colors}
+
+
+def is_selfplay_game(game: sgf.Sgf_game) -> bool:
+    """Returns true if the game is a selfplay game for the adversary."""
+    player_names = get_name_to_colors(game).keys()
+    assert len(player_names) == 2
+    if player_names[0] != player_names[1]:
+        return False
+    if is_name_victim(player_names[0]):
+        return False
+    if get_max_visits(game, Color.BLACK) != get_max_visits(game, Color.WHITE):
+        return False
+    return True
+
+
 def get_victim_adv_colors(game: sgf.Sgf_game) -> Tuple[str, Color, Color]:
     """Returns a tuple of victim name, victim color and adversary color."""
-    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
-    name_to_colors: Mapping[str, Color] = {
-        game.get_player_name(color.value.lower()): color for color in colors
-    }
+    name_to_colors = get_name_to_colors(game)
     victim_names = [name for name in name_to_colors.keys() if is_name_victim(name)]
     if len(victim_names) != 1:
         raise ValueError("Found '{len(victim_names)}' != 1 victims: %s", victim_names)
@@ -220,13 +236,16 @@ def get_max_visits(game: sgf.Sgf_game, color: Color) -> int:
     return int(visit_num[1])
 
 
-def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
+def parse_game(sgf_str: str) -> Optional[sgf.Sgf_game]:
+    """Parses SGF string, or returns None if the SGF is invalid."""
     try:
-        game = sgf.Sgf_game.from_string(sgf_str)
+        return sgf.Sgf_game.from_string(sgf_str)
     except IndexError:
         logging.warning("Error parsing game: '%s'", sgf_str, exc_info=True)
         return None
 
+
+def get_game_info(game: sgf.Sgf_game) -> Optional[AdvGameInfo]:
     game_hash = get_game_hash(game)
     if game_hash is None:
         return None
@@ -562,6 +581,7 @@ class Curriculum:
 
         useful_files = set()
         cur_games = []
+        num_selfplay_games = 0
         for sgf_file in all_sgfs:
             if sgf_file not in self.game_hashes:
                 self.game_hashes[sgf_file] = set()
@@ -574,7 +594,13 @@ class Curriculum:
                     if not line.endswith("\n"):  # game not fully written
                         continue
                     sgf_string = line.strip()
-                    game_stat = get_game_info(sgf_string)
+                    game = parse_game(sgf_string)
+                    if game is None:
+                        continue
+                    if is_selfplay_game(game):
+                        num_selfplay_games += 1
+                        continue
+                    game_stat = get_game_info(game)
                     if game_stat is None:
                         continue
                     if game_stat.board_size != Curriculum.BOARD_SIZE_FILTER:
@@ -591,7 +617,9 @@ class Curriculum:
 
         # now have cur_games sorted from newer to older
         logging.info(
-            "Got {} new games from {} files".format(len(cur_games), len(useful_files)),
+            "Got {} new games from {} files, ignored {} selfplay games".format(
+                len(cur_games), len(useful_files), num_selfplay_games
+            ),
         )
         for f in useful_files:
             logging.info("Useful SGF file: '{}'".format(str(f)))

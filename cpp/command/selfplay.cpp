@@ -185,7 +185,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   assert(!(victimplay && switchNetsMidGame));
 
   // Proportion of selfplay games to include during victimplay training.
-  const bool selfplayProportion =
+  const double selfplayProportion =
     cfg.contains("selfplayProportion") ?
     cfg.getDouble("selfplayProportion", 0.0, 1.0) :
     0.0;

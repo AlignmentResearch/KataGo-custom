@@ -616,11 +616,12 @@ class Curriculum:
                     useful_files.add(sgf_file)
 
         # now have cur_games sorted from newer to older
-        logging.info(
-            "Got {} new games from {} files, ignored {} selfplay games".format(
-                len(cur_games), len(useful_files), num_selfplay_games
-            ),
+        games_log_message = (
+            f"Got {len(cur_games)} new games from {len(useful_files)} files"
         )
+        if num_selfplay_games > 0:
+            games_log_message += f", ignored {num_selfplay_games} selfplay games"
+        logging.info(games_log_message)
         for f in useful_files:
             logging.info("Useful SGF file: '{}'".format(str(f)))
 

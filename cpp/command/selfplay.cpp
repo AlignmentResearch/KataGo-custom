@@ -187,7 +187,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   // Proportion of selfplay games to include during victimplay training.
   const bool selfplayProportion =
     cfg.contains("selfplayProportion") ?
-    cfg.getDouble("selfplayProportion") :
+    cfg.getDouble("selfplayProportion", 0.0, 1.0) :
     0.0;
   assert(victimplay || selfplayProportion == 0.0);
 
@@ -627,7 +627,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       } else if(victimplay) {
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
-        if (thisLoopSeedRand.nextDouble() >= selfplayProportion) {
+        if (thisLoopSeedRand.nextDouble() >= selfplayProportion) {  // victimplay game
           gameData = runOneVictimplayGame(
             curVictimNNEval.get(), nnEval,
             curVictimSearchParams, curAdvSearchParams,

@@ -192,7 +192,7 @@ def get_game_score(game: sgf.Sgf_game) -> Optional[float]:
 
 def is_selfplay_game(game: sgf.Sgf_game) -> bool:
     """Returns true if the game is a selfplay game for the adversary."""
-    colors: Sequence[Color] = (Color.BLACK, Color.WHITE)
+    colors = (Color.BLACK, Color.WHITE)
     player_names = [game.get_player_name(color.value.lower()) for color in colors]
     if player_names[0] != player_names[1]:
         return False

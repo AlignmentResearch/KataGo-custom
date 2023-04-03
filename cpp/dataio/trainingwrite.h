@@ -271,7 +271,7 @@ class TrainingDataWriter {
   int64_t numRowsInBuffer() const;
 
   bool forVictimplay = false;
-  // Allow selfplay games to occur even when forVictimPlay is true.
+  // If true, allows selfplay games to occur even when forVictimPlay is true.
   bool allowSelfplayInVictimplay = false;
   bool useAuxPolicyTarget = true;
 

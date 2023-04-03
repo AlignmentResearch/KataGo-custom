@@ -996,7 +996,8 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   Player victimPlayer = getVictimPlayerColor(data);
   const bool isVictimplayGame = forVictimplay && victimPlayer != P_NONE;
   if (forVictimplay) {
-    // When doing victimplay, exactly one side should be a victim.
+    // When doing victimplay, exactly one side should be a victim unless
+    // selfplay games are enabled.
     assert(isVictimplayGame || allowSelfplayInVictimplay);
   }
 

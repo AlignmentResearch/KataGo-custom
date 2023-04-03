@@ -249,7 +249,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         return AdvGameInfo(
             board_size=game.get_size(),
             victim_name="",
-            victim_visits=None,
+            victim_visits=0,
             adv_visits=get_max_visits(game, Color.BLACK),
             game_hash=game_hash,
             winner=None,

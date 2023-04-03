@@ -402,9 +402,10 @@ void Search::selectBestChildToDescend(
       const vector<double>& oppPlaySelectionValues = node.oppPlaySelectionValues.value();
       const vector<Loc>& oppLocs = node.oppLocs.value();
       assert(oppPlaySelectionValues.size() == oppLocs.size());
-      const double oppTemp = opp.interpolateEarly(
-        oppParams.chosenMoveTemperatureHalflife, oppParams.rootPolicyTemperatureEarly, oppParams.rootPolicyTemperature
-      );
+      const double oppTemp =
+          opp.interpolateEarly(oppParams.chosenMoveTemperatureHalflife,
+                               oppParams.chosenMoveTemperatureEarly,
+                               oppParams.chosenMoveTemperature);
       const uint32_t idxChosen = opp.chooseIndexWithTemperature(
         thread.rand,
         oppPlaySelectionValues.data(),

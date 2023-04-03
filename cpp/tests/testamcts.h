@@ -1,4 +1,3 @@
-
 #ifndef TESTAMCTS_H
 #define TESTAMCTS_H
 
@@ -9,7 +8,6 @@
 #include "../search/searchnode.h"
 
 namespace AMCTSTests {
-
 void runAllAMCTSTests(const int maxVisits, const int numMovesToSimulate);
 
 // Checks that the models/const-policy-*-.bin.gz behave as expected
@@ -19,22 +17,20 @@ void testConstPolicies();
 // Test our modifications didn't break the original MCTS.
 void testMCTS(const int maxVisits, const int numMovesToSimulate);
 
-// Test AMCTS
-void testAMCTS(const int maxVisits, const int numMovesToSimulate);
-
-std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
-                                       Logger& logger, uint64_t seed);
-
 // Checks one move's worth of MCTS search
 void checkMCTSSearch(const Search& bot, const float win_prob,
                      const float loss_prob);
 
+// Test AMCTS
+void testAMCTS(const int maxVisits, const int numMovesToSimulate);
+
 // Checks one move's worth of AMCTS search
 void checkAMCTSSearch(const Search& bot, const float win_prob1,
-                       const float loss_prob1, const float win_prob2,
-                       const float loss_prob2);
+                      const float loss_prob1, const float win_prob2,
+                      const float loss_prob2);
 
 // Checks how we select our move based on results of tree search.
+// Mirrors logic of getPlaySelectionValues searchresults.cpp
 void checkFinalMoveSelection(const Search& bot);
 
 // Check playout logic (for either MCTS or AMCTS)
@@ -43,7 +39,58 @@ void checkFinalMoveSelection(const Search& bot);
 // playouts.
 void checkPlayoutLogic(const Search& bot);
 
-/** Constants **/
+// Returns one sample of possible rules.
+Rules parseRules(ConfigParser& cfg, Logger& logger);
+
+/**************************** Helper functions ***************************/
+
+std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
+                                       Logger& logger, uint64_t seed);
+
+std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
+                                      Board& board, BoardHistory& hist,
+                                      Player nextPla, bool skipCache = true,
+                                      bool includeOwnerMap = true);
+
+void resetBot(Search& bot, int board_size, const Rules& rules);
+
+// Helper struct for dealing with a search tree.
+struct SearchTree {
+  const SearchNode* const root;
+  const BoardHistory rootHist;
+
+  // DFS visit order.
+  // So a child will always come after its parent in this list.
+  std::vector<const SearchNode*> all_nodes;
+
+  std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
+      children;
+
+  struct ReverseEdge {
+    const SearchNode* parent;
+    Loc moveLoc;
+  };
+  std::unordered_map<const SearchNode*, ReverseEdge> revEdge;
+
+  SearchTree(const Search& bot);
+
+  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
+
+  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
+
+  BoardHistory getNodeHistory(const SearchNode* node) const;
+};
+
+// Averages the statistics from a list of nodes.
+// Optional param: terminal_node_visits (specify if you want to override
+// terminal node weights)
+NodeStats averageStats(const Search& bot,
+                       const std::vector<const SearchNode*>& nodes,
+                       const std::unordered_map<const SearchNode*, int>*
+                           terminal_node_visits = nullptr);
+
+/******************************** Constants *******************************/
+
 const std::string AMCTS_CONFIG_PATH = "cpp/tests/data/configs/test-amcts.cfg";
 
 // exp(1)
@@ -65,48 +112,6 @@ const std::string CONST_POLICY_2_PATH =
     "cpp/tests/models/const-policy-2.bin.gz";
 const float CP2_WIN_PROB = 1 / (1 + E * E);
 const float CP2_LOSS_PROB = 1 - CP2_WIN_PROB;
-
-/** Helper functions **/
-
-// Optional param: terminal_node_visits (specify if you want to override
-// terminal node weights)
-NodeStats averageStats(const Search& bot,
-                       const std::vector<const SearchNode*>& nodes,
-                       const std::unordered_map<const SearchNode*, int>*
-                           terminal_node_visits = nullptr);
-
-std::shared_ptr<NNResultBuf> evaluate(std::shared_ptr<NNEvaluator> nnEval,
-                                      Board& board, BoardHistory& hist,
-                                      Player nextPla, bool skipCache = true,
-                                      bool includeOwnerMap = true);
-
-// Returns one sample of possible rules.
-Rules parseRules(ConfigParser& cfg, Logger& logger);
-
-void resetBot(Search& bot, int board_size, const Rules& rules);
-
-// Helper struct for dealing with a search graph.
-struct SearchTree {
-  const SearchNode *const root;
-  const BoardHistory rootHist;
-
-  // DFS visit order.
-  // So a child will always come after its parent in this list.
-  std::vector<const SearchNode*> all_nodes;
-  std::unordered_map<const SearchNode*, Loc> prevMoves;
-
-  std::unordered_map<const SearchNode*, std::vector<const SearchChildPointer *>>
-      outEdges;
-  std::unordered_map<const SearchNode*, const SearchNode*> parents;
-
-  SearchTree(const Search& bot);
-
-  std::vector<const SearchNode*> getSubtreeNodes(const SearchNode*node) const;
-
-  std::vector<const SearchNode*> getPathToRoot(const SearchNode* node) const;
-
-  BoardHistory getNodeHistory(const SearchNode* node) const;
-};
 
 }  // namespace AMCTSTests
 

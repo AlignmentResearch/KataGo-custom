@@ -117,6 +117,11 @@ Search::Search(
     assert(oppNNEval != nullptr);
     assert(!oppParams.usingAdversarialAlgo());
 
+    // When using AMCTS, we don't support graph search for ourselves or our
+    // opponent.
+    assert(!searchParams.useGraphSearch);
+    assert(!oppParams.useGraphSearch);
+
     oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
       ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
       : 1;
@@ -648,10 +653,10 @@ void Search::runWholeSearch(
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxPlayouts - numPlayouts);
         upperBoundVisitsLeft = std::min(upperBoundVisitsLeft, (double)maxVisits - numPlayouts - numNonPlayoutVisits);
 
-        bool finishedPlayout = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
-        if(finishedPlayout) {
-          numPlayouts = numPlayoutsShared.fetch_add((int64_t)1, std::memory_order_relaxed);
-          numPlayouts += 1;
+        const int numNodesAdded = runSinglePlayout(*stbuf, upperBoundVisitsLeft);
+        if(numNodesAdded > 0) {
+          numPlayouts = numPlayoutsShared.fetch_add((int64_t)numNodesAdded, std::memory_order_relaxed);
+          numPlayouts += numNodesAdded;
         }
         else {
           //In the case that we didn't finish a playout, give other threads a chance to run before we try again
@@ -1169,13 +1174,49 @@ void Search::computeRootValues() {
   }
 }
 
-
-bool Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
+int Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft) {
   //Store this value, used for futile-visit pruning this thread's root children selections.
   thread.upperBoundVisitsLeft = upperBoundVisitsLeft;
 
+  vector<SearchNode*> playoutPath;
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE];
-  bool finishedPlayout = playoutDescend(thread,*rootNode,posesWithChildBuf,true);
+  bool finishedPlayout = playoutDescend(
+      thread, *rootNode, posesWithChildBuf, true,
+      searchParams.usingAdversarialAlgo() ? &playoutPath : nullptr);
+
+  int numNodesAdded = 1;
+  // We do another playout if we are doing AMCTS and ended on a non-terminal
+  // opponent node.
+  if (searchParams.usingAdversarialAlgo() &&
+      thread.lastVisitedNode->nextPla != rootPla &&
+      thread.lastVisitedNode->stats.weightSum.load(std::memory_order_relaxed) ==
+          0) {
+    assert(finishedPlayout);
+
+    // Descend one more time starting from last visited node
+    SearchNode* const resumeDescentNode = thread.lastVisitedNode;
+    const bool finishedPlayout2 = playoutDescend(
+        thread, *resumeDescentNode, posesWithChildBuf, false, nullptr);
+    assert(finishedPlayout2);
+    assert(thread.lastVisitedNode->nextPla == rootPla);
+
+    // Update stats along path to root (from the first playout)
+    for (int i = playoutPath.size() - 2; i >= 0; i--) {
+      SearchNode* node = playoutPath[i];
+
+      int childrenCapacity;
+      SearchChildPointer* children = node->getChildren(childrenCapacity);
+      for (int j = 0; j < childrenCapacity; j++) {
+        if (children[j].getIfAllocated() == playoutPath[i + 1]) {
+          children[j].addEdgeVisits(1);
+          break;
+        }
+      }
+      updateStatsAfterPlayout(*node, thread, node == rootNode);
+    }
+
+    numNodesAdded += 1;
+  }
 
   //Restore thread state back to the root state
   thread.pla = rootPla;
@@ -1184,15 +1225,18 @@ bool Search::runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft)
   thread.graphHash = rootGraphHash;
   thread.graphPath.clear();
 
-  return finishedPlayout;
+  if (!finishedPlayout) return 0;
+  return numNodesAdded;
 }
 
 bool Search::playoutDescend(
   SearchThread& thread, SearchNode& node,
   bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
-  bool isRoot
+  bool isRoot,
+  std::vector<SearchNode*> *playoutPath
 ) {
   thread.lastVisitedNode = &node;
+  if (playoutPath != nullptr) playoutPath->push_back(&node);
 
   //Hit terminal node, finish
   //forceNonTerminal marks special nodes where we cannot end the game. This includes the root, since if we are searching a position
@@ -1422,7 +1466,7 @@ bool Search::playoutDescend(
   }
 
   //Recurse!
-  bool finishedPlayout = playoutDescend(thread,*child,posesWithChildBuf,false);
+  bool finishedPlayout = playoutDescend(thread,*child,posesWithChildBuf,false,playoutPath);
   //Update this node stats
   if(finishedPlayout) {
     nodeState = node.state.load(std::memory_order_acquire);

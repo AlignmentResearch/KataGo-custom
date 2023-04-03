@@ -276,7 +276,7 @@ struct Search {
 
   //Expert manual playout-by-playout interface
   void beginSearch(bool pondering);
-  bool runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
+  int runSinglePlayout(SearchThread& thread, double upperBoundVisitsLeft);
 
   //================================================================================================================
   // SEARCH RESULTS AND TREE INSPECTION METHODS
@@ -416,7 +416,7 @@ struct Search {
   // HELPER FUNCTIONS FOR THE SEARCH
   //================================================================================================================
 
-private:
+public:
   static constexpr double POLICY_ILLEGAL_SELECTION_VALUE = -1e50;
   static constexpr double FUTILE_VISITS_PRUNE_VALUE = -1e40;
   static constexpr double EVALUATING_SELECTION_VALUE_PENALTY = 1e20;
@@ -634,7 +634,8 @@ private:
   bool playoutDescend(
     SearchThread& thread, SearchNode& node,
     bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
-    bool isRoot
+    bool isRoot,
+    std::vector<SearchNode*> *playoutPath
   );
 
   bool maybeCatchUpEdgeVisits(SearchThread& thread, SearchNode& node, SearchNode* child, const int& nodeState, const int bestChildIdx);

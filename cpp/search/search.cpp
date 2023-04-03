@@ -504,14 +504,17 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
-    assert(oppNNEval != nullptr);
-    assert(!oppParams.usingAdversarialAlgo());
-
-    oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
-      ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
-      : 1;
-    oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
-    oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
+    if (searchParams.maxVisits > 1) {
+      assert(oppNNEval != nullptr);
+      oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
+        ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
+        : 1;
+      // We don't want to recursively model an opponent also using A-MCTS or else
+      // we'll have infinite recursion.
+      assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
+      oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
+      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
+    }
   }
 
   assert(logger != NULL);
@@ -1018,11 +1021,23 @@ void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeP
   assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack
 
   double maxValue = 0.0;
+  int maxValueIndex = 0;
   for(int i = 0; i<numRelativeProbs; i++) {
-    if(relativeProbs[i] > maxValue)
+    if(relativeProbs[i] > maxValue) {
       maxValue = relativeProbs[i];
+      maxValueIndex = i;
+    }
   }
   assert(maxValue > 0.0);
+
+  // Special case for zero temperature to avoid division by zero.
+  if (temperature == 0.0) {
+    for(int i = 0; i<numRelativeProbs; i++) {
+      buf[i] = 0.0;
+    }
+    buf[maxValueIndex] = 1.0;
+    return;
+  }
 
   double logMaxValue = log(maxValue);
   double sum = 0.0;

@@ -11,6 +11,9 @@ usage() {
     echo " OUTPUT_DIR The directory to output results to."
     echo
     echo "optional arguments:"
+    echo "  --config CONFIG"
+    echo "    KataGo match config."
+    echo "    Default: GO_ATTACK_ROOT/configs/match-1gpu.cfg"
     echo "  -v VICTIM_LIST, --victim-list VICTIM_LIST"
     echo "    A comma-separated list of models in VICTIM_DIR to use."
     echo "    If empty, the most recent model will be used."
@@ -40,6 +43,7 @@ GO_ATTACK_ROOT="/go_attack"
 while [ -n "${1-}" ]; do
   case $1 in
     -h|--help) usage; exit 0 ;;
+    --config) CONFIG="$2"; shift 2 ;;
     -v|--victim-list) VICTIM_LIST="$2"; shift 2 ;;
     -d|--victim-dir) VICTIMS_DIR="$2"; shift 2 ;;
     -p|--prediction-dir) PREDICTOR_DIR="$2"; shift 2 ;;
@@ -49,6 +53,7 @@ while [ -n "${1-}" ]; do
     *) break ;;
   esac
 done
+CONFIG=${CONFIG:-"$GO_ATTACK_ROOT"/configs/match-1gpu.cfg}
 
 NUM_POSITIONAL_ARGUMENTS=2
 if [ $# -ne ${NUM_POSITIONAL_ARGUMENTS} ]; then
@@ -117,7 +122,7 @@ do
                 # Run the evaluation
                 echo "Evaluating model $LATEST_MODEL_DIR against victim $VICTIM_NAME"
                 $KATAGO_BIN match \
-                    -config $GO_ATTACK_ROOT/configs/match-1gpu.cfg \
+                    -config "$CONFIG" \
                     -config "$VICTIMS_DIR"/victim.cfg \
                     -override-config "$EXTRA_CONFIG" \
                     -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \

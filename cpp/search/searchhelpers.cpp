@@ -34,15 +34,8 @@ uint32_t Search::chooseIndexWithTemperature(Rand& rand, const double* relativePr
   }
   //Actual temperature
   else {
-    double logMaxValue = log(maxValue);
-    double sum = 0.0;
-    for(int i = 0; i<numRelativeProbs; i++) {
-      //Numerically stable way to raise to power and normalize
-      processedRelProbs[i] = relativeProbs[i] <= 0.0 ? 0.0 : exp((log(relativeProbs[i]) - logMaxValue) / temperature);
-      sum += processedRelProbs[i];
-    }
-    assert(sum > 0.0);
-    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs);
+    temperatureScaleProbs(relativeProbs, numRelativeProbs, temperature, processedRelProbs, false);
+    uint32_t idxChosen = rand.nextUInt(processedRelProbs,numRelativeProbs); // This normalizes the probs for us
     return idxChosen;
   }
 }

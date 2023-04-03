@@ -252,6 +252,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
             victim_visits=None,
             adv_visits=get_max_visits(game, Color.BLACK),
             game_hash=game_hash,
+            winner=None,
             score_diff=0,
             score_wo_komi_diff=0,
             is_selfplay=True,

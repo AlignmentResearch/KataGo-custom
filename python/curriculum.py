@@ -237,7 +237,7 @@ def is_selfplay_game(game: sgf.Sgf_game) -> bool:
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     try:
         game = sgf.Sgf_game.from_string(sgf_str)
-    except IndexError:
+    except ValueError:
         logging.warning("Error parsing game: '%s'", sgf_str, exc_info=True)
         return None
 

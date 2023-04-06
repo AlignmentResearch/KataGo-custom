@@ -644,6 +644,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           botSpecB.botName = nnEval->getModelName();
           botSpecB.nnEval = nnEval;
           botSpecB.baseParams = curAdvSearchParams;
+          // A-MCTS is not helpful during selfplay, so let's make selfplay games run MCTS.
+          botSpecB.baseParams.searchAlgo = SearchParams::SearchAlgorithm::MCTS;
           MatchPairer::BotSpec botSpecW = botSpecB;
           gameData = gameRunner->runGame(
             seed, botSpecB, botSpecW, forkData, NULL, logger,

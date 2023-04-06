@@ -271,8 +271,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       (!FileUtils::exists(nnVictimPath) && !Global::isSuffix(nnVictimPath, ".gz"))
       || FileUtils::isDirectory(nnVictimPath);
     if(isDirectory) {
+      // We load victims from a directory.
+      // A new victim is loaded every time a new victim shows up in the directory.
       reloadVictims = true;
     } else {
+      // A victim is loaded a single time from a file.
       singleVictim.reset(loadNN("victim", nnVictimPath));
       victimNNEvals.push_back(singleVictim);
     }

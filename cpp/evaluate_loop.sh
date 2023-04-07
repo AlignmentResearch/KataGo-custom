@@ -117,7 +117,9 @@ do
                 # Run the evaluation
                 echo "Evaluating model $LATEST_MODEL_DIR against victim $VICTIM_NAME"
                 $KATAGO_BIN match \
-                    -config $GO_ATTACK_ROOT/configs/match-1gpu.cfg \
+                    -config $GO_ATTACK_ROOT/configs/match.cfg \
+                    -config $GO_ATTACK_ROOT/configs/active-experiment.cfg \
+                    -config $GO_ATTACK_ROOT/configs/compute/1gpu.cfg \
                     -config "$VICTIMS_DIR"/victim.cfg \
                     -override-config "$EXTRA_CONFIG" \
                     -override-config nnModelFile0="$VICTIMS_DIR"/"$VICTIM" \

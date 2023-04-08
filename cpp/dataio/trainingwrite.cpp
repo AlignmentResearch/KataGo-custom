@@ -994,9 +994,11 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
   Player nextPlayer = data.startPla;
 
   Player victimPlayer = getVictimPlayerColor(data);
-  if (forVictimPlay) {
-    // When doing victimplay, exactly one side should be a victim.
-    assert(victimPlayer != P_NONE);
+  const bool isVictimplayGame = forVictimplay && victimPlayer != P_NONE;
+  if (forVictimplay) {
+    // When doing victimplay, exactly one side should be a victim unless
+    // selfplay games are enabled.
+    assert(isVictimplayGame || allowSelfplayInVictimplay);
   }
 
   //Write main game rows
@@ -1019,7 +1021,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
     }
 
     auto buffers = writeBuffers;
-    if (forVictimPlay && nextPlayer == victimPlayer) {
+    if (isVictimplayGame && nextPlayer == victimPlayer) {
       if (victimBuffers)
         buffers = victimBuffers;
       else
@@ -1072,7 +1074,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
     SidePosition* sp = data.sidePositions[i];
 
     auto buffers = writeBuffers;
-    if (forVictimPlay && sp->pla == victimPlayer) {
+    if (isVictimplayGame && sp->pla == victimPlayer) {
       // Skip writing data when it is victim to move and we're not writing victim data
       if (victimBuffers)
         buffers = victimBuffers;

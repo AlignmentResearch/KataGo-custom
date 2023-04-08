@@ -57,6 +57,7 @@ class AdvGameInfo:
     winner: Optional[bool]
     score_diff: float
     score_wo_komi_diff: float
+    is_selfplay: bool
 
 
 class DataClassBase(object):
@@ -220,16 +221,42 @@ def get_max_visits(game: sgf.Sgf_game, color: Color) -> int:
     return int(visit_num[1])
 
 
+def is_selfplay_game(game: sgf.Sgf_game) -> bool:
+    """Returns true if the game is a selfplay game for the adversary."""
+    colors = (Color.BLACK, Color.WHITE)
+    player_names = [game.get_player_name(color.value.lower()) for color in colors]
+    if player_names[0] != player_names[1]:
+        return False
+    if is_name_victim(player_names[0]):
+        return False
+    if get_max_visits(game, Color.BLACK) != get_max_visits(game, Color.WHITE):
+        return False
+    return True
+
+
 def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
     try:
         game = sgf.Sgf_game.from_string(sgf_str)
-    except IndexError:
+    except ValueError:
         logging.warning("Error parsing game: '%s'", sgf_str, exc_info=True)
         return None
 
     game_hash = get_game_hash(game)
     if game_hash is None:
         return None
+
+    if is_selfplay_game(game):
+        return AdvGameInfo(
+            board_size=game.get_size(),
+            victim_name="",
+            victim_visits=0,
+            adv_visits=get_max_visits(game, Color.BLACK),
+            game_hash=game_hash,
+            winner=None,
+            score_diff=0,
+            score_wo_komi_diff=0,
+            is_selfplay=True,
+        )
 
     victim_name, victim_color, adv_color = get_victim_adv_colors(game)
     victim_visits = get_max_visits(game, victim_color)
@@ -260,6 +287,7 @@ def get_game_info(sgf_str: str) -> Optional[AdvGameInfo]:
         winner=winner,
         score_diff=adv_minus_victim_score,
         score_wo_komi_diff=adv_minus_victim_score_wo_komi,
+        is_selfplay=False,
     )
 
 
@@ -562,6 +590,7 @@ class Curriculum:
 
         useful_files = set()
         cur_games = []
+        num_selfplay_games = 0
         for sgf_file in all_sgfs:
             if sgf_file not in self.game_hashes:
                 self.game_hashes[sgf_file] = set()
@@ -584,15 +613,22 @@ class Curriculum:
                     # so stop scanning this file
                     if game_stat.game_hash in self.game_hashes[sgf_file]:
                         break
-
                     self.game_hashes[sgf_file].add(game_stat.game_hash)
+
+                    if game_stat.is_selfplay:
+                        num_selfplay_games += 1
+                        continue
+
                     cur_games.append(game_stat)
                     useful_files.add(sgf_file)
 
         # now have cur_games sorted from newer to older
-        logging.info(
-            "Got {} new games from {} files".format(len(cur_games), len(useful_files)),
+        games_log_message = (
+            f"Got {len(cur_games)} new games from {len(useful_files)} files"
         )
+        if num_selfplay_games > 0:
+            games_log_message += f", ignored {num_selfplay_games} selfplay games"
+        logging.info(games_log_message)
         for f in useful_files:
             logging.info("Useful SGF file: '{}'".format(str(f)))
 

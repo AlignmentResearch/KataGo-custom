@@ -184,6 +184,13 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
   assert(!(victimplay && switchNetsMidGame));
 
+  // Proportion of selfplay games to include during victimplay training.
+  const double selfplayProportion =
+    cfg.contains("selfplayProportion") ?
+    cfg.getDouble("selfplayProportion", 0.0, 1.0) :
+    0.0;
+  assert(victimplay || selfplayProportion == 0.0);
+
   vector<SearchParams> paramss = Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
   const vector<SearchParams> originalParamss = paramss;
   if (victimplay) assert(1 <= paramss.size() && paramss.size() <= 2);
@@ -258,9 +265,17 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   bool reloadVictims = false;
 
   if(victimplay) {
-    if(FileUtils::isDirectory(nnVictimPath)) {
+    // If victim path doesn't exist yet and isn't a gzip file, assume it's a
+    // directory that has not yet been created yet.
+    const bool isDirectory =
+      (!FileUtils::exists(nnVictimPath) && !Global::isSuffix(nnVictimPath, ".gz"))
+      || FileUtils::isDirectory(nnVictimPath);
+    if(isDirectory) {
+      // We load victims from a directory.
+      // A new victim is loaded every time a new victim shows up in the directory.
       reloadVictims = true;
     } else {
+      // A victim is loaded a single time from a file.
       singleVictim.reset(loadNN("victim", nnVictimPath));
       victimNNEvals.push_back(singleVictim);
     }
@@ -272,7 +287,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
-    [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,
+    [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,selfplayProportion,
      &loadNN,
      &modelsDir,&outputDir,&victimOutputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
@@ -359,8 +374,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
     );
 
-    tdataWriter->forVictimPlay = victimplay;
-    vdataWriter->forVictimPlay = victimplay;
+    tdataWriter->forVictimplay = victimplay;
+    vdataWriter->forVictimplay = victimplay;
+    tdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
+    vdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
 
     tdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
     vdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
@@ -403,6 +420,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     time_t modelTime;
 
     // Keep trying to load the model until we succeed
+    while (!FileUtils::exists(modelPath)) {
+      loadLogger.write(humanModelName + " model path " + modelPath + " does not exist yet, waiting 30 sec...");
+      std::this_thread::sleep_for(std::chrono::seconds(30));
+    }
     while (
       !LoadModel::findLatestModel(modelPath, loadLogger, modelName, modelFile, modelDir, modelTime, false) ||
       (!allowRandom && modelName == "random")
@@ -479,6 +500,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     &manager,
     &logger,
     switchNetsMidGame,
+    selfplayProportion,
     &numGamesStarted,
     &forkData,
     maxGamesTotal,
@@ -608,13 +630,38 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       } else if(victimplay) {
         manager->countOneGameStarted(nnEval);
         const string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
-        gameData = runOneVictimplayGame(
-          curVictimNNEval.get(), nnEval,
-          curVictimSearchParams, curAdvSearchParams,
-          gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
-          gameRunner, shouldStopFunc, logger,
-          gameIdx, seed, curPredictorNNEval.get()
-        );
+        if (thisLoopSeedRand.nextDouble() >= selfplayProportion) {  // victimplay game
+          gameData = runOneVictimplayGame(
+            curVictimNNEval.get(), nnEval,
+            curVictimSearchParams, curAdvSearchParams,
+            gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
+            gameRunner, shouldStopFunc, logger,
+            gameIdx, seed, curPredictorNNEval.get()
+          );
+        } else {  // selfplay game
+          MatchPairer::BotSpec botSpecB;
+          botSpecB.botIdx = 1;
+          botSpecB.botName = nnEval->getModelName();
+          botSpecB.nnEval = nnEval;
+          botSpecB.baseParams = curAdvSearchParams;
+          // A-MCTS is not helpful during selfplay, so let's make selfplay games run MCTS.
+          botSpecB.baseParams.searchAlgo = SearchParams::SearchAlgorithm::MCTS;
+          MatchPairer::BotSpec botSpecW = botSpecB;
+          gameData = gameRunner->runGame(
+            seed, botSpecB, botSpecW, forkData, NULL, logger,
+            shouldStopFunc,
+            nullptr,
+            nullptr,
+            nullptr
+          );
+          logger.write(
+            "Game #" + Global::int64ToString(gameIdx) +
+            " selfplay W - B score: " +
+            Global::floatToString(gameData->finalWhiteMinusBlackScore()) +
+            "; adv_" + curAdvSearchParams.getSearchAlgoAsStr() +
+                "@" + Global::intToString(curAdvSearchParams.maxVisits)
+          );
+        }
       } else {
         manager->countOneGameStarted(nnEval);
         MatchPairer::BotSpec botSpecB;

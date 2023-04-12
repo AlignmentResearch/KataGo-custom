@@ -475,5 +475,4 @@ void Search::selectBestChildToDescend(
       bestChildMoveLoc = bestNewMoveLoc;
     }
   }
-  // cout << "GT bestChildMoveLoc: " << Location::toString(bestChildMoveLoc, thread.board) << ", PSV: " << maxSelectionValue << endl;
 }

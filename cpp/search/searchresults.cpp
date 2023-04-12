@@ -20,20 +20,6 @@ int64_t Search::getRootVisits() const {
   return n;
 }
 
-// Returns whether the move `moveLoc` should be suppressed and not selected.
-//
-// `suppressPass` should be the result of `shouldSuppressPass()`, and
-// `passAliveTerritories` should be the result of `Board::calculateArea()`.
-bool Search::shouldSuppressMove(
-    Loc moveLoc,
-    bool suppressPass,
-    const vector<Color>& passAliveTerritories
-) const {
-  return (suppressPass && moveLoc == Board::PASS_LOC)
-    || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
-        && passAliveTerritories[moveLoc] == rootPla);
-}
-
 bool Search::getPlaySelectionValues(
   vector<Loc>& locs, vector<double>& playSelectionValues, double scaleMaxToAtLeast
 ) const {

@@ -453,6 +453,11 @@ private:
   double getPatternBonus(Hash128 patternBonusHash, Player prevMovePla) const;
   public: double getEndingWhiteScoreBonus(const SearchNode& parent, Loc moveLoc) const; private:
   bool shouldSuppressPass(const SearchNode* n) const;
+  bool shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const std::vector<Color>& passAliveTerritory
+  ) const;
 
   double calculateTemperature(double halflife, double earlyValue, double value, int numMoves) const;
   double interpolateEarly(double halflife, double earlyValue, double value) const;
@@ -654,11 +659,6 @@ private:
     std::vector<double>& playSelectionValues,
     const int numChildren,
     const double scaleMaxToAtLeast
-  ) const;
-  bool shouldSuppressMove(
-    Loc moveLoc,
-    bool suppressPass,
-    const std::vector<Color>& passAliveTerritory
   ) const;
 
   AnalysisData getAnalysisDataOfSingleChild(

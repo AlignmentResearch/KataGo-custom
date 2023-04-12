@@ -30,7 +30,7 @@ void checkAMCTSSearch(const Search& bot, const float win_prob1,
                       const float loss_prob2);
 
 // Checks how we select our move based on results of tree search.
-// Mirrors logic of getPlaySelectionValues searchresults.cpp
+// Mirrors logic of getPlaySelectionValues from searchresults.cpp.
 void checkFinalMoveSelection(const Search& bot);
 
 // Check playout logic (for either MCTS or AMCTS)

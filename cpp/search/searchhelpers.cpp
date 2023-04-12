@@ -536,6 +536,20 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
   return false;
 }
 
+// Returns whether the move `moveLoc` should be suppressed and not selected.
+//
+// `suppressPass` should be the result of `shouldSuppressPass()`, and
+// `passAliveTerritories` should be the result of `Board::calculateArea()`.
+bool Search::shouldSuppressMove(
+    Loc moveLoc,
+    bool suppressPass,
+    const vector<Color>& passAliveTerritories
+) const {
+  return (suppressPass && moveLoc == Board::PASS_LOC)
+    || (searchParams.passingBehavior == SearchParams::PassingBehavior::AvoidPassAliveTerritory
+        && passAliveTerritories[moveLoc] == rootPla);
+}
+
 void Search::temperatureScaleProbs(const double* relativeProbs, int numRelativeProbs, double temperature, double* buf, bool normalize) {
   assert(numRelativeProbs > 0);
   assert(numRelativeProbs <= Board::MAX_ARR_SIZE); //We're just doing this on the stack

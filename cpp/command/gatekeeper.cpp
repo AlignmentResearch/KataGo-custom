@@ -49,8 +49,6 @@ namespace {
     const SearchParams searchParamsCandidate;
     MatchPairer* matchPairer;
 
-    string testModelFile;
-    string testModelDir;
 
     ThreadSafeQueue<FinishedGameData*> finishedGameQueue;
     int numGameThreads;
@@ -70,7 +68,7 @@ namespace {
     std::atomic<bool> terminated;
 
   public:
-    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
+    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
       :modelNameBaseline(nameB),
        modelNameCandidate(nameC),
        nnEvalBaseline(nevalB),
@@ -78,7 +76,6 @@ namespace {
        searchParamsBaseline(searchParamsB),
        searchParamsCandidate(searchParamsC),
        matchPairer(NULL),
-       testModelDir(tModelDir),
        finishedGameQueue(),
        numGameThreads(0),
        isDraining(false),
@@ -445,10 +442,8 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     if (acceptedModelInfo.time <= testModelInfo.time || noAutoRejectOldModels) {
       return false;
     }
-    string renameDest = rejectedModelsDir + "/" + testModelInfo.name;
     logger.write("Rejecting " + testModelInfo.name + " automatically since older than best accepted model");
-    logger.write("Moving " + testModelInfo.dir + " to " + renameDest);
-    FileUtils::rename(testModelInfo.dir,renameDest);
+    moveModel(testModelInfo.name, testModelInfo.file, testModelInfo.dir, testModelsDir, rejectedModelsDir, logger);
     return true;
   };
   const auto loadNNEvaluator = [&logger,numGameThreads,minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed,&cfg](
@@ -799,18 +794,11 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       }
       sleep(2);
 
-      string renameDest = acceptedModelsDir + "/" + testModelInfo->name;
-      logger.write(
-          "Accepting model " + testModelInfo->name
-          + "; moving " + testModelInfo->dir + " to " + renameDest);
-      FileUtils::rename(testModelInfo->dir,renameDest);
+      logger.write("Accepting model " + testModelInfo->name);
+      moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, acceptedModelsDir, logger);
     } else if (testModelInfo.has_value()) {
-      string renameDest = rejectedModelsDir + "/" + testModelInfo->name;
-      logger.write(
-          "Rejecting model " + testModelInfo->name
-          + "; moving " + testModelInfo->dir + " to " + renameDest
-      );
-      FileUtils::rename(testModelInfo->dir,renameDest);
+      logger.write("Rejecting model " + testModelInfo->name");
+      moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, rejectedModelsDir, logger);
     }
   }
   delete netAndStuff;

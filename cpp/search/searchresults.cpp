@@ -1786,9 +1786,9 @@ bool Search::getAnalysisJson(
       moveInfo["lcb"] = Global::roundDynamic(lcb,OUTPUT_PRECISION);
       moveInfo["utilityLcb"] = Global::roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["order"] = data.order;
-      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,JSON_PRECISION);
-      moveInfo["selectionProb"] = roundDynamic(data.selectionProb,JSON_PRECISION);
-      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,JSON_PRECISION);
+      moveInfo["resultUtility"] = Global::roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+      moveInfo["selectionProb"] = Global::roundDynamic(data.selectionProb,OUTPUT_PRECISION);
+      moveInfo["selectionValue"] = Global::roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 

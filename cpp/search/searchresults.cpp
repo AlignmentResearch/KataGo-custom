@@ -1772,8 +1772,10 @@ bool Search::getAnalysisJson(
       }
 
       json moveInfo;
+      // This only depends on the size of the board, which is invariant, so it's fine to use the root board here
       moveInfo["move"] = Location::toString(data.move, board);
       moveInfo["visits"] = data.numVisits;
+      moveInfo["weight"] = data.weightSum;
       moveInfo["utility"] = Global::roundDynamic(utility,OUTPUT_PRECISION);
       moveInfo["winrate"] = Global::roundDynamic(winrate,OUTPUT_PRECISION);
       moveInfo["scoreMean"] = Global::roundDynamic(lead,OUTPUT_PRECISION);
@@ -1784,6 +1786,9 @@ bool Search::getAnalysisJson(
       moveInfo["lcb"] = Global::roundDynamic(lcb,OUTPUT_PRECISION);
       moveInfo["utilityLcb"] = Global::roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["order"] = data.order;
+      moveInfo["resultUtility"] = roundDynamic(data.resultUtility,JSON_PRECISION);
+      moveInfo["selectionProb"] = roundDynamic(data.selectionProb,JSON_PRECISION);
+      moveInfo["selectionValue"] = roundDynamic(data.playSelectionValue,JSON_PRECISION);
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 

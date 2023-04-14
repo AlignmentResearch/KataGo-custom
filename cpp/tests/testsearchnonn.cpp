@@ -662,7 +662,6 @@ xx......x
     options = options.maxDepth(1);
     search->printTree(cout, search->rootNode, options, P_WHITE);
 
-    nlohmann::json json;
     Player perspective = P_WHITE;
     int analysisPVLen = 2;
     bool preventEncore = true;
@@ -672,14 +671,16 @@ xx......x
     bool includeMovesOwnership = false;
     bool includeMovesOwnershipStdev = false;
     bool includePVVisits = false;
-    bool includeTree = false;
-    bool suc = search->getAnalysisJson(
-      perspective, analysisPVLen, preventEncore,
-      includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
-      json
-    );
-    testAssert(suc);
-    cout << json << endl;
+    for (const bool includeTree : {true, false}) {
+      nlohmann::json json;
+      bool suc = search->getAnalysisJson(
+        perspective, analysisPVLen, preventEncore,
+        includePolicy, includeOwnership, includeOwnershipStdev, includeMovesOwnership, includeMovesOwnershipStdev, includePVVisits, includeTree,
+        json
+      );
+      testAssert(suc);
+      cout << json << endl;
+    }
 
     delete search;
     delete nnEval;

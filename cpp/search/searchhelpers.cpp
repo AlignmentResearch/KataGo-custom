@@ -381,6 +381,7 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
 
   //Find the pass move
   const SearchNode* passNode = NULL;
+  int64_t passEdgeVisits = 0;
 
   int childrenCapacity;
   const SearchChildPointer* children = node.getChildren(childrenCapacity);
@@ -391,29 +392,9 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     Loc moveLoc = children[i].getMoveLocRelaxed();
     if(moveLoc == Board::PASS_LOC) {
       passNode = child;
+      passEdgeVisits = children[i].getEdgeVisits();
       break;
     }
-  }
-  if(passNode == NULL && searchParams.passingBehavior == SearchParams::PassingBehavior::Standard)
-    return false;
-
-  double passWeight;
-  double passUtility;
-  double passScoreMean;
-  double passLead;
-  {
-    int64_t numVisits = node.stats.visits.load(std::memory_order_acquire);
-    double weightSum = node.stats.weightSum.load(std::memory_order_acquire);
-    double scoreMeanAvg = node.stats.scoreMeanAvg.load(std::memory_order_acquire);
-    double leadAvg = node.stats.leadAvg.load(std::memory_order_acquire);
-    double utilityAvg = node.stats.utilityAvg.load(std::memory_order_acquire);
-
-    if(numVisits <= 0 || weightSum <= 1e-10)
-      return false;
-    passWeight = weightSum;
-    passUtility = utilityAvg;
-    passScoreMean = scoreMeanAvg;
-    passLead = leadAvg;
   }
 
   switch(searchParams.passingBehavior) {
@@ -446,6 +427,28 @@ bool Search::shouldSuppressPass(const SearchNode* n) const {
     // or that is adjacent to a pla owned spot, and is not greatly worse than pass.
     case SearchParams::PassingBehavior::LastResort:
     case SearchParams::PassingBehavior::Standard: {
+      if (passNode == NULL) {
+        return false;
+      }
+      double passWeight;
+      double passUtility;
+      double passScoreMean;
+      double passLead;
+      {
+        int64_t passVisits = passNode->stats.visits.load(std::memory_order_acquire);
+        double scoreMeanAvg = passNode->stats.scoreMeanAvg.load(std::memory_order_acquire);
+        double leadAvg = passNode->stats.leadAvg.load(std::memory_order_acquire);
+        double utilityAvg = passNode->stats.utilityAvg.load(std::memory_order_acquire);
+        double childWeight = passNode->stats.getChildWeight(passEdgeVisits,passVisits);
+
+        if(passVisits <= 0 || childWeight <= 1e-10)
+          return false;
+        passWeight = childWeight;
+        passUtility = utilityAvg;
+        passScoreMean = scoreMeanAvg;
+        passLead = leadAvg;
+      }
+
       const double extreme = 0.95;
 
       //Suppress pass if we find a move that is not a spot that the opponent almost certainly owns

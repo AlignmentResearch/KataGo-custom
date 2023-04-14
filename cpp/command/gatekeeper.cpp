@@ -435,7 +435,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   };
 
   // Rejects old test models. Returns true if the test model was rejected.
-  const auto rejectOldTestModel = [noAutoRejectOldModels,&rejectedModelsDir,&logger](
+  const auto rejectOldTestModel = [noAutoRejectOldModels,&testModelsDir,&rejectedModelsDir,&logger](
       const ModelFileInfo& testModelInfo,
       const ModelFileInfo& acceptedModelInfo
   ) -> bool {
@@ -494,7 +494,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       sgfOut = new ofstream();
       FileUtils::open(*sgfOut, sgfOutputDirThisModel + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".sgfs");
     }
-    NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, testModelInfo.dir, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
+    NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
 
     //Check for unused config keys
     cfg.warnUnusedKeys(cerr,&logger);
@@ -797,7 +797,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       logger.write("Accepting model " + testModelInfo->name);
       moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, acceptedModelsDir, logger);
     } else if (testModelInfo.has_value()) {
-      logger.write("Rejecting model " + testModelInfo->name");
+      logger.write("Rejecting model " + testModelInfo->name);
       moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, rejectedModelsDir, logger);
     }
   }

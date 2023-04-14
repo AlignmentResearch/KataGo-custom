@@ -1813,17 +1813,19 @@ bool Search::getAnalysisJson(
         moveInfo["pvEdgeVisits"] = pvEdgeVisits;
       }
 
-      if(includeMovesOwnership && includeMovesOwnershipStdev) {
-        std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
-        moveInfo["ownership"] = json(ownershipAndStdev.first);
-        moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
-      }
-      else if(includeMovesOwnershipStdev) {
-        std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
-        moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
-      }
-      else if(includeMovesOwnership) {
-        moveInfo["ownership"] = json(getAverageTreeOwnership(perspective, data.node, data.symmetry));
+      if(node == rootNode) {
+        if(includeMovesOwnership && includeMovesOwnershipStdev) {
+          std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
+          moveInfo["ownership"] = json(ownershipAndStdev.first);
+          moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
+        }
+        else if(includeMovesOwnershipStdev) {
+          std::pair<std::vector<double>,std::vector<double>> ownershipAndStdev = getAverageAndStandardDeviationTreeOwnership(perspective, data.node, data.symmetry);
+          moveInfo["ownershipStdev"] = json(ownershipAndStdev.second);
+        }
+        else if(includeMovesOwnership) {
+          moveInfo["ownership"] = json(getAverageTreeOwnership(perspective, data.node, data.symmetry));
+        }
       }
       if(includeTree)
         moveInfo["children"] = dfs(data.node, dfs);

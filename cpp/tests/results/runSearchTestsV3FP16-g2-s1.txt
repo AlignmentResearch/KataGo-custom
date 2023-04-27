@@ -1,14 +1,14 @@
 Running search tests specifically for v3 or later nets
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 : Initializing neural net buffer to be size 11 * 11 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 GAME 5 ==========================================================================
@@ -336,8 +336,8 @@ Policy
    0    0    0    0    0    0    0    0    -    0    0 
   213  -701  -637  -772  -824  -862  -882  -642   222   183   482 
   895   933  -832  -738  -926  -893  -975  -954  -934   722   664 
-  790   844   978  -834  -828  -822  -787  -961   834   799   810 
-  782   833   986   984  -903  -863  -346  -131   882   911   781 
+  790   844   978  -834  -828  -821  -787  -961   834   799   810 
+  782   833   986   984  -903  -863  -346  -131   883   911   781 
   738   781   843   822   893  -127   -56    41   303   910   689 
   550   687   806   833   702   244    26   -15   -14   226   333 
   284   492   984   862   849   948    38  -233  -292   -62  -131 
@@ -1123,14 +1123,14 @@ PV: F2 D7 C7 E4 F3 D5 C6 C5
 Tree:
 : T  11.98c W   7.62c S   4.39c ( +0.8 L  +0.8) N     200  --  F2 D7 C7 E4 F3 D5 C6
 ---Black(v)---
-F2  : T  10.19c W   6.13c S   4.12c ( +0.7 L  +0.7) LCB   21.41c P 37.13% WF  99.3 PSV      97 N      97  --  F2 D7 C7 E4 F3 D5 C6 C5
+F2  : T  10.20c W   6.13c S   4.12c ( +0.7 L  +0.7) LCB   21.41c P 37.13% WF  99.3 PSV      97 N      97  --  F2 D7 C7 E4 F3 D5 C6 C5
 E4  : T  16.40c W  11.06c S   5.35c ( +1.1 L  +1.1) LCB   30.17c P 22.28% WF  27.6 PSV      27 N      29  --  E4 D7 C7 C6 D8 D5 E8 B7
 E7  : T  15.38c W  10.42c S   4.97c ( +1.0 L  +1.0) LCB   37.98c P 10.41% WF  13.6 PSV      13 N      14  --  E7 D8 D7 C8 F2
-F3  : T  14.36c W   9.03c S   5.34c ( +1.1 L  +1.1) LCB   35.52c P  7.52% WF  14.7 PSV      11 N      15  --  F3 D7 C7 C6 D5 C8 B7 B8
-E8  : T  11.94c W   7.84c S   4.11c ( +0.6 L  +0.6) LCB   28.85c P  4.64% WF  12.0 PSV       9 N      12  --  E8 F8 D8 E4 E5 F3
-D7  : T  11.93c W   8.37c S   3.56c ( +0.4 L  +0.4) LCB   28.35c P  4.82% WF  10.0 PSV       9 N      10  --  D7 E7 E4 F2 E10
-E5  : T  14.13c W   9.58c S   4.55c ( +0.8 L  +0.8) LCB   34.73c P  5.58% WF  10.8 PSV       8 N      11  --  E5 F3 E7 C10 B10 D10 F8
-B3  : T   9.96c W   6.11c S   3.84c ( +0.6 L  +0.6) LCB   29.82c P  2.12% WF  11.2 PSV       5 N      11  --  B3 E4 E5 F3 E7
+F3  : T  14.37c W   9.03c S   5.34c ( +1.1 L  +1.1) LCB   35.53c P  7.52% WF  14.7 PSV      11 N      15  --  F3 D7 C7 C6 D5 C8 B7 B8
+E8  : T  11.94c W   7.84c S   4.11c ( +0.6 L  +0.6) LCB   28.84c P  4.64% WF  12.0 PSV       9 N      12  --  E8 F8 D8 E4 E5 F3
+D7  : T  11.93c W   8.37c S   3.56c ( +0.4 L  +0.4) LCB   28.36c P  4.82% WF  10.0 PSV       9 N      10  --  D7 E7 E4 F2 E10
+E5  : T  14.13c W   9.58c S   4.55c ( +0.8 L  +0.8) LCB   34.72c P  5.58% WF  10.8 PSV       8 N      11  --  E5 F3 E7 C10 B10 D10 F8
+B3  : T   9.95c W   6.11c S   3.84c ( +0.6 L  +0.6) LCB   29.82c P  2.12% WF  11.2 PSV       5 N      11  --  B3 E4 E5 F3 E7
 MoveNum: 0 HASH: 3D7444680E62DFF9BC252AF4DC21718D
    A B C D E F G H J K L
  7 . . . . . . . . . . .
@@ -1148,15 +1148,15 @@ NN batches: 185
 NN avg batch size: 1
 PV: H6 C4 B4 C3 B3 B2 D5 E4 D4 D3 E3 F3 E2
 Tree:
-: T  -3.65c W  -5.18c S   1.55c ( -0.4 L  -0.4) N     200  --  H6 C4 B4 C3 B3 B2 D5
+: T  -3.64c W  -5.17c S   1.55c ( -0.4 L  -0.4) N     200  --  H6 C4 B4 C3 B3 B2 D5
 ---Black(v)---
-H6  : T  -6.36c W  -7.41c S   1.06c ( -0.6 L  -0.6) LCB    1.46c P 23.97% WF 131.2 PSV     127 N     127  --  H6 C4 B4 C3 B3 B2 D5 E4
-G6  : T  -6.62c W  -7.44c S   0.83c ( -0.6 L  -0.6) LCB    2.60c P  8.92% WF  53.3 PSV      52 N      52  --  G6 J5 H6 K5 H2 G2 J2 F4
+H6  : T  -6.36c W  -7.42c S   1.06c ( -0.6 L  -0.6) LCB    1.46c P 23.97% WF 131.3 PSV     127 N     127  --  H6 C4 B4 C3 B3 B2 D5 E4
+G6  : T  -6.57c W  -7.39c S   0.83c ( -0.6 L  -0.6) LCB    2.66c P  8.92% WF  53.3 PSV      51 N      52  --  G6 J5 H6 K5 H2 G2 J2 F4
 D3  : T  35.21c W  25.80c S   9.41c ( +2.5 L  +2.5) LCB   58.67c P 30.76% WF   6.1 PSV       9 N       9  --  D3 J5 K5 H6 J6 H5
-D4  : T  41.96c W  31.42c S  10.55c ( +3.0 L  +3.0) LCB   82.03c P 15.78% WF   3.4 PSV       4 N       5  --  D4 J5 H6 J6
-C3  : T  25.62c W  19.06c S   6.56c ( +1.4 L  +1.4) LCB   95.12c P  9.53% WF   2.4 PSV       3 N       3  --  C3 J5 K5
+D4  : T  41.97c W  31.42c S  10.55c ( +3.0 L  +3.0) LCB   82.04c P 15.78% WF   3.4 PSV       4 N       5  --  D4 J5 H6 J6
+C3  : T  25.61c W  19.05c S   6.55c ( +1.4 L  +1.4) LCB   95.10c P  9.53% WF   2.4 PSV       3 N       3  --  C3 J5 K5
 J5  : T  20.25c W  14.01c S   6.23c ( +1.3 L  +1.3) LCB  152.20c P  4.63% WF   1.7 PSV       2 N       2  --  J5 C4
-G4  : T  30.92c W  23.41c S   7.51c ( +1.7 L  +1.7) LCB  340.92c P  1.92% WF   0.8 PSV       0 N       1  --  G4
+G4  : T  30.94c W  23.43c S   7.51c ( +1.7 L  +1.7) LCB  340.94c P  1.92% WF   0.8 PSV       0 N       1  --  G4
 GAME 12 ==========================================================================
 (MultiStoneSuicide rules)
 

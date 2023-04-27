@@ -22,6 +22,9 @@ Where:
    -override-config <KEYVALUEPAIRS>  (accepted multiple times)
      Override config parameters. Format: "key=value, key=value,..."
 
+   -victim-model <VICTIM_MODEL>
+     Path to victim model (for AMCTS search).
+
    -override-version <VERSION>
      Force KataGo to say a certain value in response to gtp version command
 

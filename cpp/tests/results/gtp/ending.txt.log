@@ -35,7 +35,7 @@ trtUseFP16 = false
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 19 * 19 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 19 nnYLen 19
@@ -65,7 +65,7 @@ trtUseFP16 = false
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 7 * 7 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 7 nnYLen 7
@@ -98,11 +98,11 @@ NN batches: 57
 NN avg batch size: 1
 PV: D4 A3 F4 A1 C1 A5 G6 C6 G5 pass pass
 Tree:
-: T   8.57c W  18.00c S  -2.70c ( +0.1 L  +0.1) N     100  --  D4 A3 F4 A1 C1 A5 G6
+: T   8.58c W  18.01c S  -2.69c ( +0.1 L  +0.1) N     100  --  D4 A3 F4 A1 C1 A5 G6
 ---Black(^)---
-D4  : T  12.08c W  19.72c S  -2.88c ( +0.1 L  +0.1) LCB   -5.40c P 28.51% WF  57.4 PSV      76 N      56  --  D4 A3 F4 A1 C1 A5 G6 C6
-C1  : T   1.83c W  13.17c S  -2.67c ( +0.1 L  +0.1) LCB  -20.57c P 59.53% WF  36.7 PSV      35 N      38  --  C1 A3 D4 A1 F4 A5 G6 C6
-F4  : T   3.85c W  22.04c S  -1.66c ( +0.4 L  +0.2) LCB  -81.54c P  7.30% WF   4.9 PSV       5 N       5  --  F4 D4 C1 A3
+D4  : T  12.08c W  19.73c S  -2.88c ( +0.1 L  +0.1) LCB   -5.40c P 28.54% WF  57.4 PSV      76 N      56  --  D4 A3 F4 A1 C1 A5 G6 C6
+C1  : T   1.84c W  13.18c S  -2.66c ( +0.1 L  +0.1) LCB  -20.57c P 59.49% WF  36.7 PSV      35 N      38  --  C1 A3 D4 A1 F4 A5 G6 C6
+F4  : T   3.92c W  22.08c S  -1.65c ( +0.4 L  +0.2) LCB  -81.42c P  7.31% WF   4.9 PSV       5 N       5  --  F4 D4 C1 A3
 
 : = D4
 : Controller: genmove_debug w
@@ -125,10 +125,10 @@ NN batches: 13
 NN avg batch size: 1
 PV: A3 F4 A1 C1 A5 G6 C6 E1 pass pass
 Tree:
-: T -12.75c W -17.03c S   0.05c ( -0.0 L  -0.0) N     100  --  A3 F4 A1 C1 A5 G6 C6
+: T -12.74c W -17.03c S   0.05c ( -0.0 L  -0.0) N     100  --  A3 F4 A1 C1 A5 G6 C6
 ---White(^)---
-A3  : T -11.49c W -15.91c S   0.11c ( -0.0 L  -0.0) LCB  -22.78c P 58.03% WF  98.2 PSV      98 N      98  --  A3 F4 A1 C1 A5 G6 C6 E1
-C1  : T -90.37c W -86.01c S  -4.35c ( -1.3 L  -1.0) LCB -440.37c P 16.62% WF   0.8 PSV       1 N       1  --  C1
+A3  : T -11.48c W -15.91c S   0.11c ( -0.0 L  -0.0) LCB  -22.77c P 58.04% WF  98.2 PSV      98 N      98  --  A3 F4 A1 C1 A5 G6 C6 E1
+C1  : T -90.34c W -85.99c S  -4.35c ( -1.3 L  -1.0) LCB -440.34c P 16.63% WF   0.8 PSV       1 N       1  --  C1
 
 : = A3
 : Controller: genmove_debug b
@@ -151,11 +151,11 @@ NN batches: 2
 NN avg batch size: 1
 PV: F4 A1 C1 A5 G6 C6 pass pass
 Tree:
-: T  11.37c W  15.37c S  -0.00c ( +0.0 L  +0.0) N     100  --  F4 A1 C1 A5 G6 C6 pass
+: T  11.36c W  15.37c S  -0.00c ( +0.0 L  +0.0) N     100  --  F4 A1 C1 A5 G6 C6 pass
 ---Black(^)---
-F4  : T  15.44c W  19.22c S   0.18c ( +0.1 L  +0.1) LCB   -1.87c P 11.04% WF  33.9 PSV      91 N      33  --  F4 A1 C1 A5 G6 C6 pass pass
-C1  : T   8.66c W  12.90c S  -0.10c ( -0.0 L  -0.0) LCB   -5.27c P 82.16% WF  64.2 PSV      65 N      65  --  C1 A1 F4 A5 G6 C6 pass pass
-F5  : T -25.84c W -23.28c S  -2.56c ( -0.7 L  -0.7) LCB -375.84c P  1.19% WF   0.9 PSV       0 N       1  --  F5
+F4  : T  15.44c W  19.22c S   0.18c ( +0.1 L  +0.1) LCB   -1.87c P 11.03% WF  33.9 PSV      92 N      33  --  F4 A1 C1 A5 G6 C6 pass pass
+C1  : T   8.65c W  12.90c S  -0.10c ( -0.0 L  -0.0) LCB   -5.28c P 82.16% WF  64.2 PSV      65 N      65  --  C1 A1 F4 A5 G6 C6 pass pass
+F5  : T -25.73c W -23.18c S  -2.55c ( -0.7 L  -0.7) LCB -375.73c P  1.19% WF   0.9 PSV       0 N       1  --  F5
 
 : = F4
 : Controller: genmove_debug w
@@ -178,11 +178,11 @@ NN batches: 16
 NN avg batch size: 1
 PV: A1 C1 A5 G6 C6 pass pass
 Tree:
-: T  -9.98c W -12.92c S   0.05c ( -0.0 L  -0.0) N     100  --  A1 C1 A5 G6 C6 pass pass
+: T  -9.98c W -12.91c S   0.05c ( -0.0 L  -0.0) N     100  --  A1 C1 A5 G6 C6 pass pass
 ---White(^)---
-A1  : T  -8.56c W -11.43c S   0.13c ( -0.0 L  -0.0) LCB  -18.49c P 66.25% WF  97.4 PSV      97 N      97  --  A1 C1 A5 G6 C6 pass pass
-C1  : T -94.88c W -90.50c S  -4.38c ( -1.2 L  -1.3) LCB -444.88c P 17.02% WF   0.8 PSV       1 N       1  --  C1
-A5  : T -72.78c W -94.00c S  -4.43c ( -1.2 L  -1.2) LCB -422.78c P  5.39% WF   0.8 PSV       0 N       1  --  A5
+A1  : T  -8.56c W -11.43c S   0.13c ( -0.0 L  -0.0) LCB  -18.48c P 66.25% WF  97.4 PSV      97 N      97  --  A1 C1 A5 G6 C6 pass pass
+C1  : T -94.89c W -90.51c S  -4.38c ( -1.2 L  -1.3) LCB -444.89c P 17.02% WF   0.8 PSV       1 N       1  --  C1
+A5  : T -72.80c W -93.99c S  -4.42c ( -1.2 L  -1.1) LCB -422.80c P  5.39% WF   0.8 PSV       0 N       1  --  A5
 
 : = A1
 : Controller: play b pass
@@ -252,9 +252,9 @@ NN batches: 0
 NN avg batch size: -nan
 PV: D1 B1 pass A5 pass pass
 Tree:
-: T -108.01c W -99.93c S  -7.79c ( -3.6 L  -3.4) N     100  --  D1 B1 pass A5 pass pass
+: T -108.02c W -99.93c S  -7.75c ( -3.6 L  -3.4) N     100  --  D1 B1 pass A5 pass pass
 ---Black(^)---
-D1  : T -108.08c W -99.94c S  -7.85c ( -3.6 L  -3.5) LCB -108.69c P 90.77% WF  99.0 PSV      99 N      99  --  D1 B1 pass A5 pass pass
+D1  : T -108.09c W -99.94c S  -7.81c ( -3.6 L  -3.4) LCB -108.67c P 90.76% WF  99.0 PSV      99 N      99  --  D1 B1 pass A5 pass pass
 
 : = D1
 : Controller: undo
@@ -308,11 +308,11 @@ NN batches: 54
 NN avg batch size: 1
 PV: D4 A3 C1 A1 F4 A5 pass pass
 Tree:
-: T   7.57c W  17.06c S  -2.65c ( +0.1 L  +0.1) N     100  --  D4 A3 C1 A1 F4 A5 pass
+: T   7.56c W  17.05c S  -2.65c ( +0.1 L  +0.1) N     100  --  D4 A3 C1 A1 F4 A5 pass
 ---Black(^)---
-D4  : T  11.43c W  19.18c S  -2.80c ( +0.1 L  +0.1) LCB   -6.62c P 28.23% WF  54.4 PSV      71 N      53  --  D4 A3 C1 A1 F4 A5 pass pass
-C1  : T   1.08c W  12.09c S  -2.67c ( +0.1 L  +0.1) LCB  -19.38c P 60.06% WF  39.5 PSV      34 N      41  --  C1 A3 D4 A1 F4 A5 pass pass
-F4  : T   2.83c W  21.43c S  -1.64c ( +0.4 L  +0.2) LCB  -83.58c P  7.07% WF   4.9 PSV       4 N       5  --  F4 D4 C1 A3
+D4  : T  11.42c W  19.17c S  -2.80c ( +0.1 L  +0.1) LCB   -6.64c P 28.25% WF  54.4 PSV      71 N      53  --  D4 A3 C1 A1 F4 A5 pass pass
+C1  : T   1.08c W  12.09c S  -2.67c ( +0.1 L  +0.1) LCB  -19.39c P 60.03% WF  39.5 PSV      34 N      41  --  C1 A3 D4 A1 F4 A5 pass pass
+F4  : T   2.79c W  21.40c S  -1.64c ( +0.4 L  +0.2) LCB  -83.65c P  7.07% WF   4.9 PSV       4 N       5  --  F4 D4 C1 A3
 
 : = D4
 : Controller: genmove_debug w
@@ -335,10 +335,10 @@ NN batches: 15
 NN avg batch size: 1
 PV: A3 F4 A1 C1 A5 pass pass
 Tree:
-: T  -9.03c W -13.30c S   0.12c ( -0.0 L  -0.0) N     100  --  A3 F4 A1 C1 A5 pass pass
+: T  -9.02c W -13.28c S   0.12c ( -0.0 L  -0.0) N     100  --  A3 F4 A1 C1 A5 pass pass
 ---White(^)---
-A3  : T  -7.72c W -12.12c S   0.19c ( -0.0 L  -0.0) LCB  -18.26c P 59.40% WF  98.2 PSV      98 N      98  --  A3 F4 A1 C1 A5 pass pass
-C1  : T -90.05c W -85.79c S  -4.26c ( -1.2 L  -1.0) LCB -440.05c P 16.19% WF   0.8 PSV       1 N       1  --  C1
+A3  : T  -7.71c W -12.11c S   0.19c ( -0.0 L  -0.0) LCB  -18.24c P 59.40% WF  98.2 PSV      98 N      98  --  A3 F4 A1 C1 A5 pass pass
+C1  : T -89.99c W -85.74c S  -4.25c ( -1.2 L  -1.0) LCB -439.99c P 16.19% WF   0.8 PSV       1 N       1  --  C1
 
 : = A3
 : Controller: genmove_debug b
@@ -361,11 +361,11 @@ NN batches: 2
 NN avg batch size: 1
 PV: F4 A1 C1 A5 pass pass
 Tree:
-: T   8.00c W  11.79c S  -0.01c ( +0.0 L  +0.0) N     100  --  F4 A1 C1 A5 pass pass
+: T   7.99c W  11.77c S  -0.01c ( +0.0 L  +0.0) N     100  --  F4 A1 C1 A5 pass pass
 ---Black(^)---
-F4  : T  12.26c W  15.61c S   0.17c ( +0.1 L  +0.1) LCB   -3.76c P 11.03% WF  34.9 PSV     100 N      34  --  F4 A1 C1 A5 pass pass
-C1  : T   4.98c W   9.12c S  -0.11c ( -0.0 L  -0.0) LCB   -8.17c P 82.37% WF  63.2 PSV      64 N      64  --  C1 A1 F4 A5 pass pass
-F5  : T -26.32c W -23.82c S  -2.50c ( -0.7 L  -0.7) LCB -376.32c P  1.15% WF   0.9 PSV       0 N       1  --  F5
+F4  : T  12.25c W  15.60c S   0.17c ( +0.1 L  +0.1) LCB   -3.76c P 11.03% WF  34.9 PSV     100 N      34  --  F4 A1 C1 A5 pass pass
+C1  : T   4.97c W   9.11c S  -0.12c ( -0.0 L  -0.0) LCB   -8.19c P 82.37% WF  63.1 PSV      64 N      64  --  C1 A1 F4 A5 pass pass
+F5  : T -26.28c W -23.78c S  -2.50c ( -0.7 L  -0.7) LCB -376.28c P  1.15% WF   0.9 PSV       0 N       1  --  F5
 
 : = F4
 : Controller: genmove_debug w
@@ -388,11 +388,11 @@ NN batches: 14
 NN avg batch size: 1
 PV: A1 C1 A5 pass pass
 Tree:
-: T  -7.46c W  -9.37c S   0.21c ( +0.0 L  -0.0) N     100  --  A1 C1 A5 pass pass
+: T  -7.45c W  -9.36c S   0.21c ( +0.0 L  -0.0) N     100  --  A1 C1 A5 pass pass
 ---White(^)---
-A1  : T  -6.01c W  -7.82c S   0.29c ( +0.0 L  +0.0) LCB  -15.41c P 66.27% WF  97.4 PSV      97 N      97  --  A1 C1 A5 pass pass
-C1  : T -94.47c W -90.14c S  -4.32c ( -1.2 L  -1.3) LCB -444.47c P 17.18% WF   0.8 PSV       1 N       1  --  C1
-A5  : T -71.97c W -93.77c S  -4.41c ( -1.2 L  -1.1) LCB -421.97c P  5.37% WF   0.8 PSV       0 N       1  --  A5
+A1  : T  -6.00c W  -7.80c S   0.29c ( +0.0 L  +0.0) LCB  -15.38c P 66.28% WF  97.4 PSV      97 N      97  --  A1 C1 A5 pass pass
+C1  : T -94.47c W -90.15c S  -4.33c ( -1.2 L  -1.3) LCB -444.47c P 17.18% WF   0.8 PSV       1 N       1  --  C1
+A5  : T -71.95c W -93.75c S  -4.40c ( -1.2 L  -1.1) LCB -421.95c P  5.37% WF   0.8 PSV       0 N       1  --  A5
 
 : = A1
 : Controller: play b pass
@@ -419,7 +419,7 @@ PV: C1 D1 B1 pass A5 F5 pass pass
 Tree:
 : T 104.56c W  99.90c S   4.27c ( +3.6 L  +3.4) N      50  --  C1 D1 B1 pass A5 F5 pass
 ---White(^)---
-C1  : T 104.59c W  99.91c S   4.28c ( +3.6 L  +3.4) LCB  103.70c P 96.95% WF  49.0 PSV      49 N      49  --  C1 D1 B1 pass A5 F5 pass pass
+C1  : T 104.59c W  99.91c S   4.28c ( +3.6 L  +3.4) LCB  103.70c P 96.94% WF  49.0 PSV      49 N      49  --  C1 D1 B1 pass A5 F5 pass pass
 
 : = C1
 : Controller: undo
@@ -466,9 +466,9 @@ NN batches: 1
 NN avg batch size: 1
 PV: C1 A5 pass pass
 Tree:
-: T   8.51c W  12.40c S  -1.12c ( +0.0 L  +0.0) N      50  --  C1 A5 pass pass
+: T   8.50c W  12.39c S  -1.12c ( +0.0 L  +0.0) N      50  --  C1 A5 pass pass
 ---Black(^)---
-C1  : T   7.78c W  11.77c S  -1.15c ( +0.0 L  +0.0) LCB   -5.96c P 97.04% WF  49.0 PSV      49 N      49  --  C1 A5 pass pass
+C1  : T   7.78c W  11.76c S  -1.15c ( +0.0 L  +0.0) LCB   -5.95c P 97.04% WF  49.0 PSV      49 N      49  --  C1 A5 pass pass
 
 : = C1
 : Controller: undo

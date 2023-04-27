@@ -1,14 +1,14 @@
 Running search tests specifically for v3 or later nets
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 : Initializing neural net buffer to be size 11 * 11 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 3 useFP16 = true useNHWC = false
 : Cuda backend thread 0: Model name: b6c96-s128700160-d49811312
 GAME 5 ==========================================================================
@@ -334,7 +334,7 @@ Policy
    1    -    -    -    -   32  236    -    -    0    0 
    1    2    2    -    -  477    -    -    -    -    0 
    0    1    1    1    0    0    1    0    -    0    0 
-  227  -764  -748  -866  -920  -907  -927  -635   405   329   662 
+  227  -764  -748  -866  -920  -907  -927  -636   405   329   662 
   870   885  -899  -866  -951  -908  -980  -942  -950   866   772 
   824   870   967  -913  -847  -856  -769  -967   933   851   880 
   810   866   978   969  -957  -928  -349     2   922   931   844 
@@ -1147,14 +1147,14 @@ PV: F2 D7 C7 E4 F3 D5 C6 C5 B4
 Tree:
 : T  11.46c W   7.15c S   4.33c ( +0.6 L  +0.6) N     200  --  F2 D7 C7 E4 F3 D5 C6
 ---Black(v)---
-F2  : T   8.96c W   5.01c S   3.99c ( +0.5 L  +0.5) LCB   23.88c P 15.92% WF  63.0 PSV      61 N      61  --  F2 D7 C7 E4 F3 D5 C6 C5
-E7  : T  14.28c W   9.26c S   5.01c ( +0.9 L  +0.9) LCB   29.42c P 29.03% WF  51.3 PSV      45 N      53  --  E7 D8 F2 D7 E5 F3 E4 F1
-B3  : T   6.92c W   3.48c S   3.43c ( +0.3 L  +0.3) LCB   19.67c P  2.84% WF  29.3 PSV      25 N      28  --  B3 B2 E7 D8 D7 C8
-E5  : T   6.26c W   3.28c S   2.98c ( +0.1 L  +0.1) LCB   23.29c P  3.58% WF  25.2 PSV      24 N      24  --  E5 F3 E7 C10 D10 D9 B10 C8
-E4  : T  28.91c W  20.94c S   7.99c ( +2.0 L  +2.0) LCB   59.47c P 21.03% WF  10.2 PSV      12 N      12  --  E4 D7 C7 C6 D5 C8 B7 B8
-D7  : T  17.50c W  12.82c S   4.67c ( +0.7 L  +0.7) LCB   35.44c P 10.53% WF  10.5 PSV      11 N      11  --  D7 E7 E4 F2 E10
-F3  : T  17.03c W  11.58c S   5.45c ( +1.0 L  +1.0) LCB   38.45c P  7.53% WF   7.7 PSV       8 N       8  --  F3 D7 C7 C6 D5 C8
-D8  : T  23.88c W  18.11c S   5.77c ( +1.1 L  +1.1) LCB  155.81c P  3.50% WF   1.9 PSV       2 N       2  --  D8 E8
+F2  : T   8.96c W   5.01c S   4.00c ( +0.5 L  +0.5) LCB   23.89c P 15.92% WF  63.0 PSV      61 N      61  --  F2 D7 C7 E4 F3 D5 C6 C5
+E7  : T  14.28c W   9.26c S   5.01c ( +0.9 L  +0.9) LCB   29.42c P 29.00% WF  51.3 PSV      45 N      53  --  E7 D8 F2 D7 E5 F3 E4 F1
+B3  : T   6.92c W   3.49c S   3.43c ( +0.3 L  +0.3) LCB   19.67c P  2.83% WF  29.3 PSV      25 N      28  --  B3 B2 E7 D8 D7 C8
+E5  : T   6.26c W   3.28c S   2.98c ( +0.1 L  +0.1) LCB   23.29c P  3.57% WF  25.2 PSV      24 N      24  --  E5 F3 E7 C10 D10 D9 B10 C8
+E4  : T  28.91c W  20.94c S   7.99c ( +2.0 L  +2.0) LCB   59.48c P 21.06% WF  10.2 PSV      12 N      12  --  E4 D7 C7 C6 D5 C8 B7 B8
+D7  : T  17.50c W  12.82c S   4.68c ( +0.7 L  +0.7) LCB   35.45c P 10.54% WF  10.5 PSV      11 N      11  --  D7 E7 E4 F2 E10
+F3  : T  17.03c W  11.58c S   5.45c ( +1.0 L  +1.0) LCB   38.45c P  7.55% WF   7.7 PSV       8 N       8  --  F3 D7 C7 C6 D5 C8
+D8  : T  23.87c W  18.10c S   5.77c ( +1.1 L  +1.1) LCB  155.80c P  3.50% WF   1.9 PSV       2 N       2  --  D8 E8
 MoveNum: 0 HASH: 3D7444680E62DFF9BC252AF4DC21718D
    A B C D E F G H J K L
  7 . . . . . . . . . . .
@@ -1174,13 +1174,13 @@ PV: H6 C4 B4 C3 B3 B2 D5 E4 D4 D3 E3 F3 E2
 Tree:
 : T   6.00c W   2.67c S   3.34c ( +0.4 L  +0.4) N     200  --  H6 C4 B4 C3 B3 B2 D5
 ---Black(v)---
-H6  : T   2.21c W  -0.43c S   2.64c ( +0.1 L  +0.1) LCB    9.74c P 17.20% WF 172.7 PSV     165 N     165  --  H6 C4 B4 C3 B3 B2 D5 E4
+H6  : T   2.21c W  -0.42c S   2.64c ( +0.1 L  +0.1) LCB    9.74c P 17.20% WF 172.7 PSV     165 N     165  --  H6 C4 B4 C3 B3 B2 D5 E4
 D3  : T  31.37c W  23.00c S   8.36c ( +2.2 L  +2.2) LCB   57.23c P 32.48% WF  11.3 PSV      14 N      15  --  D3 J5 K5 H6 J6 H5 K6 C4
-C3  : T  32.23c W  24.54c S   7.69c ( +1.9 L  +1.9) LCB   51.51c P 21.24% WF   7.7 PSV       9 N      10  --  C3 J5 K5 H6 J6 H5 K6 J2
-D4  : T  38.89c W  29.51c S   9.38c ( +2.6 L  +2.6) LCB   76.50c P 15.45% WF   3.8 PSV       5 N       5  --  D4 J5 K5 H6 J6
+C3  : T  32.23c W  24.53c S   7.69c ( +1.9 L  +1.9) LCB   51.51c P 21.24% WF   7.7 PSV       9 N      10  --  C3 J5 K5 H6 J6 H5 K6 J2
+D4  : T  38.88c W  29.51c S   9.37c ( +2.6 L  +2.6) LCB   76.50c P 15.45% WF   3.8 PSV       5 N       5  --  D4 J5 K5 H6 J6
 G6  : T  22.75c W  16.23c S   6.52c ( +1.5 L  +1.5) LCB  154.69c P  3.33% WF   1.8 PSV       2 N       2  --  G6 J5
-J5  : T  29.79c W  22.67c S   7.13c ( +1.7 L  +1.7) LCB  339.79c P  3.27% WF   0.9 PSV       1 N       1  --  J5
-G4  : T  27.41c W  20.20c S   7.21c ( +1.7 L  +1.7) LCB  337.41c P  1.96% WF   0.9 PSV       1 N       1  --  G4
+J5  : T  29.80c W  22.67c S   7.13c ( +1.7 L  +1.7) LCB  339.80c P  3.27% WF   0.9 PSV       1 N       1  --  J5
+G4  : T  27.41c W  20.19c S   7.21c ( +1.7 L  +1.7) LCB  337.41c P  1.96% WF   0.9 PSV       1 N       1  --  G4
 GAME 12 ==========================================================================
 (MultiStoneSuicide rules)
 

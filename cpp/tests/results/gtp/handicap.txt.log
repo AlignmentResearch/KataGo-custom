@@ -35,7 +35,7 @@ trtUseFP16 = false
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 19 * 19 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 19 nnYLen 19
@@ -419,7 +419,7 @@ R3  : T  41.00c W  42.55c S   2.71c (+12.6 L +12.8) LCB -108.85c P  6.98% WF   2
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 13 * 13 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 13 nnYLen 13
@@ -474,20 +474,20 @@ NN rows: 98
 NN batches: 98
 NN avg batch size: 1
 PlayoutDoublingAdvantage: -2.125
-PV: J4 K3 K5 J5 J3 J6
+PV: J4 K3 K5 J5 J3 H5 G4
 Tree:
-: T  66.99c W  64.95c S   2.62c ( +9.9 L +10.4) N     100  --  J4 K3 K5 J5 J3 J6
+: T  66.95c W  64.84c S   2.65c (+10.0 L +10.4) N     100  --  J4 K3 K5 J5 J3 H5 G4
 ---Black(^)---
-J4  : T  69.53c W  67.78c S   2.79c (+10.1 L +10.6) LCB   65.26c P  3.12% WF  33.4 PSV      35 N      33  --  J4 K3 K5 J5 J3 J6
+J4  : T  69.40c W  67.24c S   2.78c (+10.1 L +10.5) LCB   64.30c P  3.13% WF  36.4 PSV      36 N      36  --  J4 K3 K5 J5 J3 H5 G4
 K5  : T  68.14c W  66.53c S   2.73c (+10.0 L +10.5) LCB   61.00c P  7.78% WF  17.0 PSV      17 N      17  --  K5 L4 J4 J5 L5
-L7  : T  68.14c W  64.88c S   3.07c (+10.4 L +10.7) LCB   56.86c P  4.43% WF   9.0 PSV       9 N       9  --  L7 C6 G3 F11 C8
-K7  : T  66.28c W  63.90c S   2.65c (+10.0 L +10.4) LCB   45.25c P  6.64% WF   6.0 PSV       6 N       6  --  K7 C6 G3 F11
-L3  : T  70.07c W  65.25c S   3.13c (+10.5 L +10.7) LCB   50.02c P  4.61% WF   6.0 PSV       6 N       6  --  L3 K3 L4 L5
-L4  : T  66.19c W  65.44c S   2.41c ( +9.7 L +10.1) LCB   18.88c P  4.49% WF   4.0 PSV       4 N       4  --  L4 L5 L3
-K3  : T  66.31c W  65.37c S   2.75c (+10.1 L +10.4) LCB   20.59c P  4.01% WF   4.0 PSV       4 N       4  --  K3 J3 L4
-L6  : T  65.40c W  63.27c S   2.67c (+10.0 L +10.4) LCB   19.39c P  2.85% WF   4.0 PSV       2 N       4  --  L6 L8 J5
-D7  : T  61.38c W  60.22c S   0.76c ( +8.1 L  +9.1) LCB  -13.18c P  5.69% WF   2.9 PSV       2 N       3  --  D7 D11
-G10 : T  55.48c W  53.93c S   1.55c ( +8.9 L  +9.2) LCB -294.52c P  4.45% WF   1.0 PSV       1 N       1  --  G10
+L7  : T  68.28c W  65.04c S   3.01c (+10.3 L +10.7) LCB   54.66c P  4.42% WF   8.0 PSV       8 N       8  --  L7 C6 G3 F11
+K7  : T  66.28c W  63.91c S   2.65c (+10.0 L +10.4) LCB   45.25c P  6.63% WF   6.0 PSV       6 N       6  --  K7 C6 G3 F11
+L3  : T  67.03c W  63.93c S   3.17c (+10.5 L +10.7) LCB   38.55c P  4.61% WF   5.0 PSV       5 N       5  --  L3 K3 L4
+L4  : T  66.18c W  65.44c S   2.41c ( +9.7 L +10.1) LCB   18.87c P  4.50% WF   4.0 PSV       4 N       4  --  L4 L5 L3
+K3  : T  66.30c W  65.36c S   2.74c (+10.0 L +10.4) LCB   20.57c P  4.01% WF   4.0 PSV       4 N       4  --  K3 J3 L4
+L6  : T  65.41c W  63.28c S   2.66c (+10.0 L +10.4) LCB   19.39c P  2.85% WF   4.0 PSV       2 N       4  --  L6 L8 J5
+D7  : T  64.42c W  60.85c S   1.83c ( +9.1 L  +9.8) LCB  -84.67c P  5.68% WF   2.0 PSV       2 N       2  --  D7 H11
+G10 : T  55.49c W  53.94c S   1.55c ( +8.9 L  +9.2) LCB -294.51c P  4.45% WF   1.0 PSV       1 N       1  --  G10
 
 : = K5
 : Controller: genmove_debug w
@@ -511,18 +511,18 @@ koPOSITIONALscoreAREAtaxNONEsui1komi7.5
 Time taken: ###
 Root visits: 100
 New playouts: 100
-NN rows: 76
-NN batches: 76
+NN rows: 75
+NN batches: 75
 NN avg batch size: 1
 PlayoutDoublingAdvantage: 2.125
 PV: L4 J4 J5 J3 H5 L5 M5
 Tree:
-: T -67.05c W -64.19c S  -3.33c ( -9.8 L -10.2) N     100  --  L4 J4 J5 J3 H5 L5 M5
+: T -67.06c W -64.20c S  -3.33c ( -9.8 L -10.2) N     100  --  L4 J4 J5 J3 H5 L5 M5
 ---White(^)---
-L4  : T -66.14c W -63.04c S  -3.14c ( -9.6 L -10.0) LCB  -71.57c P 34.39% WF  56.2 PSV      56 N      56  --  L4 J4 J5 J3 H5 L5 M5
-L5  : T -66.15c W -64.32c S  -3.31c ( -9.8 L -10.1) LCB  -72.43c P 35.56% WF  35.1 PSV      35 N      35  --  L5 J4 K3 L6 K6 J5 L7 M6
-J4  : T -73.99c W -69.61c S  -4.29c (-10.7 L -10.8) LCB -103.09c P 12.54% WF   4.9 PSV       5 N       5  --  J4 L4 L3 L5
-J5  : T -84.70c W -76.58c S  -5.68c (-11.9 L -12.3) LCB -159.11c P 10.26% WF   2.8 PSV       2 N       3  --  J5 L4 L3
+L4  : T -66.14c W -63.04c S  -3.14c ( -9.6 L -10.0) LCB  -71.57c P 34.41% WF  56.2 PSV      56 N      56  --  L4 J4 J5 J3 H5 L5 M5
+L5  : T -66.16c W -64.34c S  -3.32c ( -9.8 L -10.1) LCB  -72.44c P 35.55% WF  35.1 PSV      35 N      35  --  L5 J4 K3 L6 K6 J5 L7 M6
+J4  : T -73.99c W -69.61c S  -4.29c (-10.7 L -10.8) LCB -103.08c P 12.52% WF   4.9 PSV       5 N       5  --  J4 L4 L3 L5
+J5  : T -84.71c W -76.59c S  -5.68c (-11.9 L -12.3) LCB -159.12c P 10.27% WF   2.8 PSV       2 N       3  --  J5 L4 L3
 
 : = L4
 : Controller: genmove_debug b
@@ -554,16 +554,16 @@ PV: J4 J5 L5 J6 M4 M3 M5 J3 H4 H3
 Tree:
 : T  66.80c W  63.06c S   3.70c ( +9.8 L +10.1) N     100  --  J4 J5 L5 J6 M4 M3 M5
 ---Black(^)---
-J4  : T  69.26c W  64.57c S   4.31c (+10.5 L +10.5) LCB   63.78c P 22.85% WF  61.7 PSV      61 N      61  --  J4 J5 L5 J6 M4 M3 M5 J3
-J5  : T  62.64c W  60.26c S   2.70c ( +8.8 L  +9.6) LCB   51.63c P 21.57% WF  15.6 PSV      11 N      16  --  J5 H3 G4 F11 H11
-H5  : T  65.47c W  62.81c S   3.12c ( +9.2 L +10.0) LCB   55.77c P  8.92% WF  10.9 PSV       7 N      11  --  H5 H3 L5 C6
-F3  : T  62.02c W  58.86c S   2.59c ( +8.7 L  +9.3) LCB  -86.93c P  4.53% WF   2.0 PSV       2 N       2  --  F3 H11
-D7  : T  58.30c W  57.61c S   1.06c ( +7.2 L  +8.2) LCB  -20.67c P  4.58% WF   2.9 PSV       1 N       3  --  D7 D11
-L5  : T  60.14c W  59.92c S   2.81c ( +8.9 L  +9.1) LCB  -14.12c P  2.93% WF   2.9 PSV       1 N       3  --  L5 J5 J6
-G10 : T  56.90c W  54.65c S   2.25c ( +8.4 L  +8.7) LCB -293.10c P  2.77% WF   1.0 PSV       0 N       1  --  G10
-E11 : T  59.42c W  57.26c S   2.16c ( +8.3 L  +8.8) LCB -290.58c P  2.39% WF   1.0 PSV       0 N       1  --  E11
-C11 : T  58.44c W  56.56c S   1.88c ( +8.0 L  +8.4) LCB -291.56c P  2.36% WF   1.0 PSV       0 N       1  --  C11
+J4  : T  69.26c W  64.57c S   4.31c (+10.5 L +10.5) LCB   63.78c P 22.88% WF  61.7 PSV      61 N      61  --  J4 J5 L5 J6 M4 M3 M5 J3
+J5  : T  62.64c W  60.26c S   2.69c ( +8.8 L  +9.6) LCB   51.62c P 21.57% WF  15.6 PSV      11 N      16  --  J5 H3 G4 F11 H11
+H5  : T  65.46c W  62.81c S   3.12c ( +9.2 L +10.0) LCB   55.75c P  8.92% WF  10.9 PSV       7 N      11  --  H5 H3 L5 C6
+F3  : T  62.03c W  58.86c S   2.59c ( +8.7 L  +9.3) LCB  -86.92c P  4.52% WF   2.0 PSV       2 N       2  --  F3 H11
+D7  : T  58.30c W  57.62c S   1.06c ( +7.2 L  +8.2) LCB  -20.66c P  4.58% WF   2.9 PSV       1 N       3  --  D7 D11
+L5  : T  60.12c W  59.91c S   2.81c ( +8.9 L  +9.1) LCB  -14.14c P  2.94% WF   2.9 PSV       1 N       3  --  L5 J5 J6
+G10 : T  56.91c W  54.66c S   2.25c ( +8.4 L  +8.7) LCB -293.09c P  2.77% WF   1.0 PSV       0 N       1  --  G10
+E11 : T  59.41c W  57.26c S   2.16c ( +8.3 L  +8.8) LCB -290.59c P  2.39% WF   1.0 PSV       0 N       1  --  E11
+C11 : T  58.43c W  56.55c S   1.88c ( +8.0 L  +8.4) LCB -291.57c P  2.36% WF   1.0 PSV       0 N       1  --  C11
 
 : = J4
-: GPU -1 finishing, processed 218 rows 218 batches
+: GPU -1 finishing, processed 217 rows 217 batches
 : All cleaned up, quitting

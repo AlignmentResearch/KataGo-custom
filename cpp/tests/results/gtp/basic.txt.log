@@ -35,7 +35,7 @@ trtUseFP16 = false
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 19 * 19 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 19 nnYLen 19
@@ -251,7 +251,7 @@ Q16 : T  -2.83c W  -0.88c S  -0.18c ( -0.4 L  -0.5) LCB -151.93c P  5.31% WF   2
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 9 * 9 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A5000 memory 25434652672 compute capability major 8 minor 6
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 9 nnYLen 9
@@ -263,8 +263,8 @@ Q16 : T  -2.83c W  -0.88c S  -0.18c ( -0.4 L  -0.5) LCB -151.93c P  5.31% WF   2
  9 . . . . . . . . .
  8 . . . . . . . . .
  7 . . . . . . . . .
- 6 . . . . . . . . .
- 5 . . . . @ . . . .
+ 6 . . . . @ . . . .
+ 5 . . . . . . . . .
  4 . . . . . . . . .
  3 . . . . . . . . .
  2 . . . . . . . . .
@@ -279,27 +279,27 @@ NN batches: 100
 NN avg batch size: 1
 PV: E4 E6 C5 C6 B6 D5 D4
 Tree:
-: T -10.64c W  -8.54c S  -1.34c ( -0.9 L  -0.5) N     100  --  E4 E6 C5 C6 B6 D5 D4
+: T -10.62c W  -8.53c S  -1.32c ( -0.8 L  -0.5) N     100  --  E4 E6 C5 C6 B6 D5 D4
 ---Black(^)---
-E4  : T  -9.16c W  -7.27c S  -1.05c ( -0.7 L  -0.3) LCB  -15.30c P  9.69% WF  20.1 PSV      35 N      20  --  E4 E6 C5 C6 B6 D5 D4
-F5  : T  -9.39c W  -7.26c S  -0.99c ( -0.6 L  -0.4) LCB  -16.71c P 11.18% WF  19.1 PSV      19 N      19  --  F5 D5 E3 D3 D2 E4 F4
-E5  : T -12.47c W -11.18c S  -2.08c ( -1.4 L  -0.5) LCB  -18.65c P 27.05% WF  17.8 PSV      18 N      18  --  E5 E3 G4 C4
-E6  : T  -9.67c W  -8.38c S  -1.18c ( -0.8 L  -0.5) LCB  -18.23c P 12.48% WF  12.0 PSV      12 N      12  --  E6 E4 C5 C4 B4 D5 D6
-D5  : T -11.76c W  -8.75c S  -1.28c ( -0.8 L  -0.4) LCB  -32.18c P  7.64% WF   6.0 PSV       6 N       6  --  D5 F5 E7 F7 F8
-F4  : T -11.85c W  -8.56c S  -1.55c ( -1.0 L  -0.6) LCB  -32.49c P  6.98% WF   5.9 PSV       5 N       6  --  F4 D6 C4 G6
-F6  : T -13.14c W  -9.85c S  -1.54c ( -1.0 L  -0.7) LCB  -34.30c P  7.39% WF   5.9 PSV       4 N       6  --  F6 D4 F4 D7
-D4  : T -11.34c W  -8.28c S  -1.38c ( -0.9 L  -0.6) LCB  -32.07c P  5.47% WF   6.0 PSV       4 N       6  --  D4 F6 D7 F4
-D6  : T -11.92c W  -8.99c S  -1.35c ( -0.8 L  -0.7) LCB  -32.90c P  5.20% WF   6.0 PSV       4 N       6  --  D6 F4 F6 C4
+E4  : T  -9.16c W  -7.27c S  -1.05c ( -0.7 L  -0.3) LCB  -15.30c P  9.67% WF  20.1 PSV      32 N      20  --  E4 E6 C5 C6 B6 D5 D4
+F5  : T  -9.38c W  -7.26c S  -0.99c ( -0.6 L  -0.4) LCB  -16.71c P 11.20% WF  19.1 PSV      19 N      19  --  F5 D5 E3 D3 D2 E4 F4
+E5  : T -12.68c W -11.29c S  -2.10c ( -1.4 L  -0.5) LCB  -19.10c P 26.99% WF  15.8 PSV      16 N      16  --  E5 E7 C6 G6 G5
+E6  : T  -9.74c W  -8.64c S  -1.16c ( -0.7 L  -0.4) LCB  -17.10c P 12.50% WF  14.1 PSV      14 N      14  --  E6 E4 C5 C4 B4 D5 D6 B5
+D5  : T -11.76c W  -8.75c S  -1.28c ( -0.8 L  -0.4) LCB  -32.18c P  7.65% WF   6.0 PSV       6 N       6  --  D5 F5 E7 F7 F8
+F4  : T -11.84c W  -8.55c S  -1.55c ( -1.0 L  -0.6) LCB  -32.48c P  6.98% WF   5.9 PSV       5 N       6  --  F4 D6 C4 G6
+F6  : T -13.13c W  -9.84c S  -1.54c ( -1.0 L  -0.7) LCB  -34.29c P  7.40% WF   5.9 PSV       4 N       6  --  F6 D4 F4 D7
+D4  : T -11.34c W  -8.28c S  -1.38c ( -0.9 L  -0.6) LCB  -32.06c P  5.47% WF   6.0 PSV       4 N       6  --  D4 F6 D7 F4
+D6  : T -11.92c W  -8.99c S  -1.35c ( -0.8 L  -0.7) LCB  -32.90c P  5.21% WF   6.0 PSV       4 N       6  --  D6 F4 F6 C4
 
-: = E5
+: = E6
 : Controller: showboard
-: = MoveNum: 1 HASH: 38E71B648B5DE3A43B414F57C285AD76
+: = MoveNum: 1 HASH: F6947E54F53D680912E6585605F8EFAC
    A B C D E F G H J
  9 . . . . . . . . .
  8 . . . . . . . . .
  7 . . . . . . . . .
- 6 . . . . . . . . .
- 5 . . . . X1. . . .
+ 6 . . . . X1. . . .
+ 5 . . . . . . . . .
  4 . . . . . . . . .
  3 . . . . . . . . .
  2 . . . . . . . . .

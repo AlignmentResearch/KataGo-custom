@@ -284,7 +284,9 @@ class TrainingDataWriter {
   bool isEmpty() const;
   int64_t numRowsInBuffer() const;
 
-  bool forVictimPlay = false;
+  bool forVictimplay = false;
+  // If true, allows selfplay games to occur even when forVictimPlay is true.
+  bool allowSelfplayInVictimplay = false;
   bool useAuxPolicyTarget = true;
 
  private:

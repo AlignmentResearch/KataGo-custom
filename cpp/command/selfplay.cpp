@@ -657,6 +657,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           gameData = gameRunner->runGame(
             seed, botSpecB, botSpecW, forkData, NULL, logger,
             shouldStopFunc,
+            shouldPause,
             nullptr,
             nullptr,
             nullptr

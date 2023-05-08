@@ -511,8 +511,8 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
-    // We only want to initialize oppBot if maxVisits > 1, or else we'll get
-    // infinite recursion if both bots are using A-MCTS.
+    // We only want to initialize oppBot if maxVisits > 1 or else we'll get
+    // infinite recursion when both bots are using A-MCTS.
     if (searchParams.maxVisits > 1) {
       assert(oppNNEval != nullptr);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R

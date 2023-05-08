@@ -21,7 +21,8 @@ static const vector<string> ACCEPTABLE_MODEL_SUFFIXES {
   ".bin.gz",
   ".bin",
   "model.txt.gz",
-  "model.txt"
+  "model.txt",
+  ".txt.gz",
 };
 static const vector<string> GENERIC_MODEL_NAMES {
   "model.bin.gz",
@@ -66,7 +67,7 @@ bool LoadModel::findLatestModel(const string& modelsDir, Logger& logger, string&
     gfs::path filePath = dirEntry.path();
     if(checkDirsOnly && !gfs::is_directory(filePath))
       continue;
-  
+
     if(gfs::is_regular_file(filePath) && endsWithAnySuffix(filePath.filename().u8string(), ACCEPTABLE_MODEL_SUFFIXES)) {
       gfs::file_time_type thisTime = gfs::last_write_time(filePath);
       if(!hasLatestTime || thisTime > latestTime) {

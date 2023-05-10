@@ -156,7 +156,7 @@ string Search::getRankStr() const {
   };
 
   if (searchParams.usingAdversarialAlgo()) {
-    string rankStr =  "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "");
+    string rankStr = "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "");
     // oppBot may be null if the number of visits is 1.
     if (oppBot != nullptr) {
       rankStr += "," + getVisitStr(oppBot.get(), "opp_");

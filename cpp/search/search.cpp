@@ -506,14 +506,25 @@ Search::Search(
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
     if (searchParams.maxVisits > 1) {
       assert(oppNNEval != nullptr);
-      oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
-        ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
-        : 1;
-      // We don't want to recursively model an opponent also using A-MCTS or else
-      // we'll have infinite recursion.
-      assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
-      oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
-      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
+
+      // Set opponent's maxVisits and rootNumSymmetriesToSample
+      oppParams.maxVisits =
+          params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
+              ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
+              : 1;
+      oppParams.rootNumSymmetriesToSample =
+          params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S
+              ? 1
+              : oppParams.rootNumSymmetriesToSample;
+
+      // We don't currently support recursive modeling of an opponent also using
+      // A-MCTS, since there is no place to pass in the opponent's opponent.
+      // Note that A-MCTS can only actually be active if the opponent is using
+      // more than 1 visit.
+      assert(!(oppParams.usingAdversarialAlgo() && oppParams.maxVisits > 1));
+
+      oppBot = make_unique<Search>(oppParams, oppNNEval, logger,
+                                   rSeed + "-victim-model");
     }
   }
 

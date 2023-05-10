@@ -155,8 +155,15 @@ string Search::getRankStr() const {
            std::to_string(bot->searchParams.rootNumSymmetriesToSample);
   };
 
-  if (searchParams.usingAdversarialAlgo())
-    return "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "") + "," + getVisitStr(oppBot.get(), "opp_");
+  if (searchParams.usingAdversarialAlgo()) {
+    string rankStr = "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "");
+    // oppBot may be null if the number of visits is 1.
+    if (oppBot != nullptr) {
+      rankStr += "," + getVisitStr(oppBot.get(), "opp_");
+    }
+    return rankStr;
+  }
+
   
   if (searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS)
     return "algo=MCTS," + getVisitStr(this, "");
@@ -504,6 +511,8 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
+    // We only want to initialize oppBot if maxVisits > 1 or else we'll get
+    // infinite recursion when both bots are using A-MCTS.
     if (searchParams.maxVisits > 1) {
       assert(oppNNEval != nullptr);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R

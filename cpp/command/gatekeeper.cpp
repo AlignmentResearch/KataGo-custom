@@ -252,11 +252,10 @@ namespace {
   optional<ModelFileInfo> getLatestModelInfo(
       Logger& logger,
       const string& modelsDir,
-      bool allowRandomNet,
-      bool checkDirsOnly = true
+      bool allowRandomNet
   ) {
     ModelFileInfo info;
-    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time, checkDirsOnly);
+    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time);
     if (!foundModel || (!allowRandomNet && info.file == "/dev/null")) {
       return {};
     }
@@ -646,8 +645,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(
           logger,
           victimModelsDir,
-          false /*allowRandomNet*/,
-          false /*checkDirsOnly*/
+          false /*allowRandomNet*/
       );
       if (!victimModelInfo.has_value()) {
         logger.write("No victim model found in " + victimModelsDir);

@@ -402,11 +402,16 @@ struct Search {
   std::pair<double,double> getAverageShorttermWLAndScoreError(const SearchNode* node = NULL) const;
   bool getSharpScore(const SearchNode* node, double& ret) const;
 
-  //Fill json with analysis engine format information about search results
+  //Fill json with analysis engine format information about search results.
+  //Most of the `include` flags gate verbose array fields, but
+  //`includeExtraScalars` gates a few scalar fields absent in the upstream
+  //repo lightvector/KataGo that we want to turn off in tests so that we can
+  //more easily diff test output against the upstream repo's test output.
   bool getAnalysisJson(
     const Player perspective,
     int analysisPVLen, bool preventEncore, bool includePolicy,
     bool includeOwnership, bool includeOwnershipStdev, bool includeMovesOwnership, bool includeMovesOwnershipStdev, bool includePVVisits,
+    bool includeExtraScalars,
     bool includeTree,
     nlohmann::json& ret
   ) const;

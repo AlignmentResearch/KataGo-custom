@@ -35,6 +35,7 @@ struct AnalyzeRequest {
   bool includeMovesOwnershipStdev;
   bool includePolicy;
   bool includePVVisits;
+  bool includeExtraScalars;
   bool includeTree;
 
   bool reportDuringSearch;
@@ -255,6 +256,7 @@ int MainCmds::analysis(const vector<string>& args) {
       request->includeOwnership,request->includeOwnershipStdev,
       request->includeMovesOwnership,request->includeMovesOwnershipStdev,
       request->includePVVisits,
+      request->includeExtraScalars,
       request->includeTree,
       ret
     );
@@ -492,6 +494,7 @@ int MainCmds::analysis(const vector<string>& args) {
       rbase.includeMovesOwnershipStdev = false;
       rbase.includePolicy = false;
       rbase.includePVVisits = false;
+      rbase.includeExtraScalars = false;
       rbase.includeTree = false;
       rbase.reportDuringSearch = false;
       rbase.reportDuringSearchEvery = 1e30;
@@ -897,6 +900,11 @@ int MainCmds::analysis(const vector<string>& args) {
       }
       if(input.find("includePVVisits") != input.end()) {
         bool suc = parseBoolean(input, "includePVVisits", rbase.includePVVisits, "Must be a boolean");
+        if(!suc)
+          continue;
+      }
+      if(input.find("includeExtraScalars") != input.end()) {
+        bool suc = parseBoolean(input, "includeExtraScalars", rbase.includeExtraScalars, "Must be a boolean");
         if(!suc)
           continue;
       }

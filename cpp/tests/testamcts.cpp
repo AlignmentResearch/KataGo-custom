@@ -311,6 +311,10 @@ void AMCTSTests::testAMCTS(const int maxVisits, const int numMovesToSimulate) {
     ret.chosenMoveTemperature = 0;
     ret.chosenMoveTemperatureEarly = 0;
 
+    // Make opponent use graph search
+    // We've already tested non-graph search in testMCTS.
+    ret.useGraphSearch = true;
+
     return ret;
   }();
   const SearchParams amcts_s_Params = [&]() {

@@ -1737,7 +1737,8 @@ bool Search::getAnalysisJson(
   bool includeMovesOwnershipStdev,
   bool includePVVisits,
   bool includeTree,
-  json& ret
+  json& ret,
+  bool includeFarAIStats
 ) const {
   const Board& board = rootBoard;
   const BoardHistory& hist = rootHistory;
@@ -1778,6 +1779,8 @@ bool Search::getAnalysisJson(
       moveInfo["weight"] = data.weightSum;
       moveInfo["utility"] = Global::roundDynamic(utility,OUTPUT_PRECISION);
       moveInfo["winrate"] = Global::roundDynamic(winrate,OUTPUT_PRECISION);
+      // We report lead for scoreMean here so that a bunch of legacy tools that use KataGo use lead instead, which
+      // is usually a better field for user applications. We report scoreMean instead as scoreSelfplay
       moveInfo["scoreMean"] = Global::roundDynamic(lead,OUTPUT_PRECISION);
       moveInfo["scoreSelfplay"] = Global::roundDynamic(scoreMean,OUTPUT_PRECISION);
       moveInfo["scoreLead"] = Global::roundDynamic(lead,OUTPUT_PRECISION);
@@ -1786,9 +1789,12 @@ bool Search::getAnalysisJson(
       moveInfo["lcb"] = Global::roundDynamic(lcb,OUTPUT_PRECISION);
       moveInfo["utilityLcb"] = Global::roundDynamic(utilityLcb,OUTPUT_PRECISION);
       moveInfo["order"] = data.order;
-      moveInfo["resultUtility"] = Global::roundDynamic(data.resultUtility,OUTPUT_PRECISION);
-      moveInfo["selectionProb"] = Global::roundDynamic(data.selectionProb,OUTPUT_PRECISION);
-      moveInfo["selectionValue"] = Global::roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
+      if (includeFarAIStats) {
+        // Added by FAR AI for our own analysis
+        moveInfo["resultUtility"] = Global::roundDynamic(data.resultUtility,OUTPUT_PRECISION);
+        moveInfo["selectionProb"] = Global::roundDynamic(data.selectionProb,OUTPUT_PRECISION);
+        moveInfo["selectionValue"] = Global::roundDynamic(data.playSelectionValue,OUTPUT_PRECISION);
+      }
       if(data.isSymmetryOf != Board::NULL_LOC)
         moveInfo["isSymmetryOf"] = Location::toString(data.isSymmetryOf, board);
 

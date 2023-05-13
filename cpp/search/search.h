@@ -408,7 +408,8 @@ struct Search {
     int analysisPVLen, bool preventEncore, bool includePolicy,
     bool includeOwnership, bool includeOwnershipStdev, bool includeMovesOwnership, bool includeMovesOwnershipStdev, bool includePVVisits,
     bool includeTree,
-    nlohmann::json& ret
+    nlohmann::json& ret,
+    bool includeFarAIStats = false
   ) const;
 
 

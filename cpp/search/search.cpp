@@ -121,7 +121,6 @@ Search::Search(
     // infinite recursion when both bots are using A-MCTS.
     if (searchParams.maxVisits > 1) {
       assert(oppNNEval != nullptr);
-      assert(!oppParams.useGraphSearch);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
         ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
         : 1;

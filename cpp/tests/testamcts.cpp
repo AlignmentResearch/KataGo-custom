@@ -81,53 +81,38 @@ static void setSimpleSearchParams(SearchParams& params) {
   testAssert(!params.forceWinningPass);  // We aren't testing pass sharpening.
 }
 
-// Almost directly copied from Search::getFpuValueForChildrenAssumeVisited.
-// Irrelevant code removed.
+// Computes the fpuValue of a node with overriden stats and visits.
+// This is needed in checkPlayoutLogic to simulate the tree-search process,
+// since node contains stats from the completed search tree. During simulation
+// we need to get the fpuValue of a node in a partially re-simulated tree.
 static double getFpuValue(const Search& bot, const SearchNode* node,
-                          const int64_t visits, double policyProbMassVisited,
-                          const NodeStats& stats) {
-  const SearchParams& searchParams = bot.searchParams;
+                          const NodeStats& statOverride,
+                          const int64_t visitOverride,
+                          double policyProbMassVisited) {
+  // We create a dummy SearchNode and set
+  //    {node->nnOutput, statOverride, visitOverride}.
+  // This is a bit hacky, but saves on code duplication, which is more important
+  // for these tests.
+
+  const Player prevPla = getOpp(node->nextPla);
+  SearchNode dummyNode(prevPla, node->forceNonTerminal, node->mutexIdx);
+
+  // Set nnEval -- remember to unset later because dummyNode will delete it
+  dummyNode.storeNNOutputIfNull(node->nnOutput);
+
+  // Set stats
+  dummyNode.stats = statOverride;
+
+  // Set visits
+  dummyNode.stats.visits = visitOverride;
+
   const bool isRoot = node == bot.rootNode;
-  const Player pla = node->nextPla;
+  double _, __, ___;  // throwaways, though need to be distinct
+  const double fpuValue = bot.getFpuValueForChildrenAssumeVisited(
+      dummyNode, node->nextPla, isRoot, policyProbMassVisited, _, __, ___);
 
-  const double weightSum = stats.weightSum;
-  const double utilityAvg = stats.utilityAvg;
-
-  assert(visits > 0);
-  assert(weightSum >= 0.0);
-  assert(weightSum > 0.0 || searchParams.usingAdversarialAlgo());
-  const double parentUtility = utilityAvg;
-
-  double parentUtilityForFPU = parentUtility;
-  if (searchParams.fpuParentWeightByVisitedPolicy) {
-    double avgWeight =
-        std::min(1.0, pow(policyProbMassVisited,
-                          searchParams.fpuParentWeightByVisitedPolicyPow));
-    parentUtilityForFPU =
-        avgWeight * parentUtility +
-        (1.0 - avgWeight) * bot.getUtilityFromNN(*(node->getNNOutput()));
-  } else if (searchParams.fpuParentWeight > 0.0) {
-    parentUtilityForFPU = searchParams.fpuParentWeight *
-                              bot.getUtilityFromNN(*(node->getNNOutput())) +
-                          (1.0 - searchParams.fpuParentWeight) * parentUtility;
-  }
-
-  double fpuValue;
-  {
-    double fpuReductionMax = isRoot ? searchParams.rootFpuReductionMax
-                                    : searchParams.fpuReductionMax;
-    double fpuLossProp =
-        isRoot ? searchParams.rootFpuLossProp : searchParams.fpuLossProp;
-    double utilityRadius = searchParams.winLossUtilityFactor +
-                           searchParams.staticScoreUtilityFactor +
-                           searchParams.dynamicScoreUtilityFactor;
-
-    double reduction = fpuReductionMax * sqrt(policyProbMassVisited);
-    fpuValue = pla == P_WHITE ? parentUtilityForFPU - reduction
-                              : parentUtilityForFPU + reduction;
-    double lossValue = pla == P_WHITE ? -utilityRadius : utilityRadius;
-    fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
-  }
+  // Unset nnEval
+  dummyNode.nnOutput = nullptr;
 
   return fpuValue;
 }
@@ -792,8 +777,8 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
 
       // Try unvisited children
       const double fpuValue =
-          getFpuValue(bot, node, visits[node], policyProbMassVisited,
-                      averageVisSubtreeStats(node));
+          getFpuValue(bot, node, averageVisSubtreeStats(node), visits[node],
+                      policyProbMassVisited);
       for (int pos = 0; pos < bot.policySize; pos++) {
         if (movePosVis[pos]) continue;  // Skip moves that are visited
 

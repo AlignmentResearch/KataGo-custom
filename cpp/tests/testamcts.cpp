@@ -288,7 +288,7 @@ void AMCTSTests::testAMCTS(const int maxVisits, const int numMovesToSimulate) {
       Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
   testAssert(searchParamss.size() == 2);
 
-  const SearchParams mctsParams = [&]() {
+  const auto getMctsParams = [&](const bool useGraphSearch) {
     SearchParams ret = searchParamss[0];
     setSimpleSearchParams(ret);
 
@@ -296,12 +296,11 @@ void AMCTSTests::testAMCTS(const int maxVisits, const int numMovesToSimulate) {
     ret.chosenMoveTemperature = 0;
     ret.chosenMoveTemperatureEarly = 0;
 
-    // Make opponent use graph search
-    // We've already tested non-graph search in testMCTS.
-    ret.useGraphSearch = true;
+    ret.useGraphSearch = useGraphSearch;
 
     return ret;
-  }();
+  };
+
   const SearchParams amcts_s_Params = [&]() {
     SearchParams ret = searchParamss[1];
     ret.searchAlgo = SearchParams::SearchAlgorithm::AMCTS_S;
@@ -319,14 +318,14 @@ void AMCTSTests::testAMCTS(const int maxVisits, const int numMovesToSimulate) {
   auto nnEval2 =
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
   Search bot11_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
-                 mctsParams, nnEval1.get());
+                 getMctsParams(false), nnEval1.get());
   Search bot12_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
-                 mctsParams, nnEval2.get());
+                 getMctsParams(true), nnEval2.get());
 
   Search bot11_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
-                 mctsParams, nnEval1.get());
+                 getMctsParams(true), nnEval1.get());
   Search bot12_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
-                 mctsParams, nnEval2.get());
+                 getMctsParams(false), nnEval2.get());
 
   for (auto bot_ptr : {&bot11_s, &bot12_s, &bot11_r, &bot12_r}) {
     Search& bot = *bot_ptr;

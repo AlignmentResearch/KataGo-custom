@@ -13,7 +13,7 @@ Utility for dumping or modifying torch checkpoint file contents
 parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-checkpoint', help='Checkpoint file path', required=True)
 parser.add_argument('-output-json-to', help='Output json contents to here, except for model parameters and optimizer state')
-parser.add_argument('-overwrite-checkpoint-from-json', help='Use this json contents to overwrite the apprpriate fields of the state dict of the checkpoint')
+parser.add_argument('-overwrite-checkpoint-from-json', help='Use this json contents to overwrite the appropriate fields of the state dict of the checkpoint')
 args = vars(parser.parse_args())
 
 checkpoint_path = args["checkpoint"]

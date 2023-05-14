@@ -146,14 +146,17 @@ bool Search::getPlaySelectionValues(
 
     bool isDuringSearch = false;
 
+    double exploreScaling = getExploreScaling(totalChildWeight, parentUtilityStdevFactor);
+
     const NNOutput* nnOutput = node.getNNOutput();
     assert(nnOutput != NULL);
     const float* policyProbs = nnOutput->getPolicyProbsMaybeNoised();
     double bestChildExploreSelectionValue = getExploreSelectionValueOfChild(
       node,policyProbs,bestChild,
       bestMoveLoc,
+      exploreScaling,
       totalChildWeight,bestChildEdgeVisits,fpuValue,
-      parentUtility,parentWeightPerVisit,parentUtilityStdevFactor,
+      parentUtility,parentWeightPerVisit,
       isDuringSearch,false,maxChildWeight,NULL
     );
 
@@ -169,8 +172,9 @@ bool Search::getPlaySelectionValues(
         double reduced = getReducedPlaySelectionWeight(
           node, policyProbs, child,
           moveLoc,
-          totalChildWeight, edgeVisits,
-          parentUtilityStdevFactor, bestChildExploreSelectionValue
+          exploreScaling,
+          edgeVisits,
+          bestChildExploreSelectionValue
         );
         playSelectionValues[i] = ceil(reduced);
       }
@@ -912,7 +916,7 @@ void Search::getAnalysisData(
   double policyProbMassVisited = 0.0;
   {
     for(int i = 0; i<numChildren; i++) {
-      policyProbMassVisited += policyProbs[getPos(childrenMoveLocs[i])];
+      policyProbMassVisited += std::max(0.0, (double)policyProbs[getPos(childrenMoveLocs[i])]);
     }
     //Probability mass should not sum to more than 1, giving a generous allowance
     //for floating point error.
@@ -1981,6 +1985,7 @@ bool Search::getPrunedNodeValues(const SearchNode* nodePtr, ReportedSearchValues
     if(stats.visits <= 0 || stats.weightSum <= 0.0 || edgeVisits <= 0)
       continue;
     double weight = playSelectionValues[i];
+    double weightScaling = weight / stats.weightSum;
     winLossValueSum += weight * stats.winLossValueAvg;
     noResultValueSum += weight * stats.noResultValueAvg;
     scoreMeanSum += weight * stats.scoreMeanAvg;
@@ -1988,7 +1993,7 @@ bool Search::getPrunedNodeValues(const SearchNode* nodePtr, ReportedSearchValues
     leadSum += weight * stats.leadAvg;
     utilitySum += weight * stats.utilityAvg;
     utilitySqSum += weight * stats.utilitySqAvg;
-    weightSqSum += weight * weight; // TODO not quite right
+    weightSqSum += weightScaling * weightScaling * stats.weightSqSum;
     weightSum += weight;
   }
 
@@ -2008,7 +2013,7 @@ bool Search::getPrunedNodeValues(const SearchNode* nodePtr, ReportedSearchValues
       getResultUtility(winProb-lossProb, noResultProb)
       + getScoreUtility(scoreMean, scoreMeanSq);
 
-    double weight = 1.0; // TODO also not quite right
+    double weight = computeWeightFromNNOutput(nnOutput);
     winLossValueSum += (winProb - lossProb) * weight;
     noResultValueSum += noResultProb * weight;
     scoreMeanSum += scoreMean * weight;

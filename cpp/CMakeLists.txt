@@ -46,13 +46,29 @@ if(USE_BACKEND STREQUAL "CUDA")
   enable_language(CUDA)
 
   set(CUDA_STANDARD 11)
-  set(NEURALNET_BACKEND_SOURCES neuralnet/cudabackend.cpp neuralnet/cudahelpers.cu)
-
-  if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.0)
-    set(CMAKE_CUDA_ARCHITECTURES 35 37 50 53 60 61 62 70 72 75 80 86)
+  set(NEURALNET_BACKEND_SOURCES
+    neuralnet/cudabackend.cpp
+    neuralnet/cudautils.cpp
+    neuralnet/cudahelpers.cu
+  )
+# https://en.wikipedia.org/wiki/CUDA#GPUs_supported
+  if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 12.0)
+    set(CMAKE_CUDA_ARCHITECTURES 50 52 53 60 61 62 70 72 75 80 86 87 90)
+    set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
+  elseif(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.8)
+    set(CMAKE_CUDA_ARCHITECTURES 35 37 50 52 53 60 61 62 70 72 75 80 86 87 90)
+    set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
+  elseif(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.5)
+    set(CMAKE_CUDA_ARCHITECTURES 35 37 50 52 53 60 61 62 70 72 75 80 86 87)
+    set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
+  elseif(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
+    set(CMAKE_CUDA_ARCHITECTURES 35 37 50 52 53 60 61 62 70 72 75 80 86)
+    set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
+  elseif(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 11.0)
+    set(CMAKE_CUDA_ARCHITECTURES 35 37 50 52 53 60 61 62 70 72 75 80)
     set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
   elseif (CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 10.2)
-    set(CMAKE_CUDA_ARCHITECTURES 30 35 37 50 53 60 61 62 70 72 75)
+    set(CMAKE_CUDA_ARCHITECTURES 30 35 37 50 52 53 60 61 62 70 72 75)
     set(CMAKE_CUDA_FLAGS "-Wno-deprecated-gpu-targets")
   else()
     message(WARNING "CUDA 10.2 or greater is recommended, but attempting to build anyways")
@@ -245,6 +261,7 @@ add_executable(katago
   command/evalsgf.cpp
   command/gatekeeper.cpp
   command/genbook.cpp
+  command/gputest.cpp
   command/gtp.cpp
   command/match.cpp
   command/matchauto.cpp
@@ -292,10 +309,23 @@ elseif(USE_BACKEND STREQUAL "TENSORRT")
   target_link_libraries(katago CUDA::cudart_static ${TENSORRT_LIBRARY})
 elseif(USE_BACKEND STREQUAL "OPENCL")
   target_compile_definitions(katago PRIVATE USE_OPENCL_BACKEND)
-  find_package(OpenCL REQUIRED)
-  include_directories(${OpenCL_INCLUDE_DIRS})
-  link_directories(${OpenCL_LIBRARY})
-  target_link_libraries (katago ${OpenCL_LIBRARY})
+  find_package(OpenCL)
+  if(NOT OpenCL_FOUND)
+    message(WARNING "OpenCL not found, attempting to see if CUDA exists and has OpenCL since sometimes CUDA may provide OpenCL where cmake can't find it.")
+    find_package(CUDAToolkit)
+    if(NOT CUDAToolkit_FOUND)
+      message(FATAL_ERROR "OpenCL installation not found")
+    else()
+      message(WARNING "OpenCL not found, but found CUDA, attempting to use OpenCL via CUDA.")
+    endif()
+    include_directories(${OpenCL_INCLUDE_DIRS})
+    include_directories(SYSTEM ${CUDAToolkit_INCLUDE_DIRS})
+    target_link_libraries(katago CUDA::OpenCL)
+  else()
+    include_directories(${OpenCL_INCLUDE_DIRS})
+    link_directories(${OpenCL_LIBRARY})
+    target_link_libraries(katago ${OpenCL_LIBRARY})
+  endif()
 elseif(USE_BACKEND STREQUAL "EIGEN")
   target_compile_definitions(katago PRIVATE USE_EIGEN_BACKEND)
   if(NOT (MSVC OR MINGW))

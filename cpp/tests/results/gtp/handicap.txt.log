@@ -10,7 +10,7 @@ logSearchInfo = true
 logTimeStamp = false
 logToStderr = false
 maxPlayouts = 10000
-maxTimePondering = 60
+maxTimePondering = 60.0
 maxVisits = 100
 nnRandSeed = forTesting
 nnRandomize = false
@@ -29,7 +29,7 @@ searchRandSeed = forTesting
 trtUseFP16 = false
 
 : GTP Engine starting...
-: KataGo v1.11.0
+: KataGo v1.12.0
 : Using TrompTaylor rules initially, unless GTP/GUI overrides this
 : Using 1 CPU thread(s) for search
 : nnRandSeed0 = forTesting
@@ -111,7 +111,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.841741
 Root visits: 100
 New playouts: 100
 NN rows: 100
@@ -188,7 +188,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.637974
 Root visits: 100
 New playouts: 100
 NN rows: 80
@@ -232,7 +232,7 @@ D4  : T -53.78c W -47.07c S  -4.78c (-13.6 L -14.3) LCB -102.29c P  7.08% WF   3
  1 X2. . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.515796
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -277,7 +277,7 @@ E3  : T  -2.04c W  -1.47c S  -0.97c ( -1.3 L  -1.3) LCB -150.98c P  4.90% WF   2
  1 X1. X3. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.761411
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -319,7 +319,7 @@ C17 : T  29.59c W  26.84c S   2.30c ( +7.2 L  +7.2) LCB   20.69c P  7.63% WF   9
  1 X X3X1. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.854775
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -394,7 +394,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.83434
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -467,7 +467,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.673067
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -508,7 +508,7 @@ G10 : T  55.49c W  53.94c S   1.55c ( +8.9 L  +9.2) LCB -294.51c P  4.45% WF   1
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.65222
 Root visits: 100
 New playouts: 100
 NN rows: 75
@@ -543,7 +543,7 @@ J5  : T -84.71c W -76.59c S  -5.68c (-11.9 L -12.3) LCB -159.12c P 10.27% WF   2
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.379476
 Root visits: 100
 New playouts: 100
 NN rows: 44
@@ -565,5 +565,43 @@ E11 : T  59.41c W  57.26c S   2.16c ( +8.3 L  +8.8) LCB -290.59c P  2.39% WF   1
 C11 : T  58.43c W  56.55c S   1.88c ( +8.0 L  +8.4) LCB -291.57c P  2.36% WF   1.0 PSV       0 N       1  --  C11
 
 : = J4
+: Controller: clear_board
+: = 
+: Controller: boardsize 2
 : GPU -1 finishing, processed 217 rows 217 batches
+: Cleaned up old neural net and bot
+: nnRandSeed0 = forTesting
+: After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
+: Initializing neural net buffer to be size 2 * 2 exactly
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
+: Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
+: Loaded neural net with nnXLen 2 nnYLen 2
+: Initializing board with boardXSize 2 boardYSize 2
+: = 
+: Controller: set_free_handicap a1 b1 a2
+: = 
+: Controller: showboard
+: = MoveNum: 0 HASH: 5D1FC6E3275F269C5B6E7FD1730E9E7B
+   A B
+ 2 X .
+ 1 X X
+Next player: White
+Rules: {"friendlyPassOk":false,"hasButton":false,"ko":"POSITIONAL","komi":7.5,"scoring":"AREA","suicide":true,"tax":"NONE","whiteHandicapBonus":"0"}
+B stones captured: 0
+W stones captured: 0
+: Controller: clear_board
+: = 
+: Controller: set_free_handicap a1 b1 a2 b2
+: ? Handicap placement is invalid
+: Controller: showboard
+: = MoveNum: 0 HASH: CEA26448910A5BF5F35A3098A28FEA31
+   A B
+ 2 . .
+ 1 . .
+Next player: Black
+Rules: {"friendlyPassOk":false,"hasButton":false,"ko":"POSITIONAL","komi":7.5,"scoring":"AREA","suicide":true,"tax":"NONE","whiteHandicapBonus":"0"}
+B stones captured: 0
+W stones captured: 0
+: GPU -1 finishing, processed 0 rows 0 batches
 : All cleaned up, quitting

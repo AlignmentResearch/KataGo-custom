@@ -1,4 +1,4 @@
-KataGo v1.11.0
+KataGo v1.12.0
 Using TrompTaylor rules initially, unless GTP/GUI overrides this
 Initializing board with boardXSize 19 boardYSize 19
 Loaded config configs/gtp_example.cfg and/or command-line and query overrides
@@ -28,7 +28,7 @@ MoveNum: 0 HASH: 39275211CAB1A1C57EBA614CCCEA92D2
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.841741
 Root visits: 100
 New playouts: 100
 NN rows: 100
@@ -72,7 +72,7 @@ MoveNum: 0 HASH: 31C5C7E1B1B3BA804B970B13D0FAC7AF
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.637974
 Root visits: 100
 New playouts: 100
 NN rows: 80
@@ -111,7 +111,7 @@ MoveNum: 2 HASH: 026B39E226E1EAC8E8EE88ACE7D25975
  1 X2. . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.515796
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -151,7 +151,7 @@ MoveNum: 4 HASH: 76B39503983B748D2483B1D5CEF9C2ED
  1 X1. X3. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.761411
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -188,7 +188,7 @@ MoveNum: 6 HASH: 1A76A81A096EC32DA7CA1C2F74351579
  1 X X3X1. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.854775
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -228,7 +228,7 @@ MoveNum: 1 HASH: 1AF8E45BE7BCD0CF2B21050C98540B8D
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.83434
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -263,7 +263,7 @@ MoveNum: 1 HASH: 29B4CBD3782FFC0779C046875E5F2DAE
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.673067
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -301,7 +301,7 @@ MoveNum: 2 HASH: 952E47D2E85DBDA87BA99675379189CA
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.65222
 Root visits: 100
 New playouts: 100
 NN rows: 75
@@ -333,7 +333,7 @@ MoveNum: 3 HASH: 631C64617B2072307DD8F2E6E41A3D6C
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: ###
+Time taken: 0.379476
 Root visits: 100
 New playouts: 100
 NN rows: 44
@@ -353,3 +353,4 @@ L5  : T  60.12c W  59.91c S   2.81c ( +8.9 L  +9.1) LCB  -14.14c P  2.94% WF   2
 G10 : T  56.91c W  54.66c S   2.25c ( +8.4 L  +8.7) LCB -293.09c P  2.77% WF   1.0 PSV       0 N       1  --  G10
 E11 : T  59.41c W  57.26c S   2.16c ( +8.3 L  +8.8) LCB -290.59c P  2.39% WF   1.0 PSV       0 N       1  --  E11
 C11 : T  58.43c W  56.55c S   1.88c ( +8.0 L  +8.4) LCB -291.57c P  2.36% WF   1.0 PSV       0 N       1  --  C11
+Initializing board with boardXSize 2 boardYSize 2

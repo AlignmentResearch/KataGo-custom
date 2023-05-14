@@ -42,12 +42,3 @@ repos:
     hooks:
     -   id: pytype
         args: []
-        # WARNING: If you change this, also change `PYTYPE_EXCLUDE_FILES`
-        # in .circleci/config.yml
-        exclude: |
-            (?x)^(
-                python/genboard_common.py|
-                python/genboard_run.py|
-                python/genboard_train.py|
-                python/upload_model.py
-            )$

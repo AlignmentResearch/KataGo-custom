@@ -57,6 +57,8 @@ int MainCmds::runtests(const vector<string>& args) {
 
   ScoreValue::freeTables();
 
+  Tests::runInlineConfigTests();
+
   // Pick an arbitrary file that the test uses
   if(FileUtils::exists("tests/data/configs/folded/test-parent.cfg"))
     Tests::runConfigTests({});
@@ -367,13 +369,14 @@ int MainCmds::runownershiptests(const vector<string>& args) {
 
 
 int MainCmds::runtinynntests(const vector<string>& args) {
-  if(args.size() != 2) {
-    cerr << "Must supply exactly one arguments: TMPDIR" << endl;
+  if(args.size() != 3) {
+    cerr << "Must supply exactly two arguments: TMPDIR ERRORTOLFACTOR" << endl;
     return 1;
   }
   Board::initHash();
   ScoreValue::initTables();
 
+  double errorTolFactor = Global::stringToDouble(args[2]);
   ConfigParser cfg;
   {
     //Dummy parameters
@@ -409,7 +412,8 @@ int MainCmds::runtinynntests(const vector<string>& args) {
     args[1],
     logger,
     cfg,
-    randFileName
+    randFileName,
+    errorTolFactor
   );
 
   ScoreValue::freeTables();
@@ -762,5 +766,7 @@ int MainCmds::runsleeptest(const vector<string>& args) {
 
 int MainCmds::runconfigtests(const vector<string>& args) {
   Tests::runConfigTests(args);
+  Tests::runParseAllConfigsTest();
   return 0;
 }
+

@@ -221,12 +221,12 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
   if world_size > 1:
     multiprocessing_setup(rank, world_size)
     atexit.register(multiprocessing_cleanup)
-    assert torch.cuda.is_available()
+    assert torch.cuda.is_available() # pytype: disable=module-attr
 
   if True or torch.cuda.is_available():
     my_gpu_id = multi_gpu_device_ids[rank]
-    torch.cuda.set_device(my_gpu_id)
-    logging.info("Using GPU device: " + torch.cuda.get_device_name())
+    torch.cuda.set_device(my_gpu_id) # pytype: disable=module-attr
+    logging.info("Using GPU device: " + torch.cuda.get_device_name()) # pytype: disable=module-attr
     device = torch.device("cuda", my_gpu_id)
   else:
     logging.warning("WARNING: No GPU, using CPU")

@@ -543,7 +543,7 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
       double fpuValue = bot.getFpuValueForChildrenAssumeVisited(
           *tree.root, tree.root->nextPla, true, 1.0, parentUtility,
           parentWeightPerVisit, parentUtilityStdevFactor);
-      double exploreScaling = bot.getExploreScaling(totalChildWeight, parentUtilityStdevFactor);
+      const double exploreScaling = bot.getExploreScaling(totalChildWeight, parentUtilityStdevFactor);
 
       return bot.getExploreSelectionValueOfChild(
           *tree.root, policyProbs, heaviestChild,

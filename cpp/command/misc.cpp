@@ -777,6 +777,8 @@ int MainCmds::samplesgfs(const vector<string>& args) {
          hist.initialBoard.numStonesOnBoard() + hist.moveHistory.size() > maxTurnNumber) {
         return;
       }
+      if(comments.size() > 0 && comments.find("%NOSAMPLE%") != string::npos)
+        return;
 
       if(seedRand.nextBool(sampleProb)) {
         Sgf::PositionSample posSampleToWrite = posSample;
@@ -2366,7 +2368,8 @@ int MainCmds::sampleinitializations(const vector<string>& args) {
   //Play no moves in game, since we're sampling initializations
   cfg.overrideKey("maxMovesPerGame","0");
 
-  PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg);
+  const bool isDistributed = false; 
+  PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg, isDistributed);
   GameRunner* gameRunner = new GameRunner(cfg, playSettings, logger);
 
   for(int i = 0; i<numToGen; i++) {

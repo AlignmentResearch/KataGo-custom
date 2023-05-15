@@ -1749,6 +1749,9 @@ bool Search::getAnalysisJson(
     static constexpr int minMoves = 0;
 
     json moveInfos = json::array();
+    if(node == NULL) {
+      return moveInfos;
+    }
     Player pla = node->nextPla;
 
     vector<AnalysisData> buf;

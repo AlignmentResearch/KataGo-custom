@@ -552,7 +552,7 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
           parentUtility, parentWeightPerVisit, false,
           false, maxChildWeight, NULL);
     }();
-    double exploreScaling = bot.getExploreScaling(totalChildWeight, 1.0);
+    const double exploreScaling = bot.getExploreScaling(totalChildWeight, 1.0);
     for (auto& [child, weight] : childToPsv) {
       if (child == heaviestChild) continue;
       const int64_t visits =

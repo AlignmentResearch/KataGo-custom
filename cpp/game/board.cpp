@@ -1736,7 +1736,7 @@ bool Board::searchIsLadderCaptured(Loc loc, bool defenderFirst, vector<Loc>& buf
 
 }
 
-  void Board::calculateArea(
+void Board::calculateArea(
   Color* result,
   bool nonPassAliveStones,
   bool safeBigTerritories,

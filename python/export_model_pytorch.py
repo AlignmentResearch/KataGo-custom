@@ -12,7 +12,7 @@ import datetime
 import logging
 import numpy as np
 from collections import defaultdict
-from typing import Dict, List
+from typing import BinaryIO, Dict, List
 
 import torch
 import torch.nn
@@ -67,6 +67,7 @@ def main(args):
   extension = ".bin"
   mode = "wb"
   f = open(export_dir + "/" + filename_prefix + extension, mode)
+  assert isinstance(f, BinaryIO)
   def writeln(s):
     f.write((str(s)+"\n").encode(encoding="ascii",errors="backslashreplace"))
   def writestr(s):

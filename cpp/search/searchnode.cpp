@@ -29,6 +29,20 @@ NodeStatsAtomic::NodeStatsAtomic(const NodeStatsAtomic& other)
 NodeStatsAtomic::~NodeStatsAtomic()
 {}
 
+NodeStatsAtomic& NodeStatsAtomic::operator=(const NodeStats& other) {
+  visits.store(other.visits, std::memory_order_release);
+  winLossValueAvg.store(other.winLossValueAvg, std::memory_order_release);
+  noResultValueAvg.store(other.noResultValueAvg, std::memory_order_release);
+  scoreMeanAvg.store(other.scoreMeanAvg, std::memory_order_release);
+  scoreMeanSqAvg.store(other.scoreMeanSqAvg, std::memory_order_release);
+  leadAvg.store(other.leadAvg, std::memory_order_release);
+  utilityAvg.store(other.utilityAvg, std::memory_order_release);
+  utilitySqAvg.store(other.utilitySqAvg, std::memory_order_release);
+  weightSum.store(other.weightSum, std::memory_order_release);
+  weightSqSum.store(other.weightSqSum, std::memory_order_release);
+  return *this;
+}
+
 NodeStats::NodeStats()
   :visits(0),
    winLossValueAvg(0.0),

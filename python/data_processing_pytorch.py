@@ -123,6 +123,8 @@ def apply_symmetry(tensor, symm):
         return tensor.transpose(-2, -1).flip(-1).flip(-2)
     if symm == 7:
         return tensor.flip(-2)
+    else:
+        raise ValueError(f"Invalid symm {symm}")
 
 
 def build_history_matrices(model_config: modelconfigs.ModelConfig, device):

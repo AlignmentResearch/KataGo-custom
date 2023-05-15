@@ -111,7 +111,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.841741
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 100
@@ -188,7 +188,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.637974
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 80
@@ -232,7 +232,7 @@ D4  : T -53.78c W -47.07c S  -4.78c (-13.6 L -14.3) LCB -102.29c P  7.08% WF   3
  1 X2. . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.515796
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -277,7 +277,7 @@ E3  : T  -2.04c W  -1.47c S  -0.97c ( -1.3 L  -1.3) LCB -150.98c P  4.90% WF   2
  1 X1. X3. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.761411
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -319,7 +319,7 @@ C17 : T  29.59c W  26.84c S   2.30c ( +7.2 L  +7.2) LCB   20.69c P  7.63% WF   9
  1 X X3X1. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.854775
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -394,7 +394,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.83434
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -467,7 +467,7 @@ W stones captured: 0
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.673067
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -508,7 +508,7 @@ G10 : T  55.49c W  53.94c S   1.55c ( +8.9 L  +9.2) LCB -294.51c P  4.45% WF   1
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.65222
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 75
@@ -543,7 +543,7 @@ J5  : T -84.71c W -76.59c S  -5.68c (-11.9 L -12.3) LCB -159.12c P 10.27% WF   2
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.379476
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 44

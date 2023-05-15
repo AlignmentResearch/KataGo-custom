@@ -1,3 +1,5 @@
+# This file is unused, so we skip type checking.
+# type: ignore
 import logging
 import math
 import traceback

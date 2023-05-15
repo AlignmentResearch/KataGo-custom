@@ -10,6 +10,7 @@
 
 struct SearchNode;
 struct SearchThread;
+struct NodeStats;
 
 struct NodeStatsAtomic {
   std::atomic<int64_t> visits;
@@ -30,6 +31,7 @@ struct NodeStatsAtomic {
   NodeStatsAtomic& operator=(const NodeStatsAtomic&) = delete;
   NodeStatsAtomic(NodeStatsAtomic&& other) = delete;
   NodeStatsAtomic& operator=(NodeStatsAtomic&& other) = delete;
+  NodeStatsAtomic& operator=(const NodeStats& other);
 
   double getChildWeight(int64_t edgeVisits) const;
   double getChildWeight(int64_t edgeVisits, int64_t childVisits) const;

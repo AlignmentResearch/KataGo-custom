@@ -237,7 +237,7 @@ class Features:
         elif area[loc] == opp:
           bin_input_data[idx,pos,19] = 1.0
 
-    #Features 20,21 - second encore phase starting stones, we just set them to the current stones in pythong
+    #Features 20,21 - second encore phase starting stones, we just set them to the current stones in python
     #since we don't really have a jp rules impl
     if rules["encorePhase"] >= 2:
       for y in range(bsize):

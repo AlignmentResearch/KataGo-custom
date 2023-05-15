@@ -221,12 +221,12 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
   if world_size > 1:
     multiprocessing_setup(rank, world_size)
     atexit.register(multiprocessing_cleanup)
-    assert torch.cuda.is_available()
+    assert torch.cuda.is_available() # pytype: disable=module-attr
 
   if True or torch.cuda.is_available():
     my_gpu_id = multi_gpu_device_ids[rank]
-    torch.cuda.set_device(my_gpu_id)
-    logging.info("Using GPU device: " + torch.cuda.get_device_name())
+    torch.cuda.set_device(my_gpu_id) # pytype: disable=module-attr
+    logging.info("Using GPU device: " + torch.cuda.get_device_name()) # pytype: disable=module-attr
     device = torch.device("cuda", my_gpu_id)
   else:
     logging.warning("WARNING: No GPU, using CPU")
@@ -240,7 +240,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
     return os.path.join(traindir,f"checkpoint_prev{i}.ckpt")
 
   NUM_SHORTTERM_CHECKPOINTS_TO_KEEP = 4
-  def save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, path=None):
+  def save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, model_config, path=None):
     if gnorm_stats_debug:
       logging.warning("Skipping save since debugging gnorm stats")
       return
@@ -768,10 +768,11 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
   def detensorify_metrics(metrics):
     ret = {}
     for key in metrics:
-      if isinstance(metrics[key], torch.Tensor):
-        ret[key] = metrics[key].detach().cpu().item()
+      val = metrics[key]
+      if isinstance(val, torch.Tensor):
+        ret[key] = val.detach().cpu().item()
       else:
-        ret[key] = metrics[key]
+        ret[key] = val
     return ret
 
   # _sum metrics dict entries will get reported as a moving average of their values
@@ -1071,7 +1072,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
           slow_param_data = lookahead_cache[param]
           param.data.copy_(slow_param_data)
 
-    save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state)
+    save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, model_config)
 
     num_epochs_this_instance += 1
 
@@ -1107,7 +1108,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         else:
           os.mkdir(savepathtmp)
           logging.info("SAVING MODEL FOR EXPORT TO: " + savepath)
-          save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, path=os.path.join(savepathtmp,"model.ckpt"))
+          save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, model_config, path=os.path.join(savepathtmp,"model.ckpt"))
           time.sleep(2)
           os.rename(savepathtmp,savepath)
 
@@ -1154,6 +1155,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
               main_loss_scale=main_loss_scale,
               intermediate_loss_scale=intermediate_loss_scale,
               intermediate_distill_scale=intermediate_distill_scale,
+              use_vtimeloss=not disable_vtimeloss,
             )
             metrics = detensorify_metrics(metrics)
             accumulate_metrics(val_metric_sums, val_metric_weights, metrics, batch_size, decay=1.0, new_weight=1.0)
@@ -1183,7 +1185,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
       if now - last_longterm_checkpoint_save_time >= datetime.timedelta(hours=12):
         last_longterm_checkpoint_save_time = now
         dated_name = datetime.datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-        save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, path=os.path.join(longterm_checkpoints_dir,f"{dated_name}.ckpt"))
+        save(ddp_model, swa_model, optimizer, metrics_obj, running_metrics, train_state, model_config, path=os.path.join(longterm_checkpoints_dir,f"{dated_name}.ckpt"))
 
   train_metrics_out.close()
   val_metrics_out.close()

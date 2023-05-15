@@ -113,18 +113,13 @@ jobs:
       # WARNING: If you change this, also change `FULL_LINT_FILES` in
       # `.pre-commit-config.yaml`.
       FULL_LINT_FILES: python/curriculum.py python/sgfmill/__init__.py
-      # We type most files, but exclude a few that depend on torch that
-      # we don't have installed. (And don't want to, as it's not needed for training.)
-      # WARNING: If you change this, also change `exclude:` for pytype in
-      # .pre-commit-config.yaml
-      PYTYPE_EXCLUDE_FILES: python/genboard_common.py python/genboard_run.py python/genboard_train.py python/upload_model.py
     steps:
       - checkout
 
       # Run pytype against most files.
       - run:
           name: pytype
-          command: pytype --version && pytype ./python/ -j "${NUM_CPUS}" -x ${PYTYPE_EXCLUDE_FILES}
+          command: pytype --version && pytype ./python/ -j "${NUM_CPUS}"
 
       # Lint a select few files that we maintain (not upstream).
       - run:

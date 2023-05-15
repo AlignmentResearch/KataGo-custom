@@ -16,6 +16,9 @@ You can compare the two files with the following command:
 
   diff -y --suppress-common-lines python/export_model.py python/export_const_model.py
 """
+# This file is unused and broken (common.py no longer exists, so `import common`
+# doesn't work), so we skip type checking.
+# type: ignore
 import sys
 import argparse
 import json

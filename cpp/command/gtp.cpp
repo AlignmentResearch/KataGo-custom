@@ -486,7 +486,17 @@ struct GTPEngine {
 
     nnEval = getNNEvaluator(nnModelFile, nnModelFile);
     if (opModelFile != "") {
-      opNNEval = getNNEvaluator(opModelFile, opModelFile);
+      if (params.usingAdversarialAlgo()) {
+        opNNEval = getNNEvaluator(opModelFile, opModelFile);
+      } else {
+        // Don't load opNNEval since it should be unused and it'd just take up
+        // GPU memory.
+        logger.write(
+            "Warning: Not using A-MCTS, so victim model ("
+            + opModelFile
+            + ") is ignored."
+        );
+      }
     }
 
     {

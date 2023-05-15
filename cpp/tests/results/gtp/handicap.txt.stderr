@@ -28,7 +28,7 @@ MoveNum: 0 HASH: 39275211CAB1A1C57EBA614CCCEA92D2
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.841741
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 100
@@ -72,7 +72,7 @@ MoveNum: 0 HASH: 31C5C7E1B1B3BA804B970B13D0FAC7AF
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.637974
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 80
@@ -111,7 +111,7 @@ MoveNum: 2 HASH: 026B39E226E1EAC8E8EE88ACE7D25975
  1 X2. . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.515796
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -151,7 +151,7 @@ MoveNum: 4 HASH: 76B39503983B748D2483B1D5CEF9C2ED
  1 X1. X3. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.761411
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -188,7 +188,7 @@ MoveNum: 6 HASH: 1A76A81A096EC32DA7CA1C2F74351579
  1 X X3X1. . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.854775
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -228,7 +228,7 @@ MoveNum: 1 HASH: 1AF8E45BE7BCD0CF2B21050C98540B8D
  1 . . . . . . . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.83434
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 99
@@ -263,7 +263,7 @@ MoveNum: 1 HASH: 29B4CBD3782FFC0779C046875E5F2DAE
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.673067
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 98
@@ -301,7 +301,7 @@ MoveNum: 2 HASH: 952E47D2E85DBDA87BA99675379189CA
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.65222
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 75
@@ -333,7 +333,7 @@ MoveNum: 3 HASH: 631C64617B2072307DD8F2E6E41A3D6C
  1 . . . . . . . . . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi7.5
-Time taken: 0.379476
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 44

@@ -380,6 +380,11 @@ if __name__ == '__main__':
           if filename in exclude_set:
             excluded_count += 1
             continue
+          # Check filename is readable (handles Hofvarpnir errors)
+          if not os.access(filename, os.R_OK):
+            print("WARNING: Could not open file %s, skipping" % filename, flush=True)
+            excluded_count += 1
+            continue
           filtered_filenames.append(filename)
         filenames = filtered_filenames
 

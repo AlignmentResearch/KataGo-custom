@@ -2,9 +2,34 @@ import argparse
 import itertools
 import json
 from collections import Counter, namedtuple
+from dataclasses import dataclass
 from typing import Any
 
-MoveTrace = namedtuple("MoveTrace", "move parent_move")
+DESCRIPTION = f"""Given output JSONs from KataGo's `analysis` command, prints \
+the moves visited by MCTS and how many visits each move received. \
+`includeTree` must be set to `true` in the input JSONs to `analysis`.
+
+Example usage:
+```
+    # Run KataGo `analysis` and pipe its output to a file:
+    /engines/KataGo-custom/cpp/katago analysis \\
+      -analysis-threads 10 \\
+      -model /nas/ucb/ttseng/go_attack/victims/kata1-b40c256-s11840935168-d2898845681.bin.gz \\
+      -config /go_attack/configs/gtp-raw.cfg \\
+      2>&1 | tee /tmp/out.txt
+    # Give an input JSON:
+    {{"id":"foo","moves":[["B","Q16"],["W","Q4"],["B","D4"]],"rules":"tromp-taylor","komi":6.5,"boardXSize":19,"boardYSize":19,"analyzeTurns":[3,4],"includeTree":true}}
+    # Analyze the output with this script:
+    python {__file__} /tmp/out.txt
+```
+To convert an SGF file to an `analysis` input JSON, use `sgf_to_analysis_input.py`.
+"""
+
+
+@dataclass(frozen=True)
+class MoveTrace:
+    move: str | None
+    parent_move: str | None
 
 
 def sum_lists_elementwise(l1: list[Any], l2: list[Any]) -> list[Any]:
@@ -50,11 +75,12 @@ def get_move_visit_stats(
 
 
 if __name__ == "__main__":
-    description = "TODO"
-    parser = argparse.ArgumentParser(description=description)
+    parser = argparse.ArgumentParser(
+        description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument(
         "files",
-        help="input files where each file must consist of a json object per line",
+        help="input files where each file consists of a JSON object per line",
         nargs="+",
     )
     args = parser.parse_args()

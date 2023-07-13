@@ -28,12 +28,13 @@ To convert an SGF file to an `analysis` input JSON, use `sgf_to_analysis_input.p
 
 @dataclass(frozen=True)
 class MoveTrace:
+    """Indicates the move of an MCTS node and the move of the node's parent."""
     move: str | None
     parent_move: str | None
 
 
 def sum_lists_elementwise(l1: list[Any], l2: list[Any]) -> list[Any]:
-    """TODO comment"""
+    """Sums two lists element-wise."""
     result = []
     for x, y in itertools.zip_longest(l1, l2):
         if x is None:
@@ -50,16 +51,20 @@ def get_move_visit_stats(
 ) -> list[Counter[MoveTrace]]:
     """TODO comment, describe return val"""
     if "isSymmetryOf" in data:
+        # Skip nodes that were not actually searched and instead had all of
+        # its stats copied from another node with a symmetric move. If we don't
+        # skip these nodes then we may see the total visit count across a depth
+        # level increase as we go deeper down the MCTS tree.
         return []
 
     move = data.get("move")
     visits = data.get("visits")
-    if visits is None:
-        # Handle the root node.
-        visits = data["rootInfo"]["visits"]
     children_data = data.get("children")
+
+    # Handle the root node, which has different field names.
+    if visits is None:
+        visits = data["rootInfo"]["visits"]
     if children_data is None:
-        # Handle the root node.
         children_data = data["moveInfos"]
 
     child_stats = []

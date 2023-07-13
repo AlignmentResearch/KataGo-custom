@@ -7,20 +7,26 @@ from typing import Any
 MoveTrace = namedtuple("MoveTrace", "move parent_move")
 
 
-def sum_elementwise(l1, l2, make_zero):
-    """TODO comment and type"""
-    # TODO is make_zero lambda necessary vs just zero?
-    return [x + y for x, y in itertools.zip_longest(l1, l2, fillvalue=make_zero())]
+def sum_lists_elementwise(l1: list[Any], l2: list[Any]) -> list[Any]:
+    """TODO comment"""
+    result = []
+    for x, y in itertools.zip_longest(l1, l2):
+        if x is None:
+            result.append(y)
+        elif y is None:
+            result.append(x)
+        else:
+            result.append(x + y)
+    return result
 
 
-def sum_counters(l1, l2):
-    """TODO comment and type"""
-    return sum_elementwise(l1, l2, lambda: Counter())
-
-
-# def get_move_visit_stats(data: dict[str, Any]) -> list[Counter[tuple(str | None), int]]:
-def get_move_visit_stats(data: dict[str, Any]):
+def get_move_visit_stats(
+    data: dict[str, Any], parent_move: str | None = None
+) -> list[Counter[MoveTrace]]:
     """TODO comment, describe return val"""
+    if "isSymmetryOf" in data:
+        return []
+
     move = data.get("move")
     visits = data.get("visits")
     if visits is None:
@@ -33,16 +39,13 @@ def get_move_visit_stats(data: dict[str, Any]):
 
     child_stats = []
     for child_data in children_data:
-        child_stats = sum_counters(child_stats, get_move_visit_stats(child_data))
-
-    stats = [Counter({MoveTrace(move=move, parent_move=None): visits})] + child_stats
-    if len(stats) > 1:
-        stats[1] = Counter(
-            {
-                MoveTrace(move=child_move, parent_move=move): child_visits
-                for (child_move, _), child_visits in stats[1].items()
-            }
+        child_stats = sum_lists_elementwise(
+            child_stats, get_move_visit_stats(child_data, parent_move=move)
         )
+
+    stats = [
+        Counter({MoveTrace(move=move, parent_move=parent_move): visits})
+    ] + child_stats
     return stats
 
 
@@ -65,14 +68,12 @@ if __name__ == "__main__":
                 rollout_data = []
                 data = json.loads(json_line)
 
-                print(
-                    f"\nID={data['id']} turn={data['turnNumber']} ####################"
-                )
+                print(f"\nID={data['id']} turn={data['turnNumber']}")
 
                 visit_stats = get_move_visit_stats(data)
                 for depth, depth_stats in enumerate(visit_stats):
                     total_count = 0
                     for count in depth_stats.values():
                         total_count += count
-                    print(f"Depth {depth}: visits={total_count} ===========")
+                    print(f"Depth {depth}: total visits={total_count} ===========")
                     print(depth_stats)

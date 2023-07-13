@@ -1,7 +1,7 @@
 import argparse
 import itertools
 import json
-from collections import Counter, namedtuple
+from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,6 +29,7 @@ To convert an SGF file to an `analysis` input JSON, use `sgf_to_analysis_input.p
 @dataclass(frozen=True)
 class MoveTrace:
     """Indicates the move of an MCTS node and the move of the node's parent."""
+
     move: str | None
     parent_move: str | None
 
@@ -49,7 +50,17 @@ def sum_lists_elementwise(l1: list[Any], l2: list[Any]) -> list[Any]:
 def get_move_visit_stats(
     data: dict[str, Any], parent_move: str | None = None
 ) -> list[Counter[MoveTrace]]:
-    """TODO comment, describe return val"""
+    """Returns visit counts for each move in the MCTS tree.
+
+    Args:
+        data: KataGo `analysis` JSON output describing an MCTS tree
+        parent_move: The move used to reach the top-level node described by
+          `data`.
+
+    Returns:
+        A list L where L[i] contains depth-i moves and their associated visit
+        counts.
+    """
     if "isSymmetryOf" in data:
         # Skip nodes that were not actually searched and instead had all of
         # its stats copied from another node with a symmetric move. If we don't

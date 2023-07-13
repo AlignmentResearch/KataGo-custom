@@ -1,3 +1,5 @@
+"""Converts an SGF to a KataGo `analysis` JSON input."""
+# TODO needs to be rewritten to be more general and have fewer hardcoded values
 import re
 import json
 

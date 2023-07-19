@@ -1,9 +1,13 @@
+#%%
 import argparse
 import itertools
 import json
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
+import plotly.graph_objects as go
+from collections import defaultdict
+#%%
 
 DESCRIPTION = f"""Given output JSONs from KataGo's `analysis` command, prints \
 the moves visited by MCTS and how many visits each move received. \
@@ -91,17 +95,18 @@ def get_move_visit_stats(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    parser.add_argument(
-        "files",
-        help="input files where each file consists of a JSON object per line",
-        nargs="+",
-    )
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(
+    #     description=DESCRIPTION, formatter_class=argparse.RawDescriptionHelpFormatter
+    # )
+    # parser.add_argument(
+    #     "files",
+    #     help="input files where each file consists of a JSON object per line",
+    #     nargs="+",
+    # )
+    # args = parser.parse_args()
 
-    input_files = args.files
+    # input_files = args.files
+    input_files = ["search_analysis_sgf_to_json/250-000.json"]
 
     for filename in input_files:
         print(f"\nFile {filename}")
@@ -109,7 +114,6 @@ if __name__ == "__main__":
             for json_line in f:
                 rollout_data = []
                 data = json.loads(json_line)
-
                 print(f"\nID={data['id']} turn={data['turnNumber']}")
 
                 visit_stats = get_move_visit_stats(data)
@@ -119,3 +123,74 @@ if __name__ == "__main__":
                         total_count += count
                     print(f"Depth {depth}: total visits={total_count} ===========")
                     print(depth_stats)
+
+#%%
+label = ["root"]
+label_name_dict = {"root": 0}
+x, y = [0.0], [0.5]
+target_counts = defaultdict(int)
+other_counts = [0 for _ in range(len(visit_stats) - 1)]
+source, target, value = [], [], []
+max_depth = len(visit_stats) - 1
+THRESHOLD = 3000
+for depth, depth_stats in enumerate(visit_stats[1:]):
+    label.append(f"{depth}: other")
+    label_name_dict[f"{depth}: other"] = len(label) - 1
+    x.append((depth + 1)/ (max_depth + 0.1))
+    y.append(0.0001)
+
+    for index, (move_trace, count) in enumerate(depth_stats.items()):
+        label_name = f"{depth}: {move_trace.move}"
+        if label_name not in label_name_dict:
+            label.append(label_name)
+            label_name_dict[label_name] = len(label) - 1
+            x.append((depth + 1)/ (max_depth + 0.1))
+            y.append((index + 1) / (len(depth_stats) + 3))
+
+    for move_trace, count in depth_stats.items():
+        parent, child = move_trace.parent_move, move_trace.move
+        if child is None:
+            continue
+        child_label_name = f"{depth}: {child}"
+        target_counts[child_label_name] += count
+
+    for move_trace, count in depth_stats.items():
+        parent, child = move_trace.parent_move, move_trace.move
+        if child is None:
+            continue
+        if parent is None:
+            parent_label_name = "root"
+        else:
+            parent_label_name = f"{depth - 1}: {parent}"
+            parent_target_count = target_counts[parent_label_name]
+            parent_label_name = parent_label_name if parent_target_count > THRESHOLD else f"{depth - 1}: other"
+
+        child_label_name = f"{depth}: {child}"
+        child_target_count = target_counts[child_label_name]
+        child_label_name = child_label_name if child_target_count > THRESHOLD else f"{depth}: other"
+
+        source.append(label_name_dict[parent_label_name])
+        target.append(label_name_dict[child_label_name])
+        value.append(count)
+    
+print("label x,y", list(zip(label,zip(x, y))))
+
+fig = go.Figure(data=[go.Sankey(
+    # arrangement = "freeform",
+    node = dict(
+      pad = 15,
+      thickness = 20,
+      line = dict(color = "black", width = 0.5),
+      label = label,
+    #   x = x,
+    #   y = y,
+      color = "blue"
+    ),
+    link = dict(
+      source = source,
+      target = target,
+      value = value
+  ))])
+
+fig.update_layout(title_text=input_files[0], font_size=10, height=800, width=1500)
+fig.show()

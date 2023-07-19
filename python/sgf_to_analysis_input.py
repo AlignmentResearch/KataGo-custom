@@ -1,3 +1,4 @@
+#%%
 """Converts an SGF to a KataGo `analysis` JSON input."""
 # TODO needs to be rewritten to be more general and have fewer hardcoded values
 import re
@@ -27,7 +28,7 @@ SGF_TO_GTP_COL = {
     "r": "S",
     "s": "T",
 }
-r
+
 SGF_TO_GTP_ROW = {
     "a": "1",
     "b": "2",
@@ -50,15 +51,15 @@ SGF_TO_GTP_ROW = {
     "s": "19",
 }
 
-target_file = "block_test_position.sgf"
+target_file = "./search_analysis_sgf_to_json/F60F14F76A3EC9374AEC037F61DF35ED.sgf"
 board_size = 19
 
-info_last_chance = {}
-with open("info_last_chance.jsonl", "r") as f:
-    for line in f:
-        info_last_chance.update(json.loads(line))
+# info_last_chance = {}
+# with open("./search_analysis_sgf_to_json/info_last_chance.json", "r") as f:
+#     for line in f:
+#         info_last_chance.update(json.loads(line))
 
-target_move = info_last_chance[target_file]["move_number"]
+# target_move = info_last_chance[target_file]["move_number"]
 
 with open(target_file, "r") as f:
     contents = f.read()
@@ -99,17 +100,18 @@ for i, move in enumerate(sgf_moves_list):
         exit()
 
 analysis_query = {
-    "id": "test_query",
+    "id": "search_analysis",
     "moves": gtp_movelist,
     "rules": "tromp-taylor",
-    "komi": 7.5,
+    "komi": 6.5,
     "boardXSize": board_size,
     "boardYSize": board_size,
-    "analyzeTurns": [target_move],
+    "analyzeTurns": [181],
     "maxVisits": 5000,
+    "includeTree": True,
 }
 
 # print(json.dumps(analysis_query))
 
-with open(f'input_{target_file.split(".")[0]}.txt', "w") as f:
+with open(f'./search_analysis_sgf_to_json/input_{target_file.split("/")[-1].split(".")[0]}.txt', "w") as f:
     print(json.dumps(analysis_query), file=f)

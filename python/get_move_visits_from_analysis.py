@@ -132,7 +132,7 @@ target_counts = defaultdict(int)
 other_counts = [0 for _ in range(len(visit_stats) - 1)]
 source, target, value = [], [], []
 max_depth = len(visit_stats) - 1
-THRESHOLD = 100
+THRESHOLD = 3000
 for depth, depth_stats in enumerate(visit_stats[1:]):
     label.append(f"{depth}: other")
     node_id_to_index[f"{depth}: other"] = len(label) - 1
@@ -162,8 +162,6 @@ for depth, depth_stats in enumerate(visit_stats[1:]):
         source.append(node_id_to_index[parent_node_id])
         target.append(node_id_to_index[node_id])
         value.append(count)
-    
-print("label x,y", list(zip(label,zip(x, y))))
 
 fig = go.Figure(data=[go.Sankey(
     # arrangement = "freeform",

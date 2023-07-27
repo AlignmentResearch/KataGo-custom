@@ -520,6 +520,9 @@ class Curriculum:
         with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}\n")
+                # dumb hack to add pass-hardening to low-visit victims
+                if self._cur_victim.max_visits_victim < 100:
+                    f.write(f"passingBehavior0=avoid-pass-alive-territory\n")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)

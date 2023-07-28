@@ -563,7 +563,7 @@ if __name__ == '__main__':
     end_row = num_rows_total
     with TimeStuff("Computing desired rows"):
         for i in range(len(all_files)):
-            (filename,mtime,num_rows) = all_files[i]
+            (filename,mtime,num_rows) = all_files[i]  # pytype:disable=bad-unpacking
 
             # This could happen if the .summary.json file is inaccurate after file deletions
             # Actually we just handle that in shardify - and accept that it might make our window slightly not far back enough

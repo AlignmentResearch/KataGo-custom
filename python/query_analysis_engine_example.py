@@ -52,6 +52,9 @@ class KataGo:
 
 
     def query(self, initial_board: sgfmill.boards.Board, moves: List[Tuple[Color,Move]], komi: float, max_visits=None):
+        assert self.katago.stdin is not None
+        assert self.katago.stdout is not None
+
         query = {}
 
         query["id"] = str(self.query_counter)

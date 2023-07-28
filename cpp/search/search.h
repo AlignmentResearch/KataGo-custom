@@ -88,6 +88,7 @@ struct Search {
   //of depth that it should be banned.
   std::vector<int> avoidMoveUntilByLocBlack;
   std::vector<int> avoidMoveUntilByLocWhite;
+  bool avoidMoveUntilRescaleRoot; // When avoiding moves at the root, rescale the root policy to sum to 1.
 
   //If rootSymmetryPruning==true and the board is symmetric, mask all the equivalent copies of each move except one.
   bool rootSymDupLoc[Board::MAX_ARR_SIZE];
@@ -230,6 +231,7 @@ struct Search {
   void setKomiIfNew(float newKomi); //Does not clear history, does clear search unless komi is equal.
   void setRootHintLoc(Loc hintLoc);
   void setAvoidMoveUntilByLoc(const std::vector<int>& bVec, const std::vector<int>& wVec);
+  void setAvoidMoveUntilRescaleRoot(bool b);
   void setAlwaysIncludeOwnerMap(bool b);
   void setRootSymmetryPruningOnly(const std::vector<int>& rootPruneOnlySymmetries);
   void setParams(SearchParams params);
@@ -399,7 +401,7 @@ struct Search {
   ) const;
 
 
-  std::pair<double,double> getAverageShorttermWLAndScoreError(const SearchNode* node = NULL) const;
+  std::pair<double,double> getShallowAverageShorttermWLAndScoreError(const SearchNode* node = NULL) const;
   bool getSharpScore(const SearchNode* node, double& ret) const;
 
   //Fill json with analysis engine format information about search results.
@@ -504,7 +506,7 @@ private:
   int numAdditionalThreadsToUseForTasks() const;
   void spawnThreadsIfNeeded();
   void killThreads();
-  void performTaskWithThreads(std::function<void(int)>* task);
+  void performTaskWithThreads(std::function<void(int)>* task, int capThreads);
 
   void applyRecursivelyPostOrderMulithreaded(const std::vector<SearchNode*>& nodes, std::function<void(SearchNode*,int)>* f);
   void applyRecursivelyPostOrderMulithreadedHelper(
@@ -595,7 +597,6 @@ private:
   void selectBestChildToDescend(
     SearchThread& thread, const SearchNode& node, int nodeState,
     int& numChildrenFound, int& bestChildIdx, Loc& bestChildMoveLoc,
-    bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
     bool isRoot
   ) const;
 
@@ -656,7 +657,6 @@ private:
 
   bool playoutDescend(
     SearchThread& thread, SearchNode& node,
-    bool posesWithChildBuf[NNPos::MAX_NN_POLICY_SIZE],
     bool isRoot,
     std::vector<SearchNode*> *playoutPath
   );
@@ -692,13 +692,23 @@ private:
     std::string& prefix, int64_t origVisits, int depth, const AnalysisData& data, Player perspective
   ) const;
 
-  double getSharpScoreHelper(
+  bool getSharpScoreHelper(
     const SearchNode* node,
     std::unordered_set<const SearchNode*>& graphPath,
-    double policyProbsBuf[NNPos::MAX_NN_POLICY_SIZE]
+    double policyProbsBuf[NNPos::MAX_NN_POLICY_SIZE],
+    double minProp,
+    double desiredProp,
+    double& ret
   ) const;
-
-  std::pair<double,double> getAverageShorttermWLAndScoreErrorHelper(const SearchNode* node) const;
+  void getShallowAverageShorttermWLAndScoreErrorHelper(
+    const SearchNode* node,
+    std::unordered_set<const SearchNode*>& graphPath,
+    double policyProbsBuf[NNPos::MAX_NN_POLICY_SIZE],
+    double minProp,
+    double desiredProp,
+    double& wlError,
+    double& scoreError
+  ) const;
 
   template<typename Func>
   bool traverseTreeForOwnership(

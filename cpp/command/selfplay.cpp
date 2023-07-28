@@ -177,10 +177,8 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   //Max number of games that we will allow to be queued up and not written out
   const int maxDataQueueSize = cfg.getInt("maxDataQueueSize",1,1000000);
   const int maxRowsPerTrainFile = cfg.getInt("maxRowsPerTrainFile",1,100000000);
-  const int maxRowsPerValFile = cfg.getInt("maxRowsPerValFile",1,100000000);
   const double firstFileRandMinProp = cfg.getDouble("firstFileRandMinProp",0.0,1.0);
 
-  const double validationProp = cfg.getDouble("validationProp",0.0,0.5);
   const int64_t logGamesEvery = cfg.getInt64("logGamesEvery",1,1000000);
 
   const bool switchNetsMidGame = cfg.getBool("switchNetsMidGame");
@@ -204,11 +202,11 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   mutex paramsReloadMutex;
 
   //Initialize object for randomizing game settings and running games
-  const bool isDistributed = false; 
+  const bool isDistributed = false;
   PlaySettings playSettings = PlaySettings::loadForSelfplay(cfg, isDistributed);
   GameRunner* gameRunner = new GameRunner(cfg, playSettings, logger);
   bool autoCleanupAllButLatestIfUnused = true;
-  SelfplayManager* manager = new SelfplayManager(validationProp, maxDataQueueSize, &logger, logGamesEvery, autoCleanupAllButLatestIfUnused);
+  SelfplayManager* manager = new SelfplayManager(maxDataQueueSize, &logger, logGamesEvery, autoCleanupAllButLatestIfUnused);
 
   const int minBoardXSizeUsed = gameRunner->getGameInitializer()->getMinBoardXSize();
   const int minBoardYSizeUsed = gameRunner->getGameInitializer()->getMinBoardYSize();
@@ -291,7 +289,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   //Returns true if a new net was loaded.
   auto loadLatestNeuralNetIntoManager =
-    [inputsVersion,&manager,maxRowsPerTrainFile,maxRowsPerValFile,firstFileRandMinProp,dataBoardLen,selfplayProportion,
+    [inputsVersion,&manager,maxRowsPerTrainFile,firstFileRandMinProp,dataBoardLen,selfplayProportion,
      &loadNN,
      &modelsDir,&outputDir,&victimOutputDir,&logger,&cfg,numGameThreads,victimplay,
      minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed](const string* lastNetName) -> bool {
@@ -317,12 +315,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     string modelOutputDir = outputDir + "/" + modelName;
     string sgfOutputDir = modelOutputDir + "/sgfs";
     string tdataOutputDir = modelOutputDir + "/tdata";
-    string vdataOutputDir = modelOutputDir + "/vdata";
 
-    string tdataVictimOutputDir, vdataVictimOutputDir;
+    string tdataVictimOutputDir;
     if(victimOutputDir != "") {
       tdataVictimOutputDir = victimOutputDir + "/tdata";
-      vdataVictimOutputDir = victimOutputDir + "/vdata";
     }
 
     //Try repeatedly to make directories, in case the filesystem is unhappy with us as we try to make the same dirs as another process.
@@ -335,12 +331,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         MakeDir::make(modelOutputDir);
         MakeDir::make(sgfOutputDir);
         MakeDir::make(tdataOutputDir);
-        MakeDir::make(vdataOutputDir);
 
         if (victimOutputDir != "") {
           MakeDir::make(victimOutputDir);
           MakeDir::make(tdataVictimOutputDir);
-          MakeDir::make(vdataVictimOutputDir);
         }
         success = true;
       }
@@ -377,18 +371,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       tdataOutputDir, tdataVictimOutputDir, NULL, inputsVersion, maxRowsPerTrainFile,
       firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
     );
-    TrainingDataWriter* vdataWriter = new TrainingDataWriter(
-      vdataOutputDir, vdataVictimOutputDir, NULL, inputsVersion, maxRowsPerValFile,
-      firstFileRandMinProp, dataBoardLen, dataBoardLen, onlyWriteEvery, Global::uint64ToHexString(rand.nextUInt64())
-    );
 
     tdataWriter->forVictimplay = victimplay;
-    vdataWriter->forVictimplay = victimplay;
     tdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
-    vdataWriter->allowSelfplayInVictimplay = selfplayProportion > 0.0;
-
     tdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
-    vdataWriter->useAuxPolicyTarget = cfg.getBool("useAuxPolicyTarget");
 
     ofstream* sgfOut = NULL;
     if(sgfOutputDir.length() > 0) {
@@ -397,7 +383,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     }
 
     logger.write("Model loading loop thread loaded new neural net " + nnEval->getModelName());
-    manager->loadModelAndStartDataWriting(nnEval, tdataWriter, vdataWriter, sgfOut);
+    manager->loadModelAndStartDataWriting(nnEval, tdataWriter, sgfOut);
     return true;
   };
 

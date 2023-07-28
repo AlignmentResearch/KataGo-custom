@@ -53,9 +53,10 @@ ScoreMean -0.82
 ScoreMeanSq 599.6
 Lead -0.47
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -126,9 +127,10 @@ ScoreMean 0.58
 ScoreMeanSq 514.5
 Lead 0.37
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    -   11    -    -    0    0 
@@ -199,9 +201,10 @@ ScoreMean -0.19
 ScoreMeanSq 596.9
 Lead -0.01
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -272,9 +275,10 @@ ScoreMean -16.89
 ScoreMeanSq 814.7
 Lead -13.85
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    1    0    0    0 
@@ -345,9 +349,10 @@ ScoreMean 17.53
 ScoreMeanSq 876.0
 Lead 13.92
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -443,9 +448,10 @@ ScoreMean 0.24
 ScoreMeanSq 611.6
 Lead 0.20
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -516,9 +522,10 @@ ScoreMean 1.18
 ScoreMeanSq 552.2
 Lead 0.79
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    -   21    -    -    0    0 
@@ -589,9 +596,10 @@ ScoreMean -0.75
 ScoreMeanSq 580.6
 Lead -0.31
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -662,9 +670,10 @@ ScoreMean -17.01
 ScoreMeanSq 805.5
 Lead -14.02
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    1    0    0    0 
@@ -735,9 +744,10 @@ ScoreMean 17.17
 ScoreMeanSq 848.3
 Lead 13.73
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -833,9 +843,10 @@ ScoreMean -0.15
 ScoreMeanSq 602.3
 Lead -0.11
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -906,9 +917,10 @@ ScoreMean 0.14
 ScoreMeanSq 567.9
 Lead 0.06
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    -    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    -    -    -    -    0    0    0    0    0    0    0    -    1    -    -    0    0 
@@ -979,9 +991,10 @@ ScoreMean -1.20
 ScoreMeanSq 584.8
 Lead -0.66
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -1052,9 +1065,10 @@ ScoreMean -17.99
 ScoreMeanSq 854.2
 Lead -14.90
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    2    1    0    0 
@@ -1125,9 +1139,10 @@ ScoreMean 16.49
 ScoreMeanSq 814.8
 Lead 13.06
 VarTimeLeft -1.0
-STWinlossError -1.000
-STScoreError -1.0
+STWinlossError -100.00c
+STScoreError -1.00
 Policy
+Pass   0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
    0    0    0    0    0    -    0    0    0    0    0    0    0    0    0    0    0    0    0 

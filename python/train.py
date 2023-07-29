@@ -823,7 +823,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         for key in metrics:
             val = metrics[key]
             if isinstance(val, torch.Tensor):
-                ret[key] = val.detach().cpu().item()
+                ret[key] = val.detach().cpu().item() # pytype: disable=attribute-error
             else:
                 ret[key] = val
         return ret

@@ -160,7 +160,7 @@ def likelihood_of_games(
     NOTE: For performance reasons, you should try to minimize the number of these you create. If p1 and p2 played
     a large number of games, don't call this function once per game. Instead, call it once for all the games
     together (or twice, if you are using include_first_player_advantage=True, separately reporting the stats
-    that occured when each side was the first player).
+    that occurred when each side was the first player).
 
     NOTE: If specifying include_first_player_advantage=True, make sure to add a make_single_player_prior on
     P1_ADVANTAGE_NAME.

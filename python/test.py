@@ -212,7 +212,7 @@ def main(args):
             )
             metrics = detensorify_metrics(metrics)
 
-            # Ignore first batch, treat as a warmup so timings are a bit more accurate.
+            # Ignore first batch, treat as a warm-up so timings are a bit more accurate.
             if is_first_batch:
                 is_first_batch = False
                 continue

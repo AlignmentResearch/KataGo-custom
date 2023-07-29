@@ -561,7 +561,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
     def update_and_return_lr_and_wd():
         per_sample_lr = 0.00003 * lr_scale
 
-        # Warmup for initial training
+        # Warm-up for initial training
         warmup_scale = 1.0
         if model_config["norm_kind"] == "fixup" or model_config["norm_kind"] == "fixscale" or model_config["norm_kind"] == "fixscaleonenorm":
             if train_state["global_step_samples"] < 1000000:
@@ -1096,7 +1096,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                     metrics["time_since_last_print"] = timediff
                     log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out)
 
-                # Update LR more frequently at the start for smoother warmup ramp and wd adjustment
+                # Update LR more frequently at the start for smoother warm-up ramp and wd adjustment
                 if train_state["global_step_samples"] <= 50000000 and batch_count_this_epoch % 10 == 0:
                     lr_right_now, normal_weight_decay_right_now = update_and_return_lr_and_wd()
 

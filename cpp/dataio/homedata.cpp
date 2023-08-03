@@ -15,6 +15,7 @@
 // even though PathRemoveFileSpecW is deprecated, it should still work.
 // #include <pathcch.h>
 // #pragma comment(lib, "pathcch.lib")
+#include <codecvt>
 #endif
 
 #include "../core/makedir.h"
@@ -38,14 +39,9 @@ vector<string> HomeData::getDefaultFilesDirs() {
   // #else
   PathRemoveFileSpecW(buf);
   // #endif
-  constexpr size_t buf2Size = (bufSize+1) * 2;
-  char buf2[buf2Size];
-  size_t ret;
-  wcstombs_s(&ret, buf2, buf2Size, buf, buf2Size-1);
-
-  string executableDir(buf2);
   vector<string> dirs;
-  dirs.push_back(executableDir);
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+  dirs.push_back(converter.to_bytes(buf));
   return dirs;
 }
 
@@ -74,12 +70,9 @@ string HomeData::getHomeDataDir(bool makeDir, const string& homeDataDirOverride)
   // #else
   PathRemoveFileSpecW(buf);
   // #endif
-  constexpr size_t buf2Size = (bufSize+1) * 2;
-  char buf2[buf2Size];
-  size_t ret;
-  wcstombs_s(&ret, buf2, buf2Size, buf, buf2Size-1);
 
-  string homeDataDir(buf2);
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+  string homeDataDir = converter.to_bytes(buf);
   homeDataDir += "/KataGoData";
   if(makeDir) MakeDir::make(homeDataDir);
   return homeDataDir;
@@ -98,8 +91,8 @@ vector<string> HomeData::getDefaultFilesDirs() {
   vector<string> ret;
   if(count >= 0 && count < bufSize-1) {
     string exePath(result,count);
-    const gfs::path path(exePath);
-    string exeDir = path.parent_path().string();
+    const gfs::path path(gfs::u8path(exePath));
+    string exeDir = path.parent_path().u8string();
     ret.push_back(exeDir);
   }
   ret.push_back(getHomeDataDir(false,""));

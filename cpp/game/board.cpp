@@ -31,8 +31,6 @@ const Hash128 Board::ZOBRIST_PASS_ENDS_PHASE = //Based on sha256 hash of Board::
   Hash128(0x853E097C279EBF4EULL, 0xE3153DEF9E14A62CULL);
 const Hash128 Board::ZOBRIST_GAME_IS_OVER = //Based on sha256 hash of Board::ZOBRIST_GAME_IS_OVER
   Hash128(0xb6f9e465597a77eeULL, 0xf1d583d960a4ce7fULL);
-const Hash128 Board::ZOBRIST_SOMEONE_HAS_PASSED = //Based on sha256 hash of Board::ZOBRIST_SOMEONE_HAS_PASSED
-  Hash128(0x71a90475c18880dcULL, 0xaae3bb636722402dULL);
 
 //LOCATION--------------------------------------------------------------------------------
 Loc Location::getLoc(int x, int y, int x_size)

@@ -37,6 +37,9 @@ struct SidePosition {
   Player pla;
   int64_t unreducedNumVisits;
   std::vector<PolicyTargetMove> policyTarget;
+  double policySurprise;
+  double policyEntropy;
+  double searchEntropy;
   ValueTargets whiteValueTargets;
   NNRawStats nnRawStats;
   float targetWeight;
@@ -88,11 +91,12 @@ struct FinishedGameData {
   std::vector<float> targetWeightByTurn;
   std::vector<float> targetWeightByTurnUnrounded;
   std::vector<PolicyTarget> policyTargetsByTurn;
+  std::vector<double> policySurpriseByTurn;
+  std::vector<double> policyEntropyByTurn;
+  std::vector<double> searchEntropyByTurn;
   std::vector<ValueTargets> whiteValueTargetsByTurn; //Except this one, we may have some of
   std::vector<NNRawStats> nnRawStatsByTurn;
 
-  Loc queryMoveLoc;
-  std::vector<std::vector<SearchPlayoutRecord>> playoutHistoriesByTurn;
   Color* finalFullArea;
   Color* finalOwnership;
   bool* finalSekiAreas;
@@ -100,6 +104,11 @@ struct FinishedGameData {
 
   std::vector<SidePosition*> sidePositions;
   std::vector<ChangedNeuralNet*> changedNeuralNets;
+
+  double bTimeUsed;
+  double wTimeUsed;
+  int bMoveCount;
+  int wMoveCount;
 
   static constexpr int NUM_MODES = 8;
   static constexpr int MODE_NORMAL = 0;
@@ -163,7 +172,9 @@ struct TrainingWriteBuffers {
   //C27: Weight assigned to the final board ownership target and score distr targets. Most training rows will have this be 1, some will be 0.
   //C28: Weight assigned to the next move policy target
   //C29: Weight assigned to the lead target
-  //C30-32: Unused
+  //C30: Policy Surprise (for statistical purposes)
+  //C31: Policy Entropy (for statistical purposes)
+  //C32: Search Entropy (for statistical purposes)
   //C33: Weight assigned to the future position targets valueTargetsNCHW C1-C2
   //C34: Weight assigned to the area/territory target valueTargetsNCHW C4
   //C35: Unused
@@ -236,6 +247,9 @@ struct TrainingWriteBuffers {
     int64_t unreducedNumVisits,
     const std::vector<PolicyTargetMove>* policyTarget0, //can be null
     const std::vector<PolicyTargetMove>* policyTarget1, //can be null
+    double policySurprise,
+    double policyEntropy,
+    double searchEntropy,
     const std::vector<ValueTargets>& whiteValueTargets,
     int whiteValueTargetsIdx, //index in whiteValueTargets corresponding to this turn.
     const NNRawStats& nnRawStats,

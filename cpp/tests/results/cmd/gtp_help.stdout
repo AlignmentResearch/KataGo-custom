@@ -5,15 +5,15 @@ DESCRIPTION:
 
 USAGE: 
 
-   gtp  [-config <FILE>] [-model <FILE>] [...other flags...]
+   gtp  [-config <FILE>] ...  [-model <FILE>] [...other flags...]
 
 
 Where: 
 
-   -config <FILE>
-     Config file to use (see gtp_example.cfg or configs/gtp_example.cfg).
-     Defaults to: (dir containing katago.exe, or else
-     ~/.katago)/default_gtp.cfg
+   -config <FILE>  (accepted multiple times)
+     Config file(s) to use, can be one or multiple files (see
+     gtp_example.cfg or configs/gtp_example.cfg). Defaults to: (dir
+     containing katago.exe, or else ~/.katago)/default_gtp.cfg
 
    -model <FILE>
      Neural net model file. Defaults to: (dir containing katago.exe, or
@@ -21,6 +21,9 @@ Where:
 
    -override-config <KEYVALUEPAIRS>  (accepted multiple times)
      Override config parameters. Format: "key=value, key=value,..."
+
+   -victim-model <VICTIM_MODEL>
+     Path to victim model (for AMCTS search).
 
    -override-version <VERSION>
      Force KataGo to say a certain value in response to gtp version command

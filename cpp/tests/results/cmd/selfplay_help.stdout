@@ -5,14 +5,15 @@ DESCRIPTION:
 
 USAGE: 
 
-   selfplay  -config <FILE> -models-dir <DIR> -output-dir <DIR>
-             [-max-games-total <NGAMES>]
+   selfplay  -config <FILE> ...  -models-dir <DIR> -output-dir <DIR>
+             [-max-games-total <NGAMES>] [-nn-predictor-path <PREDICTOR>]
+             [-nn-victim-path <VICTIM>] [-victim-output-dir <DIR>]
 
 
 Where: 
 
-   -config <FILE>
-     (required)  Config file to use.
+   -config <FILE>  (accepted multiple times)
+     (required)  Config file(s) to use, can be one or multiple files.
 
    -models-dir <DIR>
      (required)  Dir to poll and load models from
@@ -22,6 +23,15 @@ Where:
 
    -max-games-total <NGAMES>
      Terminate after this many games
+
+   -nn-predictor-path <PREDICTOR>
+     Path to predictor model(s)
+
+   -nn-victim-path <VICTIM>
+     Path to victim model(s)
+
+   -victim-output-dir <DIR>
+     Dir to output files for victim predictor training
 
    --,  -ignore_rest
      Ignores the rest of the labeled arguments following this flag.

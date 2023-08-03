@@ -74,7 +74,7 @@ void Tests::runPassingTests() {
   cout << "Running passing tests" << endl;
 
   ConfigParser cfg(AMCTSTests::AMCTS_CONFIG_PATH);
-  Logger logger;
+  Logger logger(&cfg);
 
   // Passing /dev/null triggers debugSkipNeuralNet=true,
   // which makes nnEvalRand a random policy

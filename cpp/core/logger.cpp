@@ -8,11 +8,26 @@
 
 using namespace std;
 
-Logger::Logger(ConfigParser *cfg, bool logToStdout_, bool logToStderr_, bool logTime_)
-  :logToStdout(logToStdout_),logToStderr(logToStderr_),logTime(logTime_),ostreams(),files()
+Logger::Logger(
+  ConfigParser* cfg,
+  bool logToStdoutDefault,
+  bool logToStderrDefault,
+  bool logTimeDefault,
+  bool logConfigContents_
+):
+  logToStdout(logToStdoutDefault),
+  logToStderr(logToStderrDefault),
+  logTime(logTimeDefault),
+  logConfigContents(logConfigContents_),
+  header(),
+  ostreams(),
+  files(),
+  logBufs(),
+  mutex(),
+  isDisabled(false)
 {
   if(cfg) {
-    logHeader = "Running with following config:\n" + cfg->getAllKeyVals();
+    header = "Running with following config:\n" + cfg->getAllKeyVals();
     if(cfg->contains("logToStdout"))
       logToStdout = cfg->getBool("logToStdout");
 
@@ -22,8 +37,8 @@ Logger::Logger(ConfigParser *cfg, bool logToStdout_, bool logToStderr_, bool log
     if(cfg->contains("logTimeStamp"))
       logTime = cfg->getBool("logTimeStamp");
 
-    if(cfg->contains("logFile") && cfg->contains("logDir"))
-      throw StringError("Cannot specify both logFile and logDir in config");
+    if((int)cfg->contains("logFile") + (int)cfg->contains("logDir") + (int)cfg->contains("logDirDated") > 1)
+      throw StringError("Cannot specify more than one of logFile and logDir and logDirDated in config");
     else if(cfg->contains("logFile"))
       addFile(cfg->getString("logFile"), false);
     else if(cfg->contains("logDir")) {
@@ -31,10 +46,16 @@ Logger::Logger(ConfigParser *cfg, bool logToStdout_, bool logToStderr_, bool log
       Rand rand;
       addFile(cfg->getString("logDir") + "/" + DateTime::getCompactDateTimeString() + "-" + Global::uint32ToHexString(rand.nextUInt()) + ".log", false);
     }
+    else if(cfg->contains("logDirDated")) {
+      MakeDir::make(cfg->getString("logDirDated"));
+      Rand rand;
+      MakeDir::make(cfg->getString("logDirDated") + "/" + DateTime::getCompactDateTimeString());
+      addFile(cfg->getString("logDirDated") + "/" + DateTime::getCompactDateTimeString() + "/" + Global::uint32ToHexString(rand.nextUInt()) + ".log", false);
+    }
   }
 
-  if (!logHeader.empty()) {
-    write(logHeader);
+  if(!header.empty()) {
+    write(header);
   }
 }
 
@@ -57,31 +78,15 @@ bool Logger::isLoggingToStderr() const {
   return logToStderr;
 }
 
-void Logger::setLogToStdout(bool b, bool afterCreation) {
-  if(afterCreation && b && !logToStdout && !logHeader.empty())
-    writeAcquireLock(logHeader, cout);
-
-  logToStdout = b;
-}
-
-void Logger::setLogToStderr(bool b, bool afterCreation) {
-  if(afterCreation && b && !logToStderr && !logHeader.empty())
-    writeAcquireLock(logHeader, cerr);
-
-  logToStderr = b;
-}
-
-void Logger::setLogTime(bool b) {
-  logTime = b;
-}
-
 void Logger::addOStream(ostream& out, bool afterCreation) {
+  lock_guard<std::mutex> lock(mutex);
   ostreams.push_back(&out);
 
-  if(afterCreation && !logHeader.empty())
-    writeAcquireLock(logHeader, out);
+  if(afterCreation && !header.empty()) {
+    time_t time = DateTime::getNow();
+    writeLocked(header, true, out, time);
+  }
 }
-
 void Logger::addFile(const string& file, bool afterCreation) {
   if(file == "")
     return;
@@ -96,10 +101,19 @@ void Logger::addFile(const string& file, bool afterCreation) {
     delete out;
     return;
   }
+
+  lock_guard<std::mutex> lock(mutex);
   files.push_back(out);
 
-  if(afterCreation && !logHeader.empty())
-    writeAcquireLock(logHeader, *out);
+  if(afterCreation && !header.empty()) {
+    time_t time = DateTime::getNow();
+    writeLocked(header, true, *out, time);
+  }
+}
+
+void Logger::setDisabled(bool b) {
+  lock_guard<std::mutex> lock(mutex);
+  isDisabled = b;
 }
 
 void Logger::write(const string& str, bool endLine) {
@@ -124,18 +138,20 @@ void Logger::write(const string& str, bool endLine) {
 
 void Logger::writeLocked(const std::string &str, bool endLine, std::ostream &out, const time_t& time)
 {
+  if(isDisabled)
+    return;
   const char* timeFormat = "%F %T%z: ";
 
-  if(logTime) {DateTime::writeTimeToStream(out, timeFormat, time); out << str; }
-  else out << ": " << str;
-  if(endLine) out << std::endl; else out << std::flush;
-}
-
-void Logger::writeAcquireLock(const std::string &str, std::ostream &out)
-{
-  lock_guard<std::mutex> lock(mutex);
-  time_t time = DateTime::getNow();
-  writeLocked(str, true, out, time);
+  if(logTime) {
+    DateTime::writeTimeToStream(out, timeFormat, time);
+    out << str;
+  }
+  else
+    out << ": " << str;
+  if(endLine)
+    out << std::endl;
+  else
+    out << std::flush;
 }
 
 void Logger::write(const string& str) {

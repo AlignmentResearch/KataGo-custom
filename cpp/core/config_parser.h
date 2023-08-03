@@ -91,23 +91,20 @@ class ConfigParser {
  private:
   bool initialized;
   std::string fileName;
-  std::vector<std::string> baseDirs;
   std::string contents;
   std::map<std::string, std::string> keyValues;
 
-  // options
-
-  // if true, overriding keys within the same file is possible
+  // If true, overriding keys within the same file is possible
   bool keysOverrideEnabled;
-
-  // if true (default), overriding keys from included files is possible
+  // If true (default), overriding keys from included files is possible
   bool keysOverrideFromIncludes;
 
-  // current reading state variables
-  // current filename being processed (can differ from fileName in calse of using @include directive)
+  // Current reading state variables
+  // Current filename being processed (can differ from fileName in case of using @include directive)
   int curLineNum = 0;
   std::string curFilename;
   std::vector<std::string> includedFiles;
+  std::vector<std::string> baseDirs;
 
   std::vector<std::string> logMessages;
 

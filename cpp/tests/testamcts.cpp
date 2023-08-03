@@ -11,14 +11,13 @@ using namespace std;
 // #define DEBUG
 
 void AMCTSTests::runAllAMCTSTests(const int maxVisits,
-                                    const int numMovesToSimulate) {
+                                  const int numMovesToSimulate) {
   testConstPolicies();
   testMCTS(maxVisits, numMovesToSimulate);
   testAMCTS(maxVisits, numMovesToSimulate);
 }
 
 static constexpr double TOTALCHILDWEIGHT_PUCT_OFFSET = 0.01;
-static const int64_t MIN_WEIGHT_FOR_LCB = 3;
 
 static bool approxEqual(float x, float y) {
   float tolerance;
@@ -48,7 +47,7 @@ static bool approxEqual(const NodeStats& s1, const NodeStats& s2) {
          approxEqual(s1.weightSqSum, s2.weightSqSum);
 }
 
-// Sets SearchParams in a such a way that makes checking (E)MCTS easy.
+// Sets SearchParams in a such a way that makes checking (A)MCTS easy.
 static void setSimpleSearchParams(SearchParams& params) {
   // Force bot to weight purely by visits for tests.
   // https://discord.com/channels/417022162348802048/583775968804732928/698893048049827870
@@ -79,26 +78,41 @@ static void setSimpleSearchParams(SearchParams& params) {
   testAssert(!params.useNoisePruning);
   testAssert(!params.useUncertainty);
   testAssert(!params.antiMirror);
+  testAssert(!params.forceWinningPass);  // We aren't testing pass sharpening.
 }
 
+// Computes the fpuValue of a node with overriden stats and visits.
+// This is needed in checkPlayoutLogic to simulate the tree-search process,
+// since node contains stats from the completed search tree. During simulation
+// we need to get the fpuValue of a node in a partially re-simulated tree.
 static double getFpuValue(const Search& bot, const SearchNode* node,
-                          const double utilityAvg,
-                          const double policyProbMassVisited) {
+                          const NodeStats& statOverride,
+                          const int64_t visitOverride,
+                          double policyProbMassVisited) {
+  // We create a dummy SearchNode and set
+  //    {node->nnOutput, statOverride, visitOverride}.
+  // This is a bit hacky, but saves on code duplication, which is more important
+  // for these tests.
+
+  const Player prevPla = getOpp(node->nextPla);
+  SearchNode dummyNode(prevPla, node->forceNonTerminal, node->mutexIdx);
+
+  // Set nnEval -- remember to unset later because dummyNode will delete it
+  dummyNode.storeNNOutputIfNull(node->nnOutput);
+
+  // Set stats
+  dummyNode.stats = statOverride;
+
+  // Set visits
+  dummyNode.stats.visits = visitOverride;
+
   const bool isRoot = node == bot.rootNode;
-  const double fpuReductionMax = isRoot ? bot.searchParams.rootFpuReductionMax
-                                        : bot.searchParams.fpuReductionMax;
-  const double fpuLossProp =
-      isRoot ? bot.searchParams.rootFpuLossProp : bot.searchParams.fpuLossProp;
-  const double utilityRadius = bot.searchParams.winLossUtilityFactor +
-                               bot.searchParams.staticScoreUtilityFactor +
-                               bot.searchParams.dynamicScoreUtilityFactor;
+  double _, __, ___;  // throwaways, though need to be distinct
+  const double fpuValue = bot.getFpuValueForChildrenAssumeVisited(
+      dummyNode, node->nextPla, isRoot, policyProbMassVisited, _, __, ___);
 
-  const double reduction = fpuReductionMax * sqrt(policyProbMassVisited);
-
-  double fpuValue = node->nextPla == P_WHITE ? utilityAvg - reduction
-                                             : utilityAvg + reduction;
-  double lossValue = node->nextPla == P_WHITE ? -utilityRadius : utilityRadius;
-  fpuValue = fpuValue + (lossValue - fpuValue) * fpuLossProp;
+  // Unset nnEval
+  dummyNode.nnOutput = nullptr;
 
   return fpuValue;
 }
@@ -213,6 +227,7 @@ void AMCTSTests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   testAssert(searchParamss.size() == 2);
 
   const SearchParams mctsParams = [&]() {
+    // searchParamss[0] is MCTS, searchParamss[1] is AMCTS; copy the 0th.
     SearchParams ret = searchParamss[0];
     setSimpleSearchParams(ret);
     return ret;
@@ -263,8 +278,7 @@ void AMCTSTests::testMCTS(const int maxVisits, const int numMovesToSimulate) {
   }
 }
 
-void AMCTSTests::testAMCTS(const int maxVisits,
-                             const int numMovesToSimulate) {
+void AMCTSTests::testAMCTS(const int maxVisits, const int numMovesToSimulate) {
   cout << "Testing AMCTS..." << endl;
 
   ConfigParser cfg(AMCTS_CONFIG_PATH);
@@ -274,7 +288,7 @@ void AMCTSTests::testAMCTS(const int maxVisits,
       Setup::loadParams(cfg, Setup::SETUP_FOR_OTHER);
   testAssert(searchParamss.size() == 2);
 
-  const SearchParams mctsParams = [&]() {
+  const auto getMctsParams = [&](const bool useGraphSearch) {
     SearchParams ret = searchParamss[0];
     setSimpleSearchParams(ret);
 
@@ -282,8 +296,11 @@ void AMCTSTests::testAMCTS(const int maxVisits,
     ret.chosenMoveTemperature = 0;
     ret.chosenMoveTemperatureEarly = 0;
 
+    ret.useGraphSearch = useGraphSearch;
+
     return ret;
-  }();
+  };
+
   const SearchParams amcts_s_Params = [&]() {
     SearchParams ret = searchParamss[1];
     ret.searchAlgo = SearchParams::SearchAlgorithm::AMCTS_S;
@@ -301,14 +318,14 @@ void AMCTSTests::testAMCTS(const int maxVisits,
   auto nnEval2 =
       getNNEval(CONST_POLICY_2_PATH, cfg, logger, 42);  // pass over move
   Search bot11_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
-                  mctsParams, nnEval1.get());
+                 getMctsParams(false), nnEval1.get());
   Search bot12_s(amcts_s_Params, nnEval1.get(), &logger, "forty-two",
-                  mctsParams, nnEval2.get());
+                 getMctsParams(true), nnEval2.get());
 
   Search bot11_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
-                  mctsParams, nnEval1.get());
+                 getMctsParams(true), nnEval1.get());
   Search bot12_r(amcts_r_Params, nnEval1.get(), &logger, "forty-two",
-                  mctsParams, nnEval2.get());
+                 getMctsParams(false), nnEval2.get());
 
   for (auto bot_ptr : {&bot11_s, &bot12_s, &bot11_r, &bot12_r}) {
     Search& bot = *bot_ptr;
@@ -341,10 +358,10 @@ void AMCTSTests::testAMCTS(const int maxVisits,
 
       if (&bot == &bot11_s || &bot == &bot11_r) {
         checkAMCTSSearch(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP1_WIN_PROB,
-                          CP1_LOSS_PROB);
+                         CP1_LOSS_PROB);
       } else if (&bot == &bot12_s || &bot == &bot12_r) {
         checkAMCTSSearch(bot, CP1_WIN_PROB, CP1_LOSS_PROB, CP2_WIN_PROB,
-                          CP2_LOSS_PROB);
+                         CP2_LOSS_PROB);
       }
 
       bot.makeMove(loc, curPla);
@@ -357,7 +374,7 @@ void AMCTSTests::testAMCTS(const int maxVisits,
 }
 
 void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
-                                  const float loss_prob) {
+                                 const float loss_prob) {
   testAssert(bot.searchParams.searchAlgo ==
              SearchParams::SearchAlgorithm::MCTS);
   SearchTree tree(bot);
@@ -381,7 +398,7 @@ void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
       // weightSum. They might also be visited more than once.
       testAssert(NodeStats(node->stats).weightSum >= 1);
     } else {
-      testAssert(bot.computeNodeWeight(*node) == 1);
+      testAssert(bot.computeWeightFromNode(*node) == 1);
     }
   }
 
@@ -408,9 +425,8 @@ void AMCTSTests::checkMCTSSearch(const Search& bot, const float win_prob,
 }
 
 void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
-                                    const float loss_prob1,
-                                    const float win_prob2,
-                                    const float loss_prob2) {
+                                  const float loss_prob1, const float win_prob2,
+                                  const float loss_prob2) {
   testAssert(bot.searchParams.usingAdversarialAlgo());
 
   SearchTree tree(bot);
@@ -434,9 +450,9 @@ void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
       // weightSum. They might also be visited more than once.
       testAssert(NodeStats(node->stats).weightSum >= 1);
     } else if (node->nextPla == bot.rootPla) {
-      testAssert(bot.computeNodeWeight(*node) == 1);
+      testAssert(bot.computeWeightFromNode(*node) == 1);
     } else {
-      testAssert(bot.computeNodeWeight(*node) == 0);
+      testAssert(bot.computeWeightFromNode(*node) == 0);
     }
   }
 
@@ -474,6 +490,10 @@ void AMCTSTests::checkAMCTSSearch(const Search& bot, const float win_prob1,
 }
 
 void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
+  // We don't test non-standard passing behaviors here.
+  testAssert(bot.searchParams.passingBehavior ==
+             SearchParams::PassingBehavior::Standard);
+
   unordered_map<Loc, double> trueLocToPsv;
   {
     vector<double> playSelectionValues;
@@ -487,9 +507,9 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
     testAssert(trueLocToPsv.size() == locs.size());
   }
 
+  SearchTree tree(bot);
   unordered_map<const SearchNode*, double> childToPsv;
   {
-    SearchTree tree(bot);
     testAssert(tree.children.at(tree.root).size() > 0);
 
     for (const auto child : tree.children.at(tree.root)) {
@@ -516,31 +536,28 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
     // overleaf.
     const float* policyProbs =
         tree.root->getNNOutput()->getPolicyProbsMaybeNoised();
-    double bestChildExploreSelectionValue;
-    {
-      const int pos =
-          NNPos::locToPos(heaviestChild->prevMoveLoc, bot.rootBoard.x_size,
-                          bot.nnXLen, bot.nnYLen);
-      const double nnPolicyProb = policyProbs[pos];
+    const double bestChildExploreSelectionValue = [&]() -> double {
+      double parentUtility;
+      double parentWeightPerVisit;
+      double parentUtilityStdevFactor;
+      double fpuValue = bot.getFpuValueForChildrenAssumeVisited(
+          *tree.root, tree.root->nextPla, true, 1.0, parentUtility,
+          parentWeightPerVisit, parentUtilityStdevFactor);
 
-      const NodeStats stats =
-          averageStats(bot, tree.getSubtreeNodes(heaviestChild));
-      const double whiteUtility = stats.utilityAvg;
-
-      const double valueComponent =
-          tree.root->nextPla == P_WHITE ? whiteUtility : -whiteUtility;
-      const double exploreComponent =
-          bot.searchParams.cpuctExploration * nnPolicyProb *
-          sqrt(totalChildWeight + TOTALCHILDWEIGHT_PUCT_OFFSET) /
-          (1.0 + stats.weightSum);
-
-      bestChildExploreSelectionValue = valueComponent + exploreComponent;
-    }
+      return bot.getExploreSelectionValueOfChild(
+          *tree.root, policyProbs, heaviestChild,
+          tree.revEdge.at(heaviestChild).moveLoc, totalChildWeight,
+          heaviestChild->stats.visits.load(std::memory_order_acquire), fpuValue,
+          parentUtility, parentWeightPerVisit, parentUtilityStdevFactor, false,
+          false, maxChildWeight, NULL);
+    }();
     for (auto& [child, weight] : childToPsv) {
       if (child == heaviestChild) continue;
+      const int64_t visits =
+          child->stats.visits.load(std::memory_order_acquire);
       const double reduced = bot.getReducedPlaySelectionWeight(
-          *tree.root, policyProbs, child, totalChildWeight, 1.0,
-          bestChildExploreSelectionValue);
+          *tree.root, policyProbs, child, tree.revEdge.at(child).moveLoc,
+          totalChildWeight, visits, 1.0, bestChildExploreSelectionValue);
       weight = ceil(reduced);
     }
 
@@ -554,10 +571,13 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
       double bestLcb = -1e10;
       const SearchNode* bestLcbChild = nullptr;
       for (const auto child : tree.children.at(tree.root)) {
-        bot.getSelfUtilityLCBAndRadius(*tree.root, child, lcbs[child],
-                                       radii[child]);
+        const Loc loc = tree.revEdge.at(child).moveLoc;
+        const int64_t visits =
+            child->stats.visits.load(std::memory_order_acquire);
+        bot.getSelfUtilityLCBAndRadius(*tree.root, child, visits, loc,
+                                       lcbs[child], radii[child]);
         double weight = childToPsv[child];
-        if (weight >= MIN_WEIGHT_FOR_LCB &&
+        if (weight > 0 &&
             weight >= bot.searchParams.minVisitPropForLCB * maxChildWeight) {
           if (lcbs[child] > bestLcb) {
             bestLcb = lcbs[child];
@@ -598,7 +618,8 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
 
   testAssert(childToPsv.size() == trueLocToPsv.size());
   for (const auto [child, psv] : childToPsv) {
-    testAssert(approxEqual(trueLocToPsv[child->prevMoveLoc], psv));
+    const Loc loc = tree.revEdge.at(child).moveLoc;
+    testAssert(approxEqual(trueLocToPsv[loc], psv));
   }
 }
 
@@ -621,8 +642,8 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
   };
 
   auto nodeToPos = [&](const SearchNode* node) {
-    return NNPos::locToPos(node->prevMoveLoc, bot.rootBoard.x_size, bot.nnXLen,
-                           bot.nnYLen);
+    return NNPos::locToPos(tree.revEdge.at(node).moveLoc, bot.rootBoard.x_size,
+                           bot.nnXLen, bot.nnYLen);
   };
 
   auto averageVisSubtreeStats = [&](const SearchNode* node) {
@@ -667,9 +688,9 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
           if (node->nextPla == bot.rootPla) return;
 
           numNodesAdded += 1;
-          for (auto x : tree.getPathToRoot(node))
-            visits[x] += 1;
-        } else if (bot.searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS) {
+          for (auto x : tree.getPathToRoot(node)) visits[x] += 1;
+        } else if (bot.searchParams.searchAlgo ==
+                   SearchParams::SearchAlgorithm::MCTS) {
           return;
         } else {
           ASSERT_UNREACHABLE;
@@ -677,7 +698,7 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
       }
 
       if (node != tree.root) {
-        history.makeBoardMoveAssumeLegal(board, node->prevMoveLoc,
+        history.makeBoardMoveAssumeLegal(board, tree.revEdge.at(node).moveLoc,
                                          getOpp(node->nextPla),
                                          bot.rootKoHashTable);
       }
@@ -687,7 +708,7 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
 
       const NodeStats nodeStats = averageVisSubtreeStats(node);
       const double totalChildWeight =
-          nodeStats.weightSum - bot.computeNodeWeight(*node);
+          nodeStats.weightSum - bot.computeWeightFromNode(*node);
 
       vector<const SearchNode*> movePosNode(bot.policySize, nullptr);
       for (auto child : tree.children.at(node)) {
@@ -733,7 +754,9 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
             sqrt(totalChildWeight + TOTALCHILDWEIGHT_PUCT_OFFSET) /
             (1.0 + childWeight);
 
-        const double selectionValue = valueComponent + exploreComponent;
+        const double selectionValue =
+            nnPolicyProb >= 0 ? valueComponent + exploreComponent
+                              : Search::POLICY_ILLEGAL_SELECTION_VALUE;
         if (selectionValue > maxSelectionValue) {
           maxSelectionValue = selectionValue;
           bestMovePos = pos;
@@ -745,7 +768,7 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
       };
 
       // Try all existing children
-      for (auto child : filterToVisited(tree.children.at(node))) {
+      for (const auto child : filterToVisited(tree.children.at(node))) {
         const NodeStats childStats = averageVisSubtreeStats(child);
         considerMove(nodeToPos(child), childStats.weightSum,
                      childStats.utilityAvg);
@@ -753,7 +776,8 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
 
       // Try unvisited children
       const double fpuValue =
-          getFpuValue(bot, node, nodeStats.utilityAvg, policyProbMassVisited);
+          getFpuValue(bot, node, averageVisSubtreeStats(node), visits[node],
+                      policyProbMassVisited);
       for (int pos = 0; pos < bot.policySize; pos++) {
         if (movePosVis[pos]) continue;  // Skip moves that are visited
 
@@ -774,14 +798,13 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
 #ifdef DEBUG
       if (is_last_playout) {
         sort(vals_debug.begin(), vals_debug.end());
-        for (auto v : vals_debug) {
-          const int pos = get<2>(v);
+        for (auto& [sv, prob, pos] : vals_debug) {
           const Loc loc =
               NNPos::posToLoc(pos, bot.rootBoard.x_size, bot.rootBoard.y_size,
                               bot.nnXLen, bot.nnYLen);
           const string locString = Location::toString(loc, bot.rootBoard);
-          cout << "(" << get<0>(v) << ", " << get<1>(v) << ", " << pos << ", "
-               << loc << ", " << locString << ")";
+          cout << "(" << sv << ", " << prob << ", " << pos << ", " << loc
+               << ", " << locString << ")";
         }
         cout << endl;
       }
@@ -797,7 +820,7 @@ void AMCTSTests::checkPlayoutLogic(const Search& bot) {
   for (int i = 0; i < bot.searchParams.maxVisits;) {
 #ifdef DEBUG
     cout << endl << "Checking playout #" << i << endl;
-    i += checkOnePlayout(i + 4 >= bot.searchParams.maxVisits);
+    i += checkOnePlayout(i + 1 >= bot.searchParams.maxVisits);
 #else
     i += checkOnePlayout();
 #endif
@@ -815,8 +838,8 @@ Rules AMCTSTests::parseRules(ConfigParser& cfg, Logger& logger) {
 }
 
 shared_ptr<NNEvaluator> AMCTSTests::getNNEval(string modelFile,
-                                               ConfigParser& cfg,
-                                               Logger& logger, uint64_t seed) {
+                                              ConfigParser& cfg, Logger& logger,
+                                              uint64_t seed) {
   Setup::initializeSession(cfg);
   Rand seedRand(seed);
   int maxConcurrentEvals = 2;
@@ -836,9 +859,9 @@ shared_ptr<NNEvaluator> AMCTSTests::getNNEval(string modelFile,
 }
 
 shared_ptr<NNResultBuf> AMCTSTests::evaluate(shared_ptr<NNEvaluator> nnEval,
-                                              Board& board, BoardHistory& hist,
-                                              Player nextPla, bool skipCache,
-                                              bool includeOwnerMap) {
+                                             Board& board, BoardHistory& hist,
+                                             Player nextPla, bool skipCache,
+                                             bool includeOwnerMap) {
   MiscNNInputParams nnInputParams;
   NNResultBuf* buf = new NNResultBuf();
   nnEval->evaluate(board, hist, nextPla, nnInputParams, *buf, skipCache,
@@ -855,6 +878,9 @@ void AMCTSTests::resetBot(Search& bot, int board_size, const Rules& rules) {
 
 AMCTSTests::SearchTree::SearchTree(const Search& bot)
     : root(bot.rootNode), rootHist(bot.rootHistory) {
+  // We don't support graph search yet.
+  testAssert(!bot.searchParams.useGraphSearch);
+
   auto build = [this](const SearchNode* node, auto&& dfs) -> void {
     all_nodes.push_back(node);
     children[node] = {};
@@ -865,6 +891,7 @@ AMCTSTests::SearchTree::SearchTree(const Search& bot)
     for (size_t i = 0; i < numChildren; i++) {
       const SearchNode* child = arr[i].getIfAllocated();
       children[node].push_back(child);
+      revEdge[child] = {node, arr[i].getMoveLoc()};
       dfs(child, dfs);
     }
   };
@@ -892,7 +919,7 @@ std::vector<const SearchNode*> AMCTSTests::SearchTree::getPathToRoot(
     const SearchNode* node) const {
   vector<const SearchNode*> path = {node};
   while (*path.rbegin() != root) {
-    path.push_back((*path.rbegin())->parent);
+    path.push_back(revEdge.at(*path.rbegin()).parent);
   }
   return path;
 }
@@ -909,7 +936,8 @@ BoardHistory AMCTSTests::SearchTree::getNodeHistory(
   BoardHistory hist = rootHist;
   for (auto& n : pathRootToNode) {
     if (n == root) continue;  // Skip root node
-    hist.makeBoardMoveTolerant(board, n->prevMoveLoc, getOpp(n->nextPla));
+    hist.makeBoardMoveTolerant(board, revEdge.at(n).moveLoc,
+                               getOpp(n->nextPla));
   }
 
   return hist;
@@ -933,10 +961,9 @@ NodeStats AMCTSTests::averageStats(
       const double scoreMean = nnOutput->whiteScoreMean;
       const double scoreMeanSq = nnOutput->whiteScoreMeanSq;
       const double lead = nnOutput->whiteLead;
-      const double utility = bot.getResultUtilityFromNN(*nnOutput) +
-                             bot.getScoreUtility(scoreMean, scoreMeanSq);
+      const double utility = bot.getUtilityFromNN(*nnOutput);
 
-      const double w = bot.computeNodeWeight(*node);
+      const double w = bot.computeWeightFromNode(*node);
 
       stats.winLossValueAvg += w * (winProb - lossProb);
       stats.noResultValueAvg += w * noResultProb;

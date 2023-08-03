@@ -27,7 +27,6 @@ struct SearchParams {
   PassingBehavior passingBehavior;
   // If enabled, then we will definitely pass if it wins us the game.
   bool forceWinningPass;
-  Loc queryMoveLoc; // Move whose selection prob history we're logging; NULL_LOC if none
 
   // Algorithm to use for search
   enum class SearchAlgorithm {
@@ -49,8 +48,9 @@ struct SearchParams {
   // Overrides the number of visits we use in AMCTS-R to simulate the victim.
   std::optional<int> oppVisitsOverride;
 
-  // Whether we are allowed to be the first player that passes in a game.
-  bool canPassFirst;
+  // If non-none, determines whether to set the weight of opponent nodes to zero.
+  // By default, this will be false for MCTS and true for adversarial algorithms.
+  std::optional<bool> oppWeightZeroingOverride;
 
   //Utility function parameters
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
@@ -72,6 +72,9 @@ struct SearchParams {
 
   double fpuReductionMax;   //Max amount to reduce fpu value for unexplore children
   double fpuLossProp; //Scale fpu this proportion of the way towards assuming a move is a loss.
+
+  bool fpuParentWeightByVisitedPolicy; //For fpu, blend between parent average and parent nn value based on proportion of policy visited.
+  double fpuParentWeightByVisitedPolicyPow; //If fpuParentWeightByVisitedPolicy, what power to raise the proportion of policy visited for blending.
   double fpuParentWeight; //For fpu, 0 = use parent average, 1 = use parent nn value, interpolates between.
 
   //Tree value aggregation parameters
@@ -85,6 +88,12 @@ struct SearchParams {
   double uncertaintyCoeff; //The amount of visits weight that an uncertainty of 1 utility is.
   double uncertaintyExponent; //Visits weight scales inversely with this power of the uncertainty
   double uncertaintyMaxWeight; //Add minimum uncertainty so that the most weight a node can have is this
+
+  //Graph search
+  bool useGraphSearch; //Enable graph search instead of tree search?
+  int graphSearchRepBound; //Rep bound to use for graph search transposition safety. Higher will reduce transpositions but be more safe.
+  double graphSearchCatchUpLeakProb; //Chance to perform a visit to deepen a branch anyways despite being behind on visit count.
+  //double graphSearchCatchUpProp; //When sufficiently far behind on visits on a transposition, catch up extra by adding up to this fraction of parents visits at once.
 
   //Root parameters
   bool rootNoiseEnabled;
@@ -135,7 +144,7 @@ struct SearchParams {
   double subtreeValueBiasWeightExponent; //When computing empiricial bias, weight subtree results by childvisits to this power.
 
   //Threading-related
-  uint32_t mutexPoolSize; //Size of mutex pool for synchronizing access to all search nodes
+  int nodeTableShardsPowerOfTwo; //Controls number of shards of node table for graph search transposition lookup
   double numVirtualLossesPerThread; //Number of virtual losses for one thread to add
 
   //Asyncbot
@@ -172,8 +181,12 @@ struct SearchParams {
   SearchParams();
   ~SearchParams();
 
+  void printParams(std::ostream& out);
+
   //Params to use for testing, with some more recent values representative of more real use (as of Jan 2019)
   static SearchParams forTestsV1();
+  //Params to use for testing, with some more recent values representative of more real use (as of Mar 2022)
+  static SearchParams forTestsV2();
 
   static void failIfParamsDifferOnUnchangeableParameter(const SearchParams& initial, const SearchParams& dynamic);
 };

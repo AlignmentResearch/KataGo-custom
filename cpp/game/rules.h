@@ -3,7 +3,6 @@
 
 #include "../core/global.h"
 #include "../core/hash.h"
-#include "../game/board.h"
 
 #include "../external/nlohmann_json/json.hpp"
 
@@ -42,17 +41,6 @@ struct Rules {
   static constexpr float MIN_USER_KOMI = -150.0f;
   static constexpr float MAX_USER_KOMI = 150.0f;
 
-  // Player(s) that can pass first.
-  // Can be one of P_NONE, P_BLACK, P_WHITE, or P_ANY.
-  //
-  // If a player is not the playerThatCanPassFirst, passing before the other
-  // player has passed is considered an illegal move. The only exception to
-  // this if the only legal move is to pass. In this case, passing is allowed.
-  Player playerThatCanPassFirst;
-
-  // TODO: Implement an alternate flag that allows passing after a certain
-  //       number of turns have occurred.
-
   Rules();
   Rules(
     int koRule,
@@ -62,8 +50,7 @@ struct Rules {
     bool hasButton,
     int whiteHandicapBonusRule,
     bool friendlyPassOk,
-    float komi,
-    Player playerThatCanPassFirst = P_ANY
+    float komi
   );
   ~Rules();
 

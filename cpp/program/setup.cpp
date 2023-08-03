@@ -1,6 +1,9 @@
 #include "../program/setup.h"
 
+#include "../core/datetime.h"
+#include "../core/makedir.h"
 #include "../neuralnet/nninterface.h"
+#include "../search/patternbonustable.h"
 
 using namespace std;
 
@@ -378,10 +381,6 @@ void Setup::loadParams(
 
     string idxStr = Global::intToString(i);
 
-    if(cfg.contains("trackPassProb"+idxStr)) params.queryMoveLoc = cfg.getBool("trackPassProb"+idxStr) ? Board::PASS_LOC : Board::NULL_LOC;
-    else if (cfg.contains("trackPassProb"))  params.queryMoveLoc = cfg.getBool("trackPassProb") ? Board::PASS_LOC : Board::NULL_LOC;
-    else if(applyDefaultParams)              params.queryMoveLoc = Board::NULL_LOC;
-
     if(cfg.contains("passingBehavior"+idxStr)) params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"+idxStr));
     else if (cfg.contains("passingBehavior"))  params.passingBehavior = SearchParams::strToPassingBehavior(cfg.getString("passingBehavior"));
     if(cfg.contains("forceWinningPass"+idxStr)) params.forceWinningPass = cfg.getBool("forceWinningPass"+idxStr);
@@ -392,8 +391,6 @@ void Setup::loadParams(
 
     if(cfg.contains("oppVisitsOverride"+idxStr)) params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if (cfg.contains("oppVisitsOverride"))  params.oppVisitsOverride = cfg.getInt64("oppVisitsOverride",        (int64_t)1, (int64_t)1 << 50);
-
-    if(cfg.contains("canPassFirst"+idxStr)) params.canPassFirst = cfg.getBool("canPassFirst"+idxStr);
 
     if(cfg.contains("maxPlayouts"+idxStr)) params.maxPlayouts = cfg.getInt64("maxPlayouts"+idxStr, (int64_t)1, (int64_t)1 << 50);
     else if(cfg.contains("maxPlayouts"))   params.maxPlayouts = cfg.getInt64("maxPlayouts",        (int64_t)1, (int64_t)1 << 50);
@@ -474,14 +471,23 @@ void Setup::loadParams(
     if(cfg.contains("fpuLossProp"+idxStr)) params.fpuLossProp = cfg.getDouble("fpuLossProp"+idxStr, 0.0, 1.0);
     else if(cfg.contains("fpuLossProp"))   params.fpuLossProp = cfg.getDouble("fpuLossProp",        0.0, 1.0);
     else if(applyDefaultParams)            params.fpuLossProp = 0.0;
-    if(cfg.contains("fpuParentWeight"+idxStr)) params.fpuParentWeight = cfg.getDouble("fpuParentWeight"+idxStr,        0.0, 1.0);
-    else if(cfg.contains("fpuParentWeight"))   params.fpuParentWeight = cfg.getDouble("fpuParentWeight",        0.0, 1.0);
-    else if(applyDefaultParams)                params.fpuParentWeight = 0.0;
-
+    if(cfg.contains("fpuParentWeightByVisitedPolicy"+idxStr)) params.fpuParentWeightByVisitedPolicy = cfg.getBool("fpuParentWeightByVisitedPolicy"+idxStr);
+    else if(cfg.contains("fpuParentWeightByVisitedPolicy"))   params.fpuParentWeightByVisitedPolicy = cfg.getBool("fpuParentWeightByVisitedPolicy");
+    else if(applyDefaultParams)                               params.fpuParentWeightByVisitedPolicy = (setupFor != SETUP_FOR_DISTRIBUTED);
+    if(params.fpuParentWeightByVisitedPolicy) {
+      if(cfg.contains("fpuParentWeightByVisitedPolicyPow"+idxStr)) params.fpuParentWeightByVisitedPolicyPow = cfg.getDouble("fpuParentWeightByVisitedPolicyPow"+idxStr, 0.0, 5.0);
+      else if(cfg.contains("fpuParentWeightByVisitedPolicyPow"))   params.fpuParentWeightByVisitedPolicyPow = cfg.getDouble("fpuParentWeightByVisitedPolicyPow",        0.0, 5.0);
+      else if(applyDefaultParams)                                  params.fpuParentWeightByVisitedPolicyPow = 2.0;
+    }
+    else {
+      if(cfg.contains("fpuParentWeight"+idxStr)) params.fpuParentWeight = cfg.getDouble("fpuParentWeight"+idxStr,        0.0, 1.0);
+      else if(cfg.contains("fpuParentWeight"))   params.fpuParentWeight = cfg.getDouble("fpuParentWeight",        0.0, 1.0);
+      else if(applyDefaultParams)                params.fpuParentWeight = 0.0;
+    }
 
     if(cfg.contains("valueWeightExponent"+idxStr)) params.valueWeightExponent = cfg.getDouble("valueWeightExponent"+idxStr, 0.0, 1.0);
-    else if(cfg.contains("valueWeightExponent"))   params.valueWeightExponent = cfg.getDouble("valueWeightExponent", 0.0, 1.0);
-    else if(applyDefaultParams)                    params.valueWeightExponent = 0.5;
+    else if(cfg.contains("valueWeightExponent")) params.valueWeightExponent = cfg.getDouble("valueWeightExponent", 0.0, 1.0);
+    else if(applyDefaultParams)                  params.valueWeightExponent = 0.25;
     if(cfg.contains("useNoisePruning"+idxStr)) params.useNoisePruning = cfg.getBool("useNoisePruning"+idxStr);
     else if(cfg.contains("useNoisePruning"))   params.useNoisePruning = cfg.getBool("useNoisePruning");
     else if(applyDefaultParams)                params.useNoisePruning = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER);
@@ -506,6 +512,18 @@ void Setup::loadParams(
     else if(cfg.contains("uncertaintyMaxWeight"))   params.uncertaintyMaxWeight = cfg.getDouble("uncertaintyMaxWeight", 1.0, 100.0);
     else if(applyDefaultParams)                     params.uncertaintyMaxWeight = 8.0;
 
+    if(cfg.contains("useGraphSearch"+idxStr)) params.useGraphSearch = cfg.getBool("useGraphSearch"+idxStr);
+    else if(cfg.contains("useGraphSearch"))   params.useGraphSearch = cfg.getBool("useGraphSearch");
+    else if(applyDefaultParams)               params.useGraphSearch = (setupFor != SETUP_FOR_DISTRIBUTED);
+    if(cfg.contains("graphSearchRepBound"+idxStr)) params.graphSearchRepBound = cfg.getInt("graphSearchRepBound"+idxStr, 3, 50);
+    else if(cfg.contains("graphSearchRepBound"))   params.graphSearchRepBound = cfg.getInt("graphSearchRepBound",        3, 50);
+    else if(applyDefaultParams)                    params.graphSearchRepBound = 11;
+    if(cfg.contains("graphSearchCatchUpLeakProb"+idxStr)) params.graphSearchCatchUpLeakProb = cfg.getDouble("graphSearchCatchUpLeakProb"+idxStr, 0.0, 1.0);
+    else if(cfg.contains("graphSearchCatchUpLeakProb"))   params.graphSearchCatchUpLeakProb = cfg.getDouble("graphSearchCatchUpLeakProb", 0.0, 1.0);
+    else if(applyDefaultParams)                           params.graphSearchCatchUpLeakProb = 0.0;
+    // if(cfg.contains("graphSearchCatchUpProp"+idxStr)) params.graphSearchCatchUpProp = cfg.getDouble("graphSearchCatchUpProp"+idxStr, 0.0, 1.0);
+    // else if(cfg.contains("graphSearchCatchUpProp"))   params.graphSearchCatchUpProp = cfg.getDouble("graphSearchCatchUpProp", 0.0, 1.0);
+    // else                                              params.graphSearchCatchUpProp = 0.0;
 
     if(cfg.contains("rootNoiseEnabled"+idxStr)) params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled"+idxStr);
     else if(cfg.contains("rootNoiseEnabled"))   params.rootNoiseEnabled = cfg.getBool("rootNoiseEnabled");
@@ -627,17 +645,17 @@ void Setup::loadParams(
 
     if(cfg.contains("subtreeValueBiasFactor"+idxStr)) params.subtreeValueBiasFactor = cfg.getDouble("subtreeValueBiasFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("subtreeValueBiasFactor"))   params.subtreeValueBiasFactor = cfg.getDouble("subtreeValueBiasFactor", 0.0, 1.0);
-    else if(applyDefaultParams)                       params.subtreeValueBiasFactor = 0.35;
+    else if(applyDefaultParams)                       params.subtreeValueBiasFactor = 0.45;
     if(cfg.contains("subtreeValueBiasFreeProp"+idxStr)) params.subtreeValueBiasFreeProp = cfg.getDouble("subtreeValueBiasFreeProp"+idxStr, 0.0, 1.0);
     else if(cfg.contains("subtreeValueBiasFreeProp"))   params.subtreeValueBiasFreeProp = cfg.getDouble("subtreeValueBiasFreeProp", 0.0, 1.0);
     else if(applyDefaultParams)                         params.subtreeValueBiasFreeProp = 0.8;
     if(cfg.contains("subtreeValueBiasWeightExponent"+idxStr)) params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent"+idxStr, 0.0, 1.0);
     else if(cfg.contains("subtreeValueBiasWeightExponent"))   params.subtreeValueBiasWeightExponent = cfg.getDouble("subtreeValueBiasWeightExponent", 0.0, 1.0);
-    else if(applyDefaultParams)                               params.subtreeValueBiasWeightExponent = 0.8;
+    else if(applyDefaultParams)                               params.subtreeValueBiasWeightExponent = 0.85;
 
-    if(cfg.contains("mutexPoolSize"+idxStr)) params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize"+idxStr, 1, 1 << 24);
-    else if(cfg.contains("mutexPoolSize"))   params.mutexPoolSize = (uint32_t)cfg.getInt("mutexPoolSize",        1, 1 << 24);
-    else if(applyDefaultParams)              params.mutexPoolSize = 16384;
+    if(cfg.contains("nodeTableShardsPowerOfTwo"+idxStr)) params.nodeTableShardsPowerOfTwo = cfg.getInt("nodeTableShardsPowerOfTwo"+idxStr, 8, 24);
+    else if(cfg.contains("nodeTableShardsPowerOfTwo"))   params.nodeTableShardsPowerOfTwo = cfg.getInt("nodeTableShardsPowerOfTwo",        8, 24);
+    else if(applyDefaultParams)                          params.nodeTableShardsPowerOfTwo = 16;
     if(cfg.contains("numVirtualLossesPerThread"+idxStr)) params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread"+idxStr, 0.01, 1000.0);
     else if(cfg.contains("numVirtualLossesPerThread"))   params.numVirtualLossesPerThread = cfg.getDouble("numVirtualLossesPerThread",        0.01, 1000.0);
     else if(applyDefaultParams)                          params.numVirtualLossesPerThread = 1.0;
@@ -669,6 +687,10 @@ void Setup::loadParams(
     if(cfg.contains("futileVisitsThreshold"+idxStr)) params.futileVisitsThreshold = cfg.getDouble("futileVisitsThreshold"+idxStr,0.01,1.0);
     else if(cfg.contains("futileVisitsThreshold"))   params.futileVisitsThreshold = cfg.getDouble("futileVisitsThreshold",0.01,1.0);
     else if(applyDefaultParams)                      params.futileVisitsThreshold = 0.0;
+
+    //On distributed, tolerate reading mutexPoolSize since older version configs use it.
+    if(setupFor == SETUP_FOR_DISTRIBUTED)
+      cfg.markAllKeysUsedWithPrefix("mutexPoolSize");
   }
 }
 

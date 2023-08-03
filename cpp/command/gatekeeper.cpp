@@ -49,7 +49,6 @@ namespace {
     const SearchParams searchParamsCandidate;
     MatchPairer* matchPairer;
 
-    string testModelDir;
 
     ThreadSafeQueue<FinishedGameData*> finishedGameQueue;
     int numGameThreads;
@@ -69,7 +68,7 @@ namespace {
     std::atomic<bool> terminated;
 
   public:
-    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, const string& tModelDir, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
+    NetAndStuff(ConfigParser& cfg, const string& nameB, const string& nameC, NNEvaluator* nevalB, NNEvaluator* nevalC, const SearchParams& searchParamsB, const SearchParams& searchParamsC, bool terminateEarlyOnPointMaj, ofstream* sOut)
       :modelNameBaseline(nameB),
        modelNameCandidate(nameC),
        nnEvalBaseline(nevalB),
@@ -77,7 +76,6 @@ namespace {
        searchParamsBaseline(searchParamsB),
        searchParamsCandidate(searchParamsC),
        matchPairer(NULL),
-       testModelDir(tModelDir),
        finishedGameQueue(),
        numGameThreads(0),
        isDraining(false),
@@ -254,11 +252,10 @@ namespace {
   optional<ModelFileInfo> getLatestModelInfo(
       Logger& logger,
       const string& modelsDir,
-      bool allowRandomNet,
-      bool checkDirsOnly = true
+      bool allowRandomNet
   ) {
     ModelFileInfo info;
-    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time, checkDirsOnly);
+    const bool foundModel = LoadModel::findLatestModel(modelsDir, logger, info.name, info.file, info.dir, info.time);
     if (!foundModel || (!allowRandomNet && info.file == "/dev/null")) {
       return {};
     }
@@ -272,6 +269,24 @@ namespace {
       if(shouldStop.load())
         break;
     }
+  }
+}
+
+static void moveModel(const string& modelName, const string& modelFile, const string& modelDir, const string& testModelsDir, const string& intoDir, Logger& logger) {
+  // Was the rejected model rooted in the testModels dir itself?
+  if(FileUtils::weaklyCanonical(modelDir) == FileUtils::weaklyCanonical(testModelsDir)) {
+    string renameDest = intoDir + "/" + modelName;
+    logger.write("Moving " + modelFile + " to " + renameDest);
+    FileUtils::rename(modelFile,renameDest);
+  }
+  // Or was it contained in a subdirectory
+  else if(Global::isPrefix(FileUtils::weaklyCanonical(modelDir), FileUtils::weaklyCanonical(testModelsDir))) {
+    string renameDest = intoDir + "/" + modelName;
+    logger.write("Moving " + modelDir + " to " + renameDest);
+    FileUtils::rename(modelDir,renameDest);
+  }
+  else {
+    throw StringError("Model " + modelDir + " does not appear to be a subdir of " + testModelsDir + " can't figure out where how to move it to accept or reject it");
   }
 }
 
@@ -419,17 +434,15 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
   };
 
   // Rejects old test models. Returns true if the test model was rejected.
-  const auto rejectOldTestModel = [noAutoRejectOldModels,&rejectedModelsDir,&logger](
+  const auto rejectOldTestModel = [noAutoRejectOldModels,&testModelsDir,&rejectedModelsDir,&logger](
       const ModelFileInfo& testModelInfo,
       const ModelFileInfo& acceptedModelInfo
   ) -> bool {
     if (acceptedModelInfo.time <= testModelInfo.time || noAutoRejectOldModels) {
       return false;
     }
-    string renameDest = rejectedModelsDir + "/" + testModelInfo.name;
     logger.write("Rejecting " + testModelInfo.name + " automatically since older than best accepted model");
-    logger.write("Moving " + testModelInfo.dir + " to " + renameDest);
-    FileUtils::rename(testModelInfo.dir,renameDest);
+    moveModel(testModelInfo.name, testModelInfo.file, testModelInfo.dir, testModelsDir, rejectedModelsDir, logger);
     return true;
   };
   const auto loadNNEvaluator = [&logger,numGameThreads,minBoardXSizeUsed,maxBoardXSizeUsed,minBoardYSizeUsed,maxBoardYSizeUsed,&cfg](
@@ -480,7 +493,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       sgfOut = new ofstream();
       FileUtils::open(*sgfOut, sgfOutputDirThisModel + "/" + Global::uint64ToHexString(rand.nextUInt64()) + ".sgfs");
     }
-    NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, testModelInfo.dir, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
+    NetAndStuff* newNet = new NetAndStuff(cfg, baselineModelInfo.name, testModelInfo.name, baselineNNEval, testNNEval, victimSearchParams, advSearchParams, terminateGamesEarlyOnPointMajority, sgfOut);
 
     //Check for unused config keys
     cfg.warnUnusedKeys(cerr,&logger);
@@ -502,6 +515,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
     auto shouldStopFunc = [&netAndStuff]() {
       return shouldStop.load() || netAndStuff->terminated.load();
     };
+    WaitableFlag* shouldPause = nullptr;
 
     Rand thisLoopSeedRand;
     while(true) {
@@ -518,7 +532,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
         string seed = gameSeedBase + ":" + Global::uint64ToHexString(thisLoopSeedRand.nextUInt64());
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, NULL, NULL, logger,
-          shouldStopFunc, nullptr, nullptr, nullptr
+          shouldStopFunc, shouldPause, nullptr, nullptr, nullptr
         );
       }
 
@@ -631,8 +645,7 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       optional<ModelFileInfo> victimModelInfo = getLatestModelInfo(
           logger,
           victimModelsDir,
-          false /*allowRandomNet*/,
-          false /*checkDirsOnly*/
+          false /*allowRandomNet*/
       );
       if (!victimModelInfo.has_value()) {
         logger.write("No victim model found in " + victimModelsDir);
@@ -779,18 +792,11 @@ int MainCmds::gatekeeper(const vector<string>& args, bool victimplay) {
       }
       sleep(2);
 
-      string renameDest = acceptedModelsDir + "/" + testModelInfo->name;
-      logger.write(
-          "Accepting model " + testModelInfo->name
-          + "; moving " + testModelInfo->dir + " to " + renameDest);
-      FileUtils::rename(testModelInfo->dir,renameDest);
+      logger.write("Accepting model " + testModelInfo->name);
+      moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, acceptedModelsDir, logger);
     } else if (testModelInfo.has_value()) {
-      string renameDest = rejectedModelsDir + "/" + testModelInfo->name;
-      logger.write(
-          "Rejecting model " + testModelInfo->name
-          + "; moving " + testModelInfo->dir + " to " + renameDest
-      );
-      FileUtils::rename(testModelInfo->dir,renameDest);
+      logger.write("Rejecting model " + testModelInfo->name);
+      moveModel(testModelInfo->name, testModelInfo->file, testModelInfo->dir, testModelsDir, rejectedModelsDir, logger);
     }
   }
   delete netAndStuff;

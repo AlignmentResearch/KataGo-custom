@@ -70,6 +70,7 @@ static FinishedGameData* runOneVictimplayGame(
     nullptr, // startPosSample
     logger,
     shouldStopFunc,
+    nullptr, // shouldPause
     nullptr, // checkForNewNNEval
     nullptr, // afterInitialization
     nullptr  // onEachMove
@@ -155,6 +156,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
 
   MakeDir::make(outputDir);
   MakeDir::make(modelsDir);
+
   Logger logger(&cfg);
   //Log to random file name to better support starting/stopping as well as multiple parallel runs
   logger.addFile(outputDir + "/log" + DateTime::getCompactDateTimeString() + "-" + Global::uint64ToHexString(seedRand.nextUInt64()) + ".log");
@@ -301,6 +303,10 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     //No new neural nets yet
     if(!foundModel || (lastNetName != NULL && *lastNetName == modelName))
       return false;
+    if(modelName == "random" && lastNetName != NULL && *lastNetName != "random") {
+      logger.write("WARNING: " + *lastNetName + " was the previous model, but now no model was found. Continuing with prev model instead of using random");
+      return false;
+    }
 
     logger.write("Found new neural net " + modelName);
 
@@ -425,7 +431,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
       std::this_thread::sleep_for(std::chrono::seconds(30));
     }
     while (
-      !LoadModel::findLatestModel(modelPath, loadLogger, modelName, modelFile, modelDir, modelTime, false) ||
+      !LoadModel::findLatestModel(modelPath, loadLogger, modelName, modelFile, modelDir, modelTime) ||
       (!allowRandom && modelName == "random")
     ) {
       loadLogger.write("No " + humanModelName + " available yet, waiting 30 sec...");
@@ -523,6 +529,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
     auto shouldStopFunc = []() noexcept {
       return shouldStop.load();
     };
+    WaitableFlag* shouldPause = nullptr;
 
     string prevModelName;
     Rand thisLoopSeedRand;
@@ -650,6 +657,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
           gameData = gameRunner->runGame(
             seed, botSpecB, botSpecW, forkData, NULL, logger,
             shouldStopFunc,
+            shouldPause,
             nullptr,
             nullptr,
             nullptr
@@ -675,6 +683,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
         gameData = gameRunner->runGame(
           seed, botSpecB, botSpecW, forkData, NULL, logger,
           shouldStopFunc,
+          shouldPause,
           (switchNetsMidGame ? checkForNewNNEval : nullptr),
           nullptr,
           nullptr

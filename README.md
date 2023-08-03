@@ -25,7 +25,7 @@
 
 ## Overview
 
-KataGo has begun its first public distributed training run! See https://katagotraining.org/ for more details, to download the latest and strongest neural nets, or to learn how to contribute if you want to help KataGo improve further!
+KataGo has begun its first public distributed training run! See https://katagotraining.org/ for more details, to download the latest and strongest neural nets, or to learn how to contribute if you want to help KataGo improve further! Also check out the computer Go [discord channel](https://discord.gg/bqkZAz3)!
 
 As of January 2021, KataGo is one of the strongest open source Go bots available online. KataGo was trained using an AlphaZero-like process with many enhancements and improvements, and is capable of reaching top levels rapidly and entirely from scratch with no outside data, improving only via self-play. Some of these improvements take advantage of game-specific features and training targets, but also many of the techniques are general and could be applied in other games. As a result, early training is immensely faster than in other self-play-trained bots - with only a few strong GPUs for a few days, any researcher/enthusiast should be able to train a neural net from nothing to high amateur dan strength on the full 19x19 board. If tuned well, a training run using only a *single* top-end consumer GPU could possibly train a bot from scratch to superhuman strength within a few months.
 
@@ -50,10 +50,12 @@ KataGo's engine also aims to be a useful tool for Go players and developers, and
 
 For more details about KataGo's older training runs, including comparisons to other bots, see [Training History and Research](TrainingHistory.md)!
 
-## Where To Download Stuff
-You can download precompiled executables for KataGo on the [releases page](https://github.com/lightvector/KataGo/releases) for Windows and Linux.
+Also if you're looking to ask about general information about KataGo or how it works, or about some past Go bots besides KataGo, consider the computer Go [discord channel](https://discord.gg/bqkZAz3).
 
-You can download a few selected neural nets from the [releases page](https://github.com/lightvector/KataGo/releases) or download additional other neural nets from [here](https://d3dndmfyhecmj0.cloudfront.net/g170/index.html)). There are two different model formats, indicated by ".txt.gz" versus ".bin.gz". This was due to a model format change starting with v1.3.3 - recent versions of KataGo support both but the latter will be both smaller on disk and faster to load.
+## Where To Download Stuff
+Precompiled executables for KataGo can be found at the [releases page](https://github.com/lightvector/KataGo/releases) for Windows and Linux.
+
+And the latest neural nets are available at [https://katagotraining.org/](https://katagotraining.org/).
 
 ## Setting Up and Running KataGo
 KataGo implements just a GTP engine, which is a simple text protocol that Go software uses. It does NOT have a graphical interface on its own. So generally, you will want to use KataGo along with a GUI or analysis program. A few of them bundle KataGo in their download so that you can get everything from one place rather than downloading separately and managing the file paths and commands.
@@ -63,6 +65,7 @@ This is by no means a complete list - there are lots of things out there. But, w
 
 * [KaTrain](https://github.com/sanderland/katrain) - KaTrain might be the easiest to set up for non-technical users, offering an all-in-one package (no need to download KataGo separately!), modified-strength bots for weaker players, and good analysis features.
 * [Lizzie](https://github.com/featurecat/lizzie) - Lizzie is very popular for running long interactive analyses and visualizing them as they happen. Lizzie also offers an all-in-one package. However keep mind that KataGo's OpenCL version may take quite a while to tune and load on the very first startup as described [here](#opencl-vs-cuda), and Lizzie does a poor job of displaying this progress as it happens. And in case of an actual error or failure, Lizzie's interface is not the best at explaining these errors and will appear to hang forever. The version of KataGo packaged with Lizzie is quite strong but might not always be the newest or strongest, so once you have it working, you may want to download KataGo and a newer network from [releases page](https://github.com/lightvector/KataGo/releases) and replace Lizzie's versions with them.
+* [Ogatak](https://github.com/rooklift/ogatak) is a KataGo-specific GUI with an emphasis on displaying the basics in a snappy, responsive fashion. It does not come with KataGo included.
 * [q5Go](https://github.com/bernds/q5Go) and [Sabaki](https://sabaki.yichuanshen.de/) are general SGF editors and GUIs that support KataGo, including KataGo's score estimation, and many high-quality features.
 
 Generally, for GUIs that don't offer an all-in-one package, you will need to download KataGo (or any other Go engine of your choice!) and tell the GUI the proper command line to run to invoke your engine, with the proper file paths involved. See [How To Use](#how-to-use) below for details on KataGo's command line interface.
@@ -198,7 +201,7 @@ then you are using the Mesa drivers. You will need to change your drivers, see f
    * For weaker or mid-range GPUs, try the final 20-block network from [here](https://github.com/lightvector/KataGo/releases/tag/v1.4.5), which is the best of its size.
    * For top-tier GPUs and/or for the highest-quality analysis if you're going to use many thousands and thousands of playouts and long thinking times, try the final 40-block network from [here](https://github.com/lightvector/KataGo/releases/tag/v1.4.5), which is more costly to run but should be the strongest and best overall.
    * If you care a lot about theoretical purity - no outside data, bot learns strictly on its own - use the 20 or 40 block nets from [this release](https://github.com/lightvector/KataGo/releases/tag/v1.4.0), which are pure in this way and still much stronger than Leela Zero, but also not quite as strong as the final nets.
-   * If you want some nets that are much faster to run, and each with their own interesting style of play due to their unique stages of learning, try any of the "b10c128" or "b15c192" Extended Training Nets [here](https://d3dndmfyhecmj0.cloudfront.net/g170/neuralnets/index.html) which are 10 block and 15 block networks from earlier in the run that are much weaker but still pro-level-and-beyond.
+   * If you want some nets that are much faster to run, and each with their own interesting style of play due to their unique stages of learning, try any of the "b10c128" or "b15c192" Extended Training Nets [here](https://katagoarchive.org/g170/neuralnets/index.html) which are 10 block and 15 block networks from earlier in the run that are much weaker but still pro-level-and-beyond.
 
 
 ## Features for Developers

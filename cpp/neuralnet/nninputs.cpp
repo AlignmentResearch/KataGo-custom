@@ -220,6 +220,13 @@ double ScoreValue::expectedWhiteScoreValue(double whiteScoreMean, double whiteSc
   return b0 + lambdaMean*(b1-b0);
 }
 
+double ScoreValue::getScoreStdev(double scoreMean, double scoreMeanSq) {
+  double variance = scoreMeanSq - scoreMean * scoreMean;
+  if(variance <= 0.0)
+    return 0.0;
+  return sqrt(variance);
+}
+
 //-----------------------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------
 
@@ -839,10 +846,6 @@ Hash128 NNInputs::getHash(
   //If the history is in a weird prolonged state, also treat it similarly.
   if(hist.isGameFinished || hist.isPastNormalPhaseEnd)
     hash ^= Board::ZOBRIST_GAME_IS_OVER;
-
-  //Fold in whether someone has passed
-  if(hist.someoneHasPassed)
-    hash ^= Board::ZOBRIST_SOMEONE_HAS_PASSED;
 
   //Fold in asymmetric playout indicator
   if(nnInputParams.playoutDoublingAdvantage != 0) {

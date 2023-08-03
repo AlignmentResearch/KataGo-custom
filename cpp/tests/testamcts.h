@@ -5,6 +5,7 @@
 #include "../core/logger.h"
 #include "../neuralnet/nneval.h"
 #include "../search/search.h"
+#include "../search/searchnode.h"
 
 namespace AMCTSTests {
 void runAllAMCTSTests(const int maxVisits, const int numMovesToSimulate);
@@ -25,10 +26,11 @@ void testAMCTS(const int maxVisits, const int numMovesToSimulate);
 
 // Checks one move's worth of AMCTS search
 void checkAMCTSSearch(const Search& bot, const float win_prob1,
-                       const float loss_prob1, const float win_prob2,
-                       const float loss_prob2);
+                      const float loss_prob1, const float win_prob2,
+                      const float loss_prob2);
 
 // Checks how we select our move based on results of tree search.
+// Mirrors logic of getPlaySelectionValues from searchresults.cpp.
 void checkFinalMoveSelection(const Search& bot);
 
 // Check playout logic (for either MCTS or AMCTS)
@@ -40,7 +42,7 @@ void checkPlayoutLogic(const Search& bot);
 // Returns one sample of possible rules.
 Rules parseRules(ConfigParser& cfg, Logger& logger);
 
-// Helper functions
+/**************************** Helper functions ***************************/
 
 std::shared_ptr<NNEvaluator> getNNEval(std::string modelFile, ConfigParser& cfg,
                                        Logger& logger, uint64_t seed);
@@ -64,6 +66,12 @@ struct SearchTree {
   std::unordered_map<const SearchNode*, std::vector<const SearchNode*>>
       children;
 
+  struct ReverseEdge {
+    const SearchNode* parent;
+    Loc moveLoc;
+  };
+  std::unordered_map<const SearchNode*, ReverseEdge> revEdge;
+
   SearchTree(const Search& bot);
 
   std::vector<const SearchNode*> getSubtreeNodes(const SearchNode* node) const;
@@ -73,6 +81,7 @@ struct SearchTree {
   BoardHistory getNodeHistory(const SearchNode* node) const;
 };
 
+// Averages the statistics from a list of nodes.
 // Optional param: terminal_node_visits (specify if you want to override
 // terminal node weights)
 NodeStats averageStats(const Search& bot,
@@ -80,7 +89,7 @@ NodeStats averageStats(const Search& bot,
                        const std::unordered_map<const SearchNode*, int>*
                            terminal_node_visits = nullptr);
 
-// Constants
+/******************************** Constants *******************************/
 
 const std::string AMCTS_CONFIG_PATH = "cpp/tests/data/configs/test-amcts.cfg";
 

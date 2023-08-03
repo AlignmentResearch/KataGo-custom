@@ -16,9 +16,6 @@
 #include <sstream>
 #include <fstream>
 
-#include <ghc/filesystem.hpp>
-namespace gfs = ghc::filesystem;
-
 using namespace std;
 
 static NNEvaluator* createNNEval(int maxNumThreads, CompactSgf* sgf, const string& modelFile, Logger& logger, ConfigParser& cfg, const SearchParams& params);
@@ -153,7 +150,8 @@ int MainCmds::benchmark(const vector<string>& args) {
     return 1;
   }
 
-  Logger logger(&cfg, true);
+  const bool logToStdoutDefault = true;
+  Logger logger(&cfg, logToStdoutDefault);
   logger.write("Loading model and initializing benchmark...");
 
   CompactSgf* sgf;
@@ -326,13 +324,15 @@ static void setNumThreads(SearchParams& params, NNEvaluator* nnEval, Logger& log
 #ifdef USE_EIGEN_BACKEND
   //Eigen is a little interesting in that by default, it sets numNNServerThreadsPerModel based on numSearchThreads
   //So, reset the number of threads in the nnEval each time we change the search numthreads
-  logger.setLogToStdout(false);
+  //Also, disable the logger to suppress the kill and respawn messages.
+  logger.setDisabled(true);
   nnEval->killServerThreads();
   nnEval->setNumThreads(vector<int>(numThreads,-1));
   nnEval->spawnServerThreads();
   //Also since we killed and respawned all the threads, re-warm them
   Rand seedRand;
   warmStartNNEval(sgf,logger,params,nnEval,seedRand);
+  logger.setDisabled(false);
 #else
   (void)nnEval;
   (void)logger;
@@ -568,7 +568,7 @@ int MainCmds::genconfig(const vector<string>& args, const string& firstCommand) 
       throw StringError("Please answer y or n");
   };
 
-  if(gfs::exists(gfs::path(outputFile))) {
+  if(FileUtils::exists(outputFile)) {
     bool b = false;
     promptAndParseInput("File " + outputFile + " already exists, okay to overwrite it with an entirely new config (y/n)?\n", [&](const string& line) { parseYN(line,b); });
     if(!b) {
@@ -780,7 +780,7 @@ int MainCmds::genconfig(const vector<string>& args, const string& firstCommand) 
   cout << "PERFORMANCE TUNING" << endl;
 
   bool skipThreadTuning = false;
-  if(gfs::exists(gfs::path(outputFile))) {
+  if(FileUtils::exists(outputFile)) {
     int oldConfigNumSearchThreads = -1;
     try {
       ConfigParser oldCfg(outputFile);
@@ -854,7 +854,8 @@ int MainCmds::genconfig(const vector<string>& args, const string& firstCommand) 
     istringstream inConfig(configFileContents);
     ConfigParser cfg(inConfig);
 
-    Logger logger(&cfg, true);
+    const bool logToStdOut = true;
+    Logger logger(&cfg, logToStdOut);
     logger.write("Loading model and initializing benchmark...");
 
     SearchParams params = Setup::loadSingleParams(cfg,Setup::SETUP_FOR_BENCHMARK);

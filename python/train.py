@@ -55,6 +55,7 @@ def parse_args() -> Mapping[str, Any]:
   parser.add_argument('-verbose', help='verbose', required=False, action='store_true')
   parser.add_argument('-no-export', help='Do not export models', required=False, action='store_true')
   parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, action='store_true')
+  parser.add_argument('-train-on-existing-data', help='Train on existing pre-seeded data.', required=False, action='store_true')
   return vars(parser.parse_args())
 
 
@@ -86,6 +87,7 @@ max_train_steps_since_last_reload = args["max_train_steps_since_last_reload"]
 verbose = args["verbose"]
 no_export = args["no_export"]
 disable_vtimeloss = args["disable_vtimeloss"]
+train_on_existing_data = args["train_on_existing_data"]
 logfilemode = "a"
 
 if samples_per_epoch is None:
@@ -558,7 +560,7 @@ else:
   trainhistory["history"].append(("initialized",model_config))
 
 if max_train_bucket_per_new_data is not None and "train_bucket_level" not in trainhistory:
-  trainhistory["train_bucket_level"] = samples_per_epoch
+  trainhistory["train_bucket_level"] = 0 if train_on_existing_data else samples_per_epoch
 if "train_steps_since_last_reload" not in trainhistory:
   trainhistory["train_steps_since_last_reload"] = 0
 
@@ -608,7 +610,7 @@ def maybe_reload_training_data():
 
       if max_train_bucket_per_new_data is not None:
         if "train_bucket_level_at_row" not in trainhistory:
-          trainhistory["train_bucket_level_at_row"] = last_datainfo_row
+          trainhistory["train_bucket_level_at_row"] = 0 if train_on_existing_data else last_datainfo_row
         if last_datainfo_row > trainhistory["train_bucket_level_at_row"]:
           new_row_count = last_datainfo_row - trainhistory["train_bucket_level_at_row"]
           trainlog("Advancing trainbucket row %.0f to %.0f, %.0f new rows" % (

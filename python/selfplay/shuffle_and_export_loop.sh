@@ -42,14 +42,14 @@ DATED_ARCHIVE="$basedir"/scripts/dated/"$DATE_FOR_FILENAME"
 mkdir -p "$DATED_ARCHIVE"
 cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/*.sh "$DATED_ARCHIVE"
 
-(
-    cd "$basedir"/scripts
-    while true
-    do
-        ./shuffle.sh "$basedir" "$tmpdir" "$NTHREADS" "$BATCHSIZE" "$@"
-        sleep 20
-    done
-) >> "$basedir"/logs/outshuffle.txt 2>&1 & disown
+# (
+#     cd "$basedir"/scripts
+#     while true
+#     do
+#         ./shuffle.sh "$basedir" "$tmpdir" "$NTHREADS" "$BATCHSIZE" "$@"
+#         sleep 20
+#     done
+# ) >> "$basedir"/logs/outshuffle.txt 2>&1 & disown
 
 (
     cd "$basedir"/scripts

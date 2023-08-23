@@ -18,7 +18,7 @@ MoveNum: 0 HASH: 534D5F4EAEDAD476890520B7CAD26FA0
  1 . X . . . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.600125
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 49
@@ -42,7 +42,7 @@ MoveNum: 1 HASH: 52844085B23915A6A066B24E800201DC
  1 . X . . . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.132213
+Time taken: ###
 Root visits: 100
 New playouts: 58
 NN rows: 11
@@ -65,7 +65,7 @@ MoveNum: 2 HASH: BD17188D3FA6FC41A4A484243DEAE6FF
  1 . X . . . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.0326897
+Time taken: ###
 Root visits: 100
 New playouts: 2
 NN rows: 3
@@ -90,7 +90,7 @@ MoveNum: 3 HASH: 48E6C4158A76372D961D73101CF04419
  1 @ X . . . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.0798346
+Time taken: ###
 Root visits: 100
 New playouts: 60
 NN rows: 6
@@ -114,7 +114,7 @@ MoveNum: 5 HASH: 806A1708DE637B1D9145BE60E7EE7578
  1 O2X @ . . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.460902
+Time taken: ###
 Root visits: 50
 New playouts: 50
 NN rows: 40
@@ -136,7 +136,7 @@ MoveNum: 6 HASH: 9BE87029B630D0B6435D9AE046166F79
  1 O1. O3@ . . .
 
 koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi5
-Time taken: 0.00217388
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 0
@@ -159,7 +159,7 @@ MoveNum: 0 HASH: 534D5F4EAEDAD476890520B7CAD26FA0
  1 . X . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.608945
+Time taken: ###
 Root visits: 100
 New playouts: 100
 NN rows: 51
@@ -183,7 +183,7 @@ MoveNum: 1 HASH: 52844085B23915A6A066B24E800201DC
  1 . X . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.104459
+Time taken: ###
 Root visits: 100
 New playouts: 56
 NN rows: 9
@@ -206,7 +206,7 @@ MoveNum: 2 HASH: BD17188D3FA6FC41A4A484243DEAE6FF
  1 . X . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.0355298
+Time taken: ###
 Root visits: 100
 New playouts: 2
 NN rows: 3
@@ -231,7 +231,7 @@ MoveNum: 3 HASH: 48E6C4158A76372D961D73101CF04419
  1 @ X . . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.0922639
+Time taken: ###
 Root visits: 100
 New playouts: 62
 NN rows: 7
@@ -255,7 +255,7 @@ MoveNum: 5 HASH: 806A1708DE637B1D9145BE60E7EE7578
  1 O2X @ . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.46694
+Time taken: ###
 Root visits: 50
 New playouts: 50
 NN rows: 39
@@ -277,7 +277,7 @@ MoveNum: 6 HASH: 806A1708DE637B1D9145BE60E7EE7578
  1 O1X @ . . . .
 
 koPOSITIONALscoreAREAtaxNONEsui1komi5
-Time taken: 0.00982013
+Time taken: ###
 Root visits: 50
 New playouts: 50
 NN rows: 1

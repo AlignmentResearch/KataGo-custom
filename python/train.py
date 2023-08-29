@@ -91,8 +91,6 @@ if __name__ == "__main__":
   parser.add_argument('-intermediate-loss-scale', type=float, help='Loss factor scale for intermediate head', required=False)
   parser.add_argument('-intermediate-distill-scale', type=float, help='Distill factor scale for intermediate head', required=False)
 
-  parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, action='store_true')
-
   args = vars(parser.parse_args())
 
 
@@ -171,8 +169,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
   main_loss_scale = args["main_loss_scale"]
   intermediate_loss_scale = args["intermediate_loss_scale"]
   intermediate_distill_scale = args["intermediate_distill_scale"]
-
-  disable_vtimeloss = args["disable_vtimeloss"]
 
   if lr_scale is None:
     lr_scale = 1.0
@@ -948,7 +944,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
           main_loss_scale=main_loss_scale,
           intermediate_loss_scale=intermediate_loss_scale,
           intermediate_distill_scale=intermediate_distill_scale,
-          use_vtimeloss=not disable_vtimeloss,
         )
 
         # DDP averages loss across instances, so to preserve LR as per-sample lr, we scale by world size.
@@ -1155,7 +1150,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
               main_loss_scale=main_loss_scale,
               intermediate_loss_scale=intermediate_loss_scale,
               intermediate_distill_scale=intermediate_distill_scale,
-              use_vtimeloss=not disable_vtimeloss,
             )
             metrics = detensorify_metrics(metrics)
             accumulate_metrics(val_metric_sums, val_metric_weights, metrics, batch_size, decay=1.0, new_weight=1.0)

@@ -209,7 +209,6 @@ def main(args):
         main_loss_scale=1.0,
         intermediate_loss_scale=None,
         intermediate_distill_scale=None,
-        use_vtimeloss=True,
       )
       metrics = detensorify_metrics(metrics)
 

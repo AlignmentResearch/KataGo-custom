@@ -33,7 +33,7 @@ usage() {
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
 }
 
-VICTIM_LIST=""
+VICTIM_LIST_ARG=""
 VICTIMS_DIR=""
 PREDICTOR_DIR=""
 KATAGO_BIN="/engines/KataGo-custom/cpp/katago"
@@ -44,7 +44,7 @@ while [ -n "${1-}" ]; do
   case $1 in
     -h|--help) usage; exit 0 ;;
     --config) CONFIG="$2"; shift 2 ;;
-    -v|--victim-list) VICTIM_LIST="$2"; shift 2 ;;
+    -v|--victim-list) VICTIM_LIST_ARG="$2"; shift 2 ;;
     -d|--victim-dir) VICTIMS_DIR="$2"; shift 2 ;;
     -p|--prediction-dir) PREDICTOR_DIR="$2"; shift 2 ;;
     -k|--katago-bin) KATAGO_BIN="$2"; shift 2 ;;
@@ -84,10 +84,12 @@ do
         continue
     fi
 
-    if [[ -z "$VICTIM_LIST" ]]
+    if [[ -z "$VICTIM_LIST_ARG" ]]
     then
         # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
         VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | grep "\.gz" | tail --lines 1)
+    else
+        VICTIM_LIST="$VICTIM_LIST_ARG"
     fi
 
     # Split the string VICTIM_LIST into an array victim_array:
@@ -102,13 +104,13 @@ do
         continue
     fi
 
-    for VICTIM in "${victim_array[@]}"; do
-        if [[ "$LATEST_MODEL_DIR" =~ -s([0-9]+) ]]; then
-            # The first capture group is the step number
-            STEP=${BASH_REMATCH[1]}
+    if [[ "$LATEST_MODEL_DIR" =~ -s([0-9]+) ]]; then
+        # The first capture group is the step number
+        STEP=${BASH_REMATCH[1]}
 
-            # Have we evaluated this model yet?
-            if [ "$STEP" -gt "$LAST_STEP" ]; then
+        # Have we evaluated this model yet?
+        if [ "$STEP" -gt "$LAST_STEP" ]; then
+            for VICTIM in "${victim_array[@]}"; do
                 # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
                 VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
                 EXTRA_CONFIG="numGamesTotal=100"
@@ -131,11 +133,10 @@ do
                     -override-config botName1="adv-$LATEST_MODEL_DIR" \
                     -sgf-output-dir "$OUTPUT_DIR"/sgfs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR" \
                     2>&1 | tee "$OUTPUT_DIR"/logs/"$VICTIM_NAME"_"$LATEST_MODEL_DIR".log
-
-                # Update the last step
-                LAST_STEP="$STEP"
-            fi
+            done
+            # Update the last step
+            LAST_STEP="$STEP"
         fi
-    done
+    fi
     sleep $SLEEP_INTERVAL
 done

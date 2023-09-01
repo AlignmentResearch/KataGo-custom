@@ -444,7 +444,7 @@ void Setup::loadParams(
 
     if(cfg.contains("minPlayoutsPerThread"+idxStr)) params.minPlayoutsPerThread = cfg.getDouble("minPlayoutsPerThread"+idxStr, 0.0, 1.0e20);
     else if(cfg.contains("minPlayoutsPerThread"))   params.minPlayoutsPerThread = cfg.getDouble("minPlayoutsPerThread",        0.0, 1.0e20);
-    else                                            params.minPlayoutsPerThread = (setupFor == SETUP_FOR_ANALYSIS || setupFor == SETUP_FOR_GTP) ? 8.0 : 0.0;
+    else if(applyDefaultParams)                     params.minPlayoutsPerThread = (setupFor == SETUP_FOR_ANALYSIS || setupFor == SETUP_FOR_GTP) ? 8.0 : 0.0;
 
     if(cfg.contains("winLossUtilityFactor"+idxStr)) params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor"+idxStr, 0.0, 1.0);
     else if(cfg.contains("winLossUtilityFactor"))   params.winLossUtilityFactor = cfg.getDouble("winLossUtilityFactor",        0.0, 1.0);
@@ -512,7 +512,7 @@ void Setup::loadParams(
 
     if(cfg.contains("policyOptimism"+idxStr)) params.policyOptimism = cfg.getDouble("policyOptimism"+idxStr, 0.0, 1.0);
     else if(cfg.contains("policyOptimism"))   params.policyOptimism = cfg.getDouble("policyOptimism",        0.0, 1.0);
-    else params.policyOptimism = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? 1.0 : 0.0;
+    else if(applyDefaultParams)               params.policyOptimism = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? 1.0 : 0.0;
 
     if(cfg.contains("valueWeightExponent"+idxStr)) params.valueWeightExponent = cfg.getDouble("valueWeightExponent"+idxStr, 0.0, 1.0);
     else if(cfg.contains("valueWeightExponent")) params.valueWeightExponent = cfg.getDouble("valueWeightExponent", 0.0, 1.0);
@@ -592,7 +592,7 @@ void Setup::loadParams(
 
     if(cfg.contains("rootPolicyOptimism"+idxStr)) params.rootPolicyOptimism = cfg.getDouble("rootPolicyOptimism"+idxStr, 0.0, 1.0);
     else if(cfg.contains("rootPolicyOptimism"))   params.rootPolicyOptimism = cfg.getDouble("rootPolicyOptimism",        0.0, 1.0);
-    else params.rootPolicyOptimism = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? std::min(params.policyOptimism, 0.2) : 0.0;
+    else if(applyDefaultParams)                   params.rootPolicyOptimism = (setupFor != SETUP_FOR_DISTRIBUTED && setupFor != SETUP_FOR_OTHER) ? std::min(params.policyOptimism, 0.2) : 0.0;
 
     if(cfg.contains("chosenMoveTemperature"+idxStr)) params.chosenMoveTemperature = cfg.getDouble("chosenMoveTemperature"+idxStr, 0.0, 5.0);
     else if(cfg.contains("chosenMoveTemperature"))   params.chosenMoveTemperature = cfg.getDouble("chosenMoveTemperature",        0.0, 5.0);

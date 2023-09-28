@@ -1,0 +1,7 @@
+// TODO comment
+#ifndef NEURALNET_PYTORCHBACKEND_H_
+#define NEURALNET_PYTORCHBACKEND_H_
+
+void getTorchOutput();
+
+#endif  // NEURALNET_PYTORCHBACKEND_H_

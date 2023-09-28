@@ -9,6 +9,7 @@
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nneval.h"
 #include "../neuralnet/desc.h"
+#include "../neuralnet/pytorchbackend.h"
 
 #include "../core/simpleallocator.h"
 
@@ -2419,6 +2420,8 @@ void NeuralNet::getOutput(
   NNResultBuf** inputBufs,
   vector<NNOutput*>& outputs
 ) {
+  getTorchOutput();
+
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   assert(numBatchEltsFilled > 0);
   const int batchSize = numBatchEltsFilled;

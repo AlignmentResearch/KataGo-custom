@@ -25,5 +25,23 @@ void getTorchOutput() {
 
   std::cerr << "TORCH SCRIPT MODEL MOVED TO GPU\n";
 
-  exit(-1);
+  std::vector<torch::jit::IValue> inputs;
+  // try a dummy input
+  inputs.push_back(torch::ones({1, 22, 19, 19}).to(at::kCUDA));
+  inputs.push_back(torch::ones({1, 19}).to(at::kCUDA));
+  std::cerr << "CREATED INPUT\n";
+  const c10::IValue output = module.forward(inputs);
+  std::cerr << "GOT OUTPUT\n";
+  const auto& output_tuple = output.toTupleRef().elements();
+  std::cerr << "GOT OUTPUT TUPLE\n";
+  std::cerr << "len=" << output_tuple.size() << "\n";
+  for (const auto& elem : output_tuple) {
+    const auto& tup = elem.toTupleRef();
+    std::cerr << "  len=" << tup.size() << "\n";
+    for (const auto& e2 : tup.elements()) {
+      std::cerr << e2.toTensor() << '\n';
+    }
+  }
+
+  exit(0);
 }

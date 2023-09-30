@@ -46,18 +46,19 @@ input_batch = next(data_processing_pytorch.read_npz_training_data(
 # # Printing so that we can check whether the C++ version gives the same output
 # torch.set_printoptions(profile="full")
 # print("Input:")
-# print(input_batch["binaryInputNCHW"].shape, input_batch["globalInputNC"].shape)
+# print("shape:", input_batch["binaryInputNCHW"].shape, input_batch["globalInputNC"].shape)
 # print("binaryInputNCHW")
 # print(input_batch["binaryInputNCHW"])
 # print("globalInputNC")
 # print(input_batch["globalInputNC"])
 # print("Output:")
 # output = model(input_batch["binaryInputNCHW"], input_batch["globalInputNC"])
-# print(len(output))
-# print(len(output[0]))
-# for i in range(len(output[0])):
-#     print(i, output[0][i].shape)
-#     print(output[0][i])
+# print("len:", len(output))
+# for elem in output:
+#     print("inner len:", len(elem))
+#     for e in elem:
+#         print("shape:", e.shape)
+#         print(e)
 
 traced_script_module = torch.jit.trace(
         func=model,

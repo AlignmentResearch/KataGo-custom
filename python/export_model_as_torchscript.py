@@ -14,6 +14,7 @@ RANK = 0
 TRAIN_DATA = [
         "/nas/ucb/k8/go-attack/victimplay/ttseng-cyclic-vs-b18-s6201m-20230517-130803/selfplay/t0-s9737216-d2331818/tdata/0B45CABDA2418864.npz"
 ]
+USE_SWA = True
 WORLD_SIZE = 1
 
 if torch.cuda.is_available():
@@ -25,11 +26,15 @@ else:
 
 # TODO argparse stuff instead of hardcoding
 
-model, _, _ = load_model.load_model(
-        checkpoint_file="/nas/ucb/ttseng/go_attack/victim-weights/kata1-b18c384nbt-s7619896320-d3691351602/model.ckpt",
-        use_swa=False,
+model, swa_model, _ = load_model.load_model(
+        checkpoint_file="/nas/ucb/ttseng/go_attack/victim-weights/kata1-b18c384nbt-s7529928448-d3667707199/model.ckpt",
+        use_swa=USE_SWA,
         device=device,
 )
+config = model.config
+pos_len = model.pos_len
+if swa_model is not None:
+    model = swa_model
 model.eval()
 
 input_batch = next(data_processing_pytorch.read_npz_training_data(
@@ -37,28 +42,11 @@ input_batch = next(data_processing_pytorch.read_npz_training_data(
     batch_size=BATCH_SIZE,
     world_size=WORLD_SIZE,
     rank=RANK,
-    pos_len=model.pos_len,
+    pos_len=pos_len,
     device=device,
     randomize_symmetries=True,
-    model_config=model.config,
+    model_config=config,
 ))
-
-# # Printing so that we can check whether the C++ version gives the same output
-# torch.set_printoptions(profile="full")
-# print("Input:")
-# print("shape:", input_batch["binaryInputNCHW"].shape, input_batch["globalInputNC"].shape)
-# print("binaryInputNCHW")
-# print(input_batch["binaryInputNCHW"])
-# print("globalInputNC")
-# print(input_batch["globalInputNC"])
-# print("Output:")
-# output = model(input_batch["binaryInputNCHW"], input_batch["globalInputNC"])
-# print("len:", len(output))
-# for elem in output:
-#     print("inner len:", len(elem))
-#     for e in elem:
-#         print("shape:", e.shape)
-#         print(e)
 
 traced_script_module = torch.jit.trace(
         func=model,

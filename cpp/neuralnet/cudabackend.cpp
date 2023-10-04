@@ -2420,26 +2420,13 @@ void NeuralNet::getOutput(
   NNResultBuf** inputBufs,
   vector<NNOutput*>& outputs
 ) {
-  std::cerr << "model: " << gpuHandle->model->name <<'\n';
-  // std::cerr << "zeroing all inputs\n";
-  // assert(numBatchEltsFilled == 1);
-  // for (int i = 0; i < numBatchEltsFilled; i++) {
-  //   for (int j = 0; j < 19 * 19 * 22; j++) {
-  //     inputBufs[i]->rowSpatial[j] = 0;
-  //   }
-  //   // mark the board as playable (channel 0)
-  //   for (int j = 0; j < 19 * 19; j++) {
-  //     inputBufs[i]->rowSpatial[j] = 1;
-  //   }
-  //   // inputBufs[i]->rowSpatial[0] = 1.0;
-  //   for (int j = 0; j < 19; j++) {
-  //     inputBufs[i]->rowGlobal[j] = 0;
-  //   }
-  // }
-
   getTorchOutput(numBatchEltsFilled, inputBufs, outputs);
   std::cerr << "PyTorch\n";
+  std::cerr << outputs[0]->whiteWinProb << ' '
+            << outputs[0]->whiteLossProb << ' '
+            << outputs[0]->whiteNoResultProb << '\n';
   std::cerr << outputs[0]->whiteScoreMean << ' '
+            << outputs[0]->whiteScoreMeanSq << ' '
             << outputs[0]->whiteLead << ' '
             << outputs[0]->varTimeLeft << ' '
             << outputs[0]->shorttermWinlossError << ' '
@@ -2657,7 +2644,11 @@ void NeuralNet::getOutput(
     }
   }
   std::cerr << "CUDA\n";
+  std::cerr << outputs[0]->whiteWinProb << ' '
+            << outputs[0]->whiteLossProb << ' '
+            << outputs[0]->whiteNoResultProb << '\n';
   std::cerr << outputs[0]->whiteScoreMean << ' '
+            << outputs[0]->whiteScoreMeanSq << ' '
             << outputs[0]->whiteLead << ' '
             << outputs[0]->varTimeLeft << ' '
             << outputs[0]->shorttermWinlossError << ' '

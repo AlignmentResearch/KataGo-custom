@@ -2420,7 +2420,38 @@ void NeuralNet::getOutput(
   NNResultBuf** inputBufs,
   vector<NNOutput*>& outputs
 ) {
-  getTorchOutput();
+  std::cerr << "model: " << gpuHandle->model->name <<'\n';
+  // std::cerr << "zeroing all inputs\n";
+  // assert(numBatchEltsFilled == 1);
+  // for (int i = 0; i < numBatchEltsFilled; i++) {
+  //   for (int j = 0; j < 19 * 19 * 22; j++) {
+  //     inputBufs[i]->rowSpatial[j] = 0;
+  //   }
+  //   // mark the board as playable (channel 0)
+  //   for (int j = 0; j < 19 * 19; j++) {
+  //     inputBufs[i]->rowSpatial[j] = 1;
+  //   }
+  //   // inputBufs[i]->rowSpatial[0] = 1.0;
+  //   for (int j = 0; j < 19; j++) {
+  //     inputBufs[i]->rowGlobal[j] = 0;
+  //   }
+  // }
+
+  getTorchOutput(numBatchEltsFilled, inputBufs, outputs);
+  std::cerr << "PyTorch\n";
+  std::cerr << outputs[0]->whiteScoreMean << ' '
+            << outputs[0]->whiteLead << ' '
+            << outputs[0]->varTimeLeft << ' '
+            << outputs[0]->shorttermWinlossError << ' '
+            << outputs[0]->shorttermScoreError
+            << '\n';
+  for (int i = 0; i < 19; i++) {
+    for (int j = 0; j < 19; j++) {
+      std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
+    }
+    std::cerr << '\n';
+  }
+  std::cerr << outputs[0]->policyProbs[361] << '\n';
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   assert(numBatchEltsFilled > 0);
@@ -2625,7 +2656,22 @@ void NeuralNet::getOutput(
       ASSERT_UNREACHABLE;
     }
   }
+  std::cerr << "CUDA\n";
+  std::cerr << outputs[0]->whiteScoreMean << ' '
+            << outputs[0]->whiteLead << ' '
+            << outputs[0]->varTimeLeft << ' '
+            << outputs[0]->shorttermWinlossError << ' '
+            << outputs[0]->shorttermScoreError
+            << '\n';
+  for (int i = 0; i < 19; i++) {
+    for (int j = 0; j < 19; j++) {
+      std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
+    }
+    std::cerr << '\n';
+  }
+  std::cerr << outputs[0]->policyProbs[361] << '\n';
 
+  exit(0);
 }
 
 //TESTING ----------------------------------------------------------------------------------

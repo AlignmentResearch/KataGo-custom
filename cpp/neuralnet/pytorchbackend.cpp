@@ -3,56 +3,160 @@
 #include <cassert>
 #include <iostream>
 
-#include <torch/script.h>
-
 #include "../neuralnet/modelversion.h"
 
 namespace {
-// obviously it's not correct to load the model here, but we're just doing basic debugging right now
-torch::jit::script::Module module;
 
-void run() {
-  static bool has_run = false;
-  if (!has_run) {
-    has_run = true;
-    try {
-      module = torch::jit::load("/nas/ucb/ttseng/go_attack/torch-script/traced-test-model.pt");
-    }
-    catch (const c10::Error& e) {
-      std::cerr << "Error loading Torch Script model\n";
-      throw e;
-    }
-    module.to(at::kCUDA);
-  }
-}
+// TODO(tomtseng): We should write the model version and max model board size
+// separately when exporting the model. For now we'll just hard code the
+// values.
+const int BOARD_LEN = 19;
+const int MODEL_VERSION = 14;
+const int NUM_SPATIAL_FEATURES = NNModelVersion::getNumSpatialFeatures(MODEL_VERSION);
+const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSION);
 
 }  // namespace
 
-void getTorchOutput(int numBatchEltsFilled, NNResultBuf** inputBufs, std::vector<NNOutput*>& outputs) {
-  run();
+namespace TorchNeuralNet {
 
-  const int batchSize = numBatchEltsFilled;
-  const int nnXLen = 19;
-  const int nnYLen = 19;
-  // need to assert on NHWC
-  const bool inputsUseNHWC = false;
-  const int numSpatialFeatures = NNModelVersion::getNumSpatialFeatures(14);
-  const int numGlobalFeatures = NNModelVersion::getNumGlobalFeatures(14);
-  std::vector<torch::jit::IValue> inputs;
-  torch::Tensor spatialInputs = torch::empty({batchSize, numSpatialFeatures, nnYLen, nnXLen});
-  torch::Tensor globalInputs = torch::empty({batchSize, numGlobalFeatures});
-  for (int row = 0; row < batchSize; row++) {
-    SymmetryHelpers::copyInputsWithSymmetry(inputBufs[row]->rowSpatial, spatialInputs[row].data_ptr<float>(), 1, nnYLen, nnXLen, numSpatialFeatures, inputsUseNHWC, inputBufs[row]->symmetry);
-    const float* rowGlobal = inputBufs[row]->rowGlobal;
-    std::copy(rowGlobal, rowGlobal + numGlobalFeatures, globalInputs[row].data_ptr<float>());
+LoadedModel::LoadedModel(const std::string& fileName) {
+  module = torch::jit::load(file);
+  module.eval();
+}
+
+LoadedModel* loadModelFile(const std::string& file const string& expectedSha256) {
+  if (expectedSha256.size() != 0) {
+    throw StringError("Checking sha256 for PyTorch models is not yet implemented.\n");
   }
-  inputs.emplace_back(spatialInputs.to(at::kCUDA));
-  inputs.emplace_back(globalInputs.to(at::kCUDA));
+  return new LoadedModel(file)
+  LoadedModel* model = new LoadedModel();
+}
+
+void freeLoadedModel(LoadedModel* model) {
+  delete model;
+}
+
+ComputeContext::ComputeContext(int nnXLen, int nnYLen, enabled_t useFP16)
+  : nnXLen(nnXLen)
+  , nnYLen(nnYLen)
+  , dType(useFP16Mode == enabled_t::False ? torch::kFloat32 : torch::kFloat16) {}
+
+ComputeContext* createComputeContext(
+  const std::vector<int>& gpuIdxs,
+  Logger* logger,
+  int nnXLen,
+  int nnYLen,
+  const std::string& openCLTunerFile,
+  const std::string& homeDataDirOverride,
+  bool openCLReTunePerBoardSize,
+  enabled_t useFP16Mode,
+  enabled_t useNHWCMode,
+  const LoadedModel* loadedModel
+) {
+  (void)gpuIdxs;
+  (void)logger;
+  (void)openCLTunerFile;
+  (void)homeDataDirOverride;
+  (void)openCLReTunePerBoardSize;
+  if (useNHWCMode == enabled_t::False) {
+    throw StringError("useNHWC is not yet implemented for PyTorch.");
+  }
+  assert(nnXLen == BOARD_LEN);
+  assert(nnYLen == BOARD_LEN);
+
+  // TODO is it fine for multiple threads to use the same loadedModel?
+  model->module.to(at::kCUDA, context->dType);
+  ComputeContext* context = new ComputeContext(nnXLen, nnYLen, useFP16Mode);
+}
+
+void freeComputeContext(ComputeContext* context) {
+  delete context;
+}
+
+ComputeHandle::ComputeHandle(const ComputeContext* context, const LoadedModel* model, int maxBatchSize)
+  : model(model)
+  , maxBatchSize(maxBatchSize)
+  , nnXLen(context->nnXLen)
+  , nnYLen(context->nnYLen)
+  , dType(context->dType) {}
+
+ComputeHandle* createComputeHandle(
+  ComputeContext* context,
+  const LoadedModel* loadedModel,
+  Logger* logger,
+  int maxBatchSize,
+  bool requireExactNNLen,
+  bool inputsUseNHWC,
+  int gpuIdxForThisThread,
+  int serverThreadIdx
+) {
+  if (inputsUseNHWC) {
+    throw StringError("inputsUseNHWC is not yet implemented for PyTorch.");
+  }
+  if (gpuIdxForThisThread != 0 && gpuIdxForThisThread != -1) {
+    throw StringError("GPU index != 0 is not yet implemented for PyTorch.");
+  }
+
+  if (logger != NULL) {
+    logger->write(
+        "Torch backend thread " + Global::intToString(serverThreadIdx) ": Model name: " + loadedModel->module.name()
+    );
+  }
+
+  return new ComputeHandle(context, model, maxBatchSize);
+}
+
+void freeComputeHandle(TorchComputeHandle* gpuHandle) {
+  delete gpuHandle;
+}
+
+InputBuffers::InputBuffers(int maxBatchSize, int nnXLen, int nnYLen) {
+  InputBuffers* buffers = new InputBuffers();
+  buffers->hostSpatialInputs = torch::empty({maxBatchSize, NUM_SPATIAL_FEATURES, nnYLen, nnXLen});
+  buffers->hostGlobalInputs = torch::empty({maxBatchSize, NUM_GLOBAL_FEATURES});
+  const size_t NUM_INPUTS = 2;
+  buffers->modelInputs.reserve(NUM_INPUTS);
+}
+
+InputBuffers* createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen) {
+  (void)loadedModel;
+  return new InputBuffers(maxBatchSize, nnXLen, nnYLen);
+}
+
+void freeInputBuffers(InputBuffers* inputBuffers) {
+  return inputBuffers;
+}
+
+void getOutput(
+  TorchComputeHandle* gpuHandle,
+  TorchInputBuffers* inputBuffers,
+  int numBatchEltsFilled,
+  NNResultBuf** inputBufs,
+  vector<NNOutput*>& outputs
+) {
+  const int batchSize = numBatchEltsFilled;
+  assert(batchSize <= gpuHandle->maxBatchSize);
+  assert(batchSize > 0);
+  const int nnXLen = gpuHandle->nnXLen;
+  const int nnYLen = gpuHandle->nnYLen;
+
+  const auto& spatialInputs = buffers->hostSpatialInputs;
+  const auto& globalInputs = buffers->hostglobalInputs;
+  for (int row = 0; row < batchSize; row++) {
+    SymmetryHelpers::copyInputsWithSymmetry(inputBufs[row]->rowSpatial, spatialInputs[row].data_ptr<float>(), 1, nnYLen, nnXLen, NUM_SPATIAL_FEATURES, inputsUseNHWC, inputBufs[row]->symmetry);
+    const float* rowGlobal = inputBufs[row]->rowGlobal;
+    std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
+  }
+
+  const auto& modelInputs = buffers->modelInputs;
+  modelInputs.clear();
+  modelInputs.emplace_back(spatialInputs.to(at::kCUDA, handle->dType));
+  modelInputs.emplace_back(globalInputs.to(at::kCUDA, handle->dType));
 
   c10::IValue modelOutput;
   {
     torch::NoGradGuard no_grad;
-    modelOutput = module.forward(inputs);
+    modelOutput = gpuHandle->model.forward(gpuHandle->modelInput);
   }
   const auto& output_tuple = modelOutput.toTupleRef().elements();
   const auto& mainOutput = output_tuple[0].toTupleRef().elements();
@@ -69,14 +173,14 @@ void getTorchOutput(int numBatchEltsFilled, NNResultBuf** inputBufs, std::vector
     float policyOptimism = (float)inputBufs[row]->policyOptimism;
     const auto& policyOutput = policyOutputs[row][0];
     const auto& optimisticPolicyOutput = policyOutputs[row][5];
-    for (int i = 0; i < nnXLen * nnYLen + 1; i++) {
+    for (int i = 0; i < nnYLen * nnXLen + 1; i++) {
       const float p = policyOutput[i].item<float>();
       const float pOptimistic = optimisticPolicyOutput[i].item<float>();
       policyProbsTmp[i] = p + (pOptimistic - p) * policyOptimism;
     }
-    SymmetryHelpers::copyOutputsWithSymmetry(policyProbsTmp, output->policyProbs, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
+    SymmetryHelpers::copyOutputsWithSymmetry(policyProbsTmp, output->policyProbs, 1, nnYLen, nnXlen, inputBufs[row]->symmetry);
     // Copy the policy output for passing as well.
-    output->policyProbs[nnXLen * nnYLen] = policyProbsTmp[nnXLen * nnYLen];
+    output->policyProbs[nnYLen * nnXLen] = policyProbsTmp[nnYLen * nnXLen];
 
     const auto& valueOutput = valueOutputs[row];
     output->whiteWinProb = valueOutput[0].item<float>();
@@ -98,3 +202,5 @@ void getTorchOutput(int numBatchEltsFilled, NNResultBuf** inputBufs, std::vector
     }
   }
 }
+
+}  // namespace TorchNeuralNet

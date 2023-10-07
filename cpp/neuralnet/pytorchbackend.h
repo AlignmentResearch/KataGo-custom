@@ -63,11 +63,12 @@
 namespace TorchNeuralNet {
 
 struct LoadedModel {
-  torch::jit::script::Module module;
+  torch::jit::script::Module model;
 
   LoadedModel(const std::string& fileName);
-}
-LoadedModel* loadModelFile(const std::string& file const string& expectedSha256);
+  LoadedModel(torch::jit::script::Module model);
+};
+LoadedModel* loadModelFile(const std::string& file, const std::string& expectedSha256);
 void freeLoadedModel(LoadedModel* model);
 
 struct ComputeContext {
@@ -75,8 +76,8 @@ struct ComputeContext {
   const int nnYLen;
   const at::ScalarType dType;
 
-  ComputeContext(int nnXLen, int nnYLen, at::ScalarType dType);
-}
+  ComputeContext(int nnXLen, int nnYLen, enabled_t useFP16);
+};
 ComputeContext* createComputeContext(
   const std::vector<int>& gpuIdxs,
   Logger* logger,
@@ -92,17 +93,23 @@ ComputeContext* createComputeContext(
 void freeComputeContext(ComputeContext* context);
 
 struct ComputeHandle {
-  const LoadedModel* const model;
+  LoadedModel model;
+  const torch::Device device;
   const int maxBatchSize;
   const int nnXLen;
   const int nnYLen;
   const at::ScalarType dType;
 
-  ComputeHandle(const ComputeContext* context, const LoadedModel* model, int maxBatchSize);
-}
+  ComputeHandle(
+      const ComputeContext* context,
+      const LoadedModel* model,
+      int maxBatchSize,
+      int gpuIdxForThisThread
+  );
+};
 ComputeHandle* createComputeHandle(
   ComputeContext* context,
-  const TorchLoadedModel* loadedModel,
+  const LoadedModel* loadedModel,
   Logger* logger,
   int maxBatchSize,
   bool requireExactNNLen,
@@ -113,16 +120,22 @@ ComputeHandle* createComputeHandle(
 void freeComputeHandle(ComputeHandle* gpuHandle);
 
 struct InputBuffers {
-  torch::jit::IValue hostSpatialInputs;
-  torch::jit::IValue hostGlobalInputs;
+  torch::Tensor hostSpatialInputs;
+  torch::Tensor hostGlobalInputs;
   std::vector<torch::jit::IValue> modelInputs;
 
   InputBuffers(int maxBatchSize, int nnXLen, int nnYLen);
-}
+};
 InputBuffers* createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen);
 void freeInputBuffers(InputBuffers* inputBuffers);
 
-void getOutput(int numBatchEltsFilled, NNResultBuf** inputBufs, std::vector<NNOutput*>& outputs);
+void getOutput(
+    ComputeHandle* gpuHandle,
+    InputBuffers* inputBuffers,
+    int numBatchEltsFilled,
+    NNResultBuf** inputBufs,
+    std::vector<NNOutput*>& outputs
+);
 
 }  // namespace TorchNeuralNet
 

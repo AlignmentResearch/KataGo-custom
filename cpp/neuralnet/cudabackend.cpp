@@ -9,6 +9,9 @@
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nneval.h"
 #include "../neuralnet/desc.h"
+// TODO(tomtseng): The PyTorch backend should not be used here. We're crudely
+// bolting the PyTorch backend here while we prototype the PyTorch backend
+// implementation.
 #include "../neuralnet/pytorchbackend.h"
 
 #include "../core/simpleallocator.h"
@@ -1988,8 +1991,13 @@ struct Model {
 
 struct LoadedModel {
   ModelDesc modelDesc;
+  TorchNeuralNet::LoadedModel* torchModel;
 
   LoadedModel(const string& fileName, const string& expectedSha256) {
+    if (Global::isSuffix(fileName, ".pt")) {
+      torchModel = TorchNeuralNet::loadModelFile(fileName, expectedSha256);
+      return;
+    }
     ModelDesc::loadFromFileMaybeGZipped(fileName,modelDesc,expectedSha256);
   }
 
@@ -2004,6 +2012,9 @@ LoadedModel* NeuralNet::loadModelFile(const string& file, const string& expected
 }
 
 void NeuralNet::freeLoadedModel(LoadedModel* loadedModel) {
+  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
+    delete loadedModel->torchModel;
+  }
   delete loadedModel;
 }
 
@@ -2127,6 +2138,11 @@ struct ComputeContext {
   int nnYLen;
   enabled_t useFP16Mode;
   enabled_t useNHWCMode;
+  std::unique_ptr<TorchNeuralNet::ComputeContext> torchContext;
+
+  ComputeContext() = default;
+  ComputeContext(std::unique_ptr<TorchNeuralNet::ComputeContext> torchContext_)
+    : torchContext(std::move(torchContext_)) {};
 };
 
 ComputeContext* NeuralNet::createComputeContext(
@@ -2141,13 +2157,20 @@ ComputeContext* NeuralNet::createComputeContext(
   enabled_t useNHWCMode,
   const LoadedModel* loadedModel
 ) {
-  (void)gpuIdxs;
-  (void)logger;
-  (void)openCLTunerFile;
-  (void)homeDataDirOverride;
-  (void)openCLReTunePerBoardSize;
-  (void)loadedModel;
-
+  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
+    return new ComputeContext(std::unique_ptr<TorchNeuralNet::ComputeContext>(TorchNeuralNet::createComputeContext(
+      gpuIdxs,
+      logger,
+      nnXLen,
+      nnYLen,
+      openCLTunerFile,
+      homeDataDirOverride,
+      openCLReTunePerBoardSize,
+      useFP16Mode,
+      useNHWCMode,
+      loadedModel->torchModel
+    )));
+  }
   ComputeContext* context = new ComputeContext();
   context->nnXLen = nnXLen;
   context->nnYLen = nnYLen;
@@ -2173,6 +2196,7 @@ struct ComputeHandle {
   const bool requireExactNNLen;
   const bool inputsUseNHWC;
   const bool usingNHWC;
+  std::unique_ptr<TorchNeuralNet::ComputeHandle> torchHandle;
 
   ComputeHandle(
     const ComputeContext* context,
@@ -2203,6 +2227,17 @@ struct ComputeHandle {
     //Synchronize after creating buffers and copying all the weights, just in case
     CUDA_ERR("ComputeHandle", cudaDeviceSynchronize());
   }
+
+  ComputeHandle(std::unique_ptr<TorchNeuralNet::ComputeHandle> torchHandle_)
+    : // We need to initialize these const members or else the compiler gives a warning.
+      usingFP16(false)
+    , nnXLen(0)
+    , nnYLen(0)
+    , requireExactNNLen(false)
+    , inputsUseNHWC(false)
+    , usingNHWC(false)
+    , torchHandle(std::move(torchHandle_)) {}
+
   ~ComputeHandle() {
   }
 
@@ -2221,6 +2256,21 @@ ComputeHandle* NeuralNet::createComputeHandle(
   int gpuIdxForThisThread,
   int serverThreadIdx
 ) {
+  if (context != nullptr && context->torchContext != nullptr) {
+    assert(loadedModel != nullptr);
+    assert(loadedModel->torchModel != nullptr);
+    return new ComputeHandle(std::unique_ptr<TorchNeuralNet::ComputeHandle>(TorchNeuralNet::createComputeHandle(
+        context->torchContext.get(),
+        loadedModel->torchModel,
+        logger,
+        maxBatchSize,
+        requireExactNNLen,
+        inputsUseNHWC,
+        gpuIdxForThisThread,
+        serverThreadIdx
+    )));
+  }
+
   //Use whatever CUDA believes GPU 0 to be.
   if(gpuIdxForThisThread == -1)
     gpuIdxForThisThread = 0;
@@ -2345,6 +2395,8 @@ struct InputBuffers {
   float* scoreValueResults; //Host pointer
   float* ownershipResults; //Host pointer
 
+  std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers;
+
   InputBuffers(const LoadedModel* loadedModel, int maxBatchSz, int nnXLen, int nnYLen) {
     const ModelDesc& m = loadedModel->modelDesc;
 
@@ -2387,6 +2439,9 @@ struct InputBuffers {
     ownershipResults = new float[(size_t)maxBatchSize * nnXLen * nnYLen * m.numOwnershipChannels];
   }
 
+  InputBuffers(std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers_)
+    : torchBuffers(std::move(torchBuffers_)) {}
+
   ~InputBuffers() {
     delete[] userInputBuffer;
     delete[] userInputGlobalBuffer;
@@ -2404,6 +2459,11 @@ struct InputBuffers {
 };
 
 InputBuffers* NeuralNet::createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen) {
+  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
+    return new InputBuffers(std::unique_ptr<TorchNeuralNet::InputBuffers>(
+          TorchNeuralNet::createInputBuffers(loadedModel->torchModel, maxBatchSize, nnXLen, nnYLen)
+    ));
+  }
   return new InputBuffers(loadedModel,maxBatchSize,nnXLen,nnYLen);
 }
 void NeuralNet::freeInputBuffers(InputBuffers* inputBuffers) {
@@ -2420,25 +2480,35 @@ void NeuralNet::getOutput(
   NNResultBuf** inputBufs,
   vector<NNOutput*>& outputs
 ) {
-  getTorchOutput(numBatchEltsFilled, inputBufs, outputs);
-  std::cerr << "PyTorch\n";
-  std::cerr << outputs[0]->whiteWinProb << ' '
-            << outputs[0]->whiteLossProb << ' '
-            << outputs[0]->whiteNoResultProb << '\n';
-  std::cerr << outputs[0]->whiteScoreMean << ' '
-            << outputs[0]->whiteScoreMeanSq << ' '
-            << outputs[0]->whiteLead << ' '
-            << outputs[0]->varTimeLeft << ' '
-            << outputs[0]->shorttermWinlossError << ' '
-            << outputs[0]->shorttermScoreError
-            << '\n';
-  for (int i = 0; i < 19; i++) {
-    for (int j = 0; j < 19; j++) {
-      std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
-    }
-    std::cerr << '\n';
+  if (gpuHandle != nullptr && gpuHandle->torchHandle != nullptr) {
+    assert(inputBuffers != nullptr);
+    assert(inputBuffers->torchBuffers != nullptr);
+    return TorchNeuralNet::getOutput(
+        gpuHandle->torchHandle.get(),
+        inputBuffers->torchBuffers.get(),
+        numBatchEltsFilled,
+        inputBufs,
+        outputs
+    );
   }
-  std::cerr << outputs[0]->policyProbs[361] << '\n';
+  // std::cerr << "PyTorch\n";
+  // std::cerr << outputs[0]->whiteWinProb << ' '
+  //           << outputs[0]->whiteLossProb << ' '
+  //           << outputs[0]->whiteNoResultProb << '\n';
+  // std::cerr << outputs[0]->whiteScoreMean << ' '
+  //           << outputs[0]->whiteScoreMeanSq << ' '
+  //           << outputs[0]->whiteLead << ' '
+  //           << outputs[0]->varTimeLeft << ' '
+  //           << outputs[0]->shorttermWinlossError << ' '
+  //           << outputs[0]->shorttermScoreError
+  //           << '\n';
+  // for (int i = 0; i < 19; i++) {
+  //   for (int j = 0; j < 19; j++) {
+  //     std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
+  //   }
+  //   std::cerr << '\n';
+  // }
+  // std::cerr << outputs[0]->policyProbs[361] << '\n';
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   assert(numBatchEltsFilled > 0);
@@ -2643,26 +2713,26 @@ void NeuralNet::getOutput(
       ASSERT_UNREACHABLE;
     }
   }
-  std::cerr << "CUDA\n";
-  std::cerr << outputs[0]->whiteWinProb << ' '
-            << outputs[0]->whiteLossProb << ' '
-            << outputs[0]->whiteNoResultProb << '\n';
-  std::cerr << outputs[0]->whiteScoreMean << ' '
-            << outputs[0]->whiteScoreMeanSq << ' '
-            << outputs[0]->whiteLead << ' '
-            << outputs[0]->varTimeLeft << ' '
-            << outputs[0]->shorttermWinlossError << ' '
-            << outputs[0]->shorttermScoreError
-            << '\n';
-  for (int i = 0; i < 19; i++) {
-    for (int j = 0; j < 19; j++) {
-      std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
-    }
-    std::cerr << '\n';
-  }
-  std::cerr << outputs[0]->policyProbs[361] << '\n';
+  // std::cerr << "CUDA\n";
+  // std::cerr << outputs[0]->whiteWinProb << ' '
+  //           << outputs[0]->whiteLossProb << ' '
+  //           << outputs[0]->whiteNoResultProb << '\n';
+  // std::cerr << outputs[0]->whiteScoreMean << ' '
+  //           << outputs[0]->whiteScoreMeanSq << ' '
+  //           << outputs[0]->whiteLead << ' '
+  //           << outputs[0]->varTimeLeft << ' '
+  //           << outputs[0]->shorttermWinlossError << ' '
+  //           << outputs[0]->shorttermScoreError
+  //           << '\n';
+  // for (int i = 0; i < 19; i++) {
+  //   for (int j = 0; j < 19; j++) {
+  //     std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
+  //   }
+  //   std::cerr << '\n';
+  // }
+  // std::cerr << outputs[0]->policyProbs[361] << '\n';
 
-  exit(0);
+  // exit(0);
 }
 
 //TESTING ----------------------------------------------------------------------------------

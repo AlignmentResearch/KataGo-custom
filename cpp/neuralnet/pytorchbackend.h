@@ -67,9 +67,11 @@ struct LoadedModel {
 
   LoadedModel(const std::string& fileName);
   LoadedModel(torch::jit::script::Module model);
+
 };
 LoadedModel* loadModelFile(const std::string& file, const std::string& expectedSha256);
 void freeLoadedModel(LoadedModel* model);
+int getModelVersion(const LoadedModel* model);
 
 struct ComputeContext {
   const int nnXLen;

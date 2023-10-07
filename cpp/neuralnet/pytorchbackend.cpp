@@ -37,6 +37,10 @@ void freeLoadedModel(LoadedModel* model) {
   delete model;
 }
 
+int getModelVersion(const LoadedModel*) {
+  return MODEL_VERSION;
+}
+
 ComputeContext::ComputeContext(int nnXLen_, int nnYLen_, enabled_t useFP16)
   : nnXLen(nnXLen_)
   , nnYLen(nnYLen_)
@@ -60,7 +64,7 @@ ComputeContext* createComputeContext(
   (void)homeDataDirOverride;
   (void)openCLReTunePerBoardSize;
   (void)loadedModel;
-  if (useNHWCMode == enabled_t::False) {
+  if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
   assert(nnXLen == BOARD_LEN);

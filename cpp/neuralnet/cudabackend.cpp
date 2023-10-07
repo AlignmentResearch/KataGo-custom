@@ -1991,11 +1991,11 @@ struct Model {
 
 struct LoadedModel {
   ModelDesc modelDesc;
-  TorchNeuralNet::LoadedModel* torchModel;
+  std::unique_ptr<TorchNeuralNet::LoadedModel> torchModel;
 
   LoadedModel(const string& fileName, const string& expectedSha256) {
     if (Global::isSuffix(fileName, ".pt")) {
-      torchModel = TorchNeuralNet::loadModelFile(fileName, expectedSha256);
+      torchModel = std::unique_ptr<TorchNeuralNet::LoadedModel>(TorchNeuralNet::loadModelFile(fileName, expectedSha256));
       return;
     }
     ModelDesc::loadFromFileMaybeGZipped(fileName,modelDesc,expectedSha256);
@@ -2012,9 +2012,6 @@ LoadedModel* NeuralNet::loadModelFile(const string& file, const string& expected
 }
 
 void NeuralNet::freeLoadedModel(LoadedModel* loadedModel) {
-  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
-    delete loadedModel->torchModel;
-  }
   delete loadedModel;
 }
 
@@ -2023,6 +2020,9 @@ string NeuralNet::getModelName(const LoadedModel* loadedModel) {
 }
 
 int NeuralNet::getModelVersion(const LoadedModel* loadedModel) {
+  if (loadedModel->torchModel != nullptr) {
+    return TorchNeuralNet::getModelVersion(loadedModel->torchModel.get());
+  }
   return loadedModel->modelDesc.version;
 }
 
@@ -2168,7 +2168,7 @@ ComputeContext* NeuralNet::createComputeContext(
       openCLReTunePerBoardSize,
       useFP16Mode,
       useNHWCMode,
-      loadedModel->torchModel
+      loadedModel->torchModel.get()
     )));
   }
   ComputeContext* context = new ComputeContext();
@@ -2261,7 +2261,7 @@ ComputeHandle* NeuralNet::createComputeHandle(
     assert(loadedModel->torchModel != nullptr);
     return new ComputeHandle(std::unique_ptr<TorchNeuralNet::ComputeHandle>(TorchNeuralNet::createComputeHandle(
         context->torchContext.get(),
-        loadedModel->torchModel,
+        loadedModel->torchModel.get(),
         logger,
         maxBatchSize,
         requireExactNNLen,
@@ -2461,7 +2461,7 @@ struct InputBuffers {
 InputBuffers* NeuralNet::createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen) {
   if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
     return new InputBuffers(std::unique_ptr<TorchNeuralNet::InputBuffers>(
-          TorchNeuralNet::createInputBuffers(loadedModel->torchModel, maxBatchSize, nnXLen, nnYLen)
+          TorchNeuralNet::createInputBuffers(loadedModel->torchModel.get(), maxBatchSize, nnXLen, nnYLen)
     ));
   }
   return new InputBuffers(loadedModel,maxBatchSize,nnXLen,nnYLen);

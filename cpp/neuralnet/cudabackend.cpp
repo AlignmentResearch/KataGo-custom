@@ -2440,7 +2440,14 @@ struct InputBuffers {
   }
 
   InputBuffers(std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers_)
-    : torchBuffers(std::move(torchBuffers_)) {}
+    : userInputBuffer(nullptr)
+    , userInputGlobalBuffer(nullptr)
+    , policyPassResults(nullptr)
+    , policyResults(nullptr)
+    , valueResults(nullptr)
+    , scoreValueResults(nullptr)
+    , ownershipResults(nullptr)
+    , torchBuffers(std::move(torchBuffers_)) {}
 
   ~InputBuffers() {
     delete[] userInputBuffer;

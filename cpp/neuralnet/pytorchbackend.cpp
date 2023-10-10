@@ -67,8 +67,8 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
-  assert(nnXLen == BOARD_LEN);
-  assert(nnYLen == BOARD_LEN);
+  assert(nnXLen <= BOARD_LEN);
+  assert(nnYLen <= BOARD_LEN);
 
   ComputeContext* context = new ComputeContext(nnXLen, nnYLen, useFP16Mode);
   return context;

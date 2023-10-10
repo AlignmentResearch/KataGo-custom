@@ -166,8 +166,8 @@ void getOutput(
 
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  modelInputs.emplace_back(spatialInputs.to(gpuHandle->device, gpuHandle->dType));
-  modelInputs.emplace_back(globalInputs.to(gpuHandle->device, gpuHandle->dType));
+  modelInputs.emplace_back(spatialInputs.slice(0, 0, batchSize).to(gpuHandle->device, gpuHandle->dType));
+  modelInputs.emplace_back(globalInputs.slice(0, 0, batchSize).to(gpuHandle->device, gpuHandle->dType));
 
   c10::IValue modelOutput;
   {

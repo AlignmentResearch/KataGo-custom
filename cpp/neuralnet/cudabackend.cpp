@@ -2490,32 +2490,37 @@ void NeuralNet::getOutput(
   if (gpuHandle != nullptr && gpuHandle->torchHandle != nullptr) {
     assert(inputBuffers != nullptr);
     assert(inputBuffers->torchBuffers != nullptr);
-    return TorchNeuralNet::getOutput(
+    TorchNeuralNet::getOutput(
         gpuHandle->torchHandle.get(),
         inputBuffers->torchBuffers.get(),
         numBatchEltsFilled,
         inputBufs,
         outputs
     );
+    // std::cerr << "PyTorch outputs\n";
+    // std::cerr << "batch elems=" << numBatchEltsFilled << '\n';
+    // for (int b = 0; b < numBatchEltsFilled; b++) {
+    //   std::cerr << "elem=" << b << '\n';
+    //   std::cerr << outputs[b]->whiteWinProb << ' '
+    //             << outputs[b]->whiteLossProb << ' '
+    //             << outputs[b]->whiteNoResultProb << '\n';
+    //   std::cerr << outputs[b]->whiteScoreMean << ' '
+    //             << outputs[b]->whiteScoreMeanSq << ' '
+    //             << outputs[b]->whiteLead << ' '
+    //             << outputs[b]->varTimeLeft << ' '
+    //             << outputs[b]->shorttermWinlossError << ' '
+    //             << outputs[b]->shorttermScoreError
+    //             << '\n';
+    //   for (int i = 0; i < 19; i++) {
+    //     for (int j = 0; j < 19; j++) {
+    //       std::cerr << outputs[b]->policyProbs[i * 19 + j] << ' ';
+    //     }
+    //     std::cerr << '\n';
+    //   }
+    //   std::cerr << outputs[b]->policyProbs[361] << '\n';
+    // }
+    return;
   }
-  // std::cerr << "PyTorch\n";
-  // std::cerr << outputs[0]->whiteWinProb << ' '
-  //           << outputs[0]->whiteLossProb << ' '
-  //           << outputs[0]->whiteNoResultProb << '\n';
-  // std::cerr << outputs[0]->whiteScoreMean << ' '
-  //           << outputs[0]->whiteScoreMeanSq << ' '
-  //           << outputs[0]->whiteLead << ' '
-  //           << outputs[0]->varTimeLeft << ' '
-  //           << outputs[0]->shorttermWinlossError << ' '
-  //           << outputs[0]->shorttermScoreError
-  //           << '\n';
-  // for (int i = 0; i < 19; i++) {
-  //   for (int j = 0; j < 19; j++) {
-  //     std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
-  //   }
-  //   std::cerr << '\n';
-  // }
-  // std::cerr << outputs[0]->policyProbs[361] << '\n';
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   assert(numBatchEltsFilled > 0);
@@ -2720,24 +2725,28 @@ void NeuralNet::getOutput(
       ASSERT_UNREACHABLE;
     }
   }
-  // std::cerr << "CUDA\n";
-  // std::cerr << outputs[0]->whiteWinProb << ' '
-  //           << outputs[0]->whiteLossProb << ' '
-  //           << outputs[0]->whiteNoResultProb << '\n';
-  // std::cerr << outputs[0]->whiteScoreMean << ' '
-  //           << outputs[0]->whiteScoreMeanSq << ' '
-  //           << outputs[0]->whiteLead << ' '
-  //           << outputs[0]->varTimeLeft << ' '
-  //           << outputs[0]->shorttermWinlossError << ' '
-  //           << outputs[0]->shorttermScoreError
-  //           << '\n';
-  // for (int i = 0; i < 19; i++) {
-  //   for (int j = 0; j < 19; j++) {
-  //     std::cerr << outputs[0]->policyProbs[i * 19 + j] << ' ';
+  // std::cerr << "CUDA outputs\n";
+  // std::cerr << "batch elems=" << numBatchEltsFilled << '\n';
+  // for (int b = 0; b < numBatchEltsFilled; b++) {
+  //   std::cerr << "elem=" << b << '\n';
+  //   std::cerr << outputs[b]->whiteWinProb << ' '
+  //             << outputs[b]->whiteLossProb << ' '
+  //             << outputs[b]->whiteNoResultProb << '\n';
+  //   std::cerr << outputs[b]->whiteScoreMean << ' '
+  //             << outputs[b]->whiteScoreMeanSq << ' '
+  //             << outputs[b]->whiteLead << ' '
+  //             << outputs[b]->varTimeLeft << ' '
+  //             << outputs[b]->shorttermWinlossError << ' '
+  //             << outputs[b]->shorttermScoreError
+  //             << '\n';
+  //   for (int i = 0; i < 19; i++) {
+  //     for (int j = 0; j < 19; j++) {
+  //       std::cerr << outputs[b]->policyProbs[i * 19 + j] << ' ';
+  //     }
+  //     std::cerr << '\n';
   //   }
-  //   std::cerr << '\n';
+  //   std::cerr << outputs[b]->policyProbs[361] << '\n';
   // }
-  // std::cerr << outputs[0]->policyProbs[361] << '\n';
 
   // exit(0);
 }

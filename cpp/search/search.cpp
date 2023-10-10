@@ -137,19 +137,6 @@ Search::Search(
       oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
       oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
     }
-
-
-    if (searchParams.maxVisits > 1) {
-      assert(oppNNEval != nullptr);
-      oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
-        ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
-        : 1;
-      // We don't want to recursively model an opponent also using A-MCTS or else
-      // we'll have infinite recursion.
-      assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
-      oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
-      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
-    }
   }
 
   assert(logger != NULL);

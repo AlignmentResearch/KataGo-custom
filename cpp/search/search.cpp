@@ -114,9 +114,31 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
-    // When using AMCTS, we don't support graph search for ourselves or our
-    // opponent.
+    // When using AMCTS, we don't support graph search for ourselves.
     assert(!searchParams.useGraphSearch);
+    if (oppNNEval == nullptr) {
+      // oppNNEval being nullptr signifies oppBot shouldn't be created. This can
+      // happen when both bots are running A-MCTS. When bot 0 runs A-MCTS, it
+      // needs to create oppBot representing bot 1, but oppBot->oppBot doesn't
+      // need to exist since oppBot will have maxVisits==1 and hence will never
+      // evaluate oppBot->oppBot.
+      // Even if bot 0 itself only has maxVisits==1, though, it still should
+      // create oppBot in case the number of visits changes later. E.g.,
+      // during victimplay, at the end of a game, bots are used with a modified
+      // number of visits to estimate stats of the board.
+      //
+    } else {
+      oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
+        ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
+        : 1;
+      // We don't want to recursively model an opponent also using A-MCTS or else
+      // we'll have infinite recursion.
+      assert(!oppParams.usingAdversarialAlgo() || oppParams.maxVisits == 1);
+      oppParams.rootNumSymmetriesToSample = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_S ? 1 : oppParams.rootNumSymmetriesToSample;
+      oppBot = make_unique<Search>(oppParams, oppNNEval, logger, rSeed + "-victim-model");
+    }
+
+
     if (searchParams.maxVisits > 1) {
       assert(oppNNEval != nullptr);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R

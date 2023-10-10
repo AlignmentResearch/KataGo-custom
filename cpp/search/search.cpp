@@ -122,11 +122,11 @@ Search::Search(
       // needs to create oppBot representing bot 1, but oppBot->oppBot doesn't
       // need to exist since oppBot will have maxVisits==1 and hence will never
       // evaluate oppBot->oppBot.
-      // Even if bot 0 itself only has maxVisits==1, though, it still should
-      // create oppBot in case the number of visits changes later. E.g.,
-      // during victimplay, at the end of a game, bots are used with a modified
-      // number of visits to estimate stats of the board.
-      //
+      // (We should initialize oppBot based on whether oppNNEval is nullptr
+      // rather than whther maxVisits is 1. Even if bot 0 has maxVisits==1, it
+      // still should create oppBot in case the number of visits changes later.
+      // E.g., during victimplay, at the end of a game, bots are used with a
+      // modified number of visits to estimate stats of the board.)
     } else {
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
         ? params.oppVisitsOverride.value_or(oppParams.maxVisits)

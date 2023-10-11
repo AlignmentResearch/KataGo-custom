@@ -180,7 +180,10 @@ Search::~Search() {
 }
 
 string Search::getRankStr() const {
-  const auto getVisitStr = [](const Search* bot, string prefix) {
+  const auto getVisitStr = [](const Search* bot, string prefix) -> string {
+    if (bot == nullptr) {
+      return "NULL";
+    }
     return prefix + "v=" + std::to_string(bot->searchParams.maxVisits) + "," +
            prefix + "rsym=" +
            std::to_string(bot->searchParams.rootNumSymmetriesToSample);

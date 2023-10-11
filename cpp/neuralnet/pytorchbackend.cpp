@@ -10,7 +10,7 @@ namespace {
 // TODO(tomtseng): We should write the model version and max model board size
 // separately when exporting the model. For now we'll just hard code the
 // values.
-constexpr int BOARD_LEN = 19;
+constexpr int MAX_BOARD_LEN = 19;
 constexpr int MODEL_VERSION = 14;
 const int NUM_SPATIAL_FEATURES = NNModelVersion::getNumSpatialFeatures(MODEL_VERSION);
 const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSION);
@@ -67,8 +67,8 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
-  assert(nnXLen <= BOARD_LEN);
-  assert(nnYLen <= BOARD_LEN);
+  assert(nnXLen <= MAX_BOARD_LEN);
+  assert(nnYLen <= MAX_BOARD_LEN);
 
   ComputeContext* context = new ComputeContext(nnXLen, nnYLen, useFP16Mode);
   return context;
@@ -127,7 +127,7 @@ void freeComputeHandle(ComputeHandle* gpuHandle) {
 }
 
 InputBuffers::InputBuffers(int maxBatchSize, int nnXLen, int nnYLen)
-  : hostSpatialInputs(torch::empty({maxBatchSize, NUM_SPATIAL_FEATURES, nnYLen, nnXLen}))
+  : hostSpatialInputs(torch::empty({maxBatchSize, NUM_SPATIAL_FEATURES, MAX_BOARD_LEN, MAX_BOARD_LEN}))
   , hostGlobalInputs(torch::empty({maxBatchSize, NUM_GLOBAL_FEATURES})) {
   const size_t NUM_INPUTS = 2;
   modelInputs.reserve(NUM_INPUTS);

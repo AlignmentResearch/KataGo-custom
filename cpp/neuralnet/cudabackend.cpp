@@ -1990,15 +1990,21 @@ struct Model {
 //------------------------------------------------------------------------------
 
 struct LoadedModel {
+  // modelDesc stores a typical KataGo model, whereas torchModel stores a
+  // TorchScript KataGo model.
+  // Typically we don't expect both modelDesc and torchModel to be populated,
+  // but for some of the remainder of the code we'll handle the case where both
+  // are populated in order to make it easier for a user to load both a typical
+  // model and its corresponding TorchScript model for debugging reasons.
   ModelDesc modelDesc;
   std::unique_ptr<TorchNeuralNet::LoadedModel> torchModel;
 
   LoadedModel(const string& fileName, const string& expectedSha256) {
     if (Global::isSuffix(fileName, ".pt")) {
       torchModel = std::unique_ptr<TorchNeuralNet::LoadedModel>(TorchNeuralNet::loadModelFile(fileName, expectedSha256));
-      return;
+    } else {
+      ModelDesc::loadFromFileMaybeGZipped(fileName,modelDesc,expectedSha256);
     }
-    ModelDesc::loadFromFileMaybeGZipped(fileName,modelDesc,expectedSha256);
   }
 
   LoadedModel() = delete;
@@ -2141,8 +2147,6 @@ struct ComputeContext {
   std::unique_ptr<TorchNeuralNet::ComputeContext> torchContext;
 
   ComputeContext() = default;
-  ComputeContext(std::unique_ptr<TorchNeuralNet::ComputeContext> torchContext_)
-    : torchContext(std::move(torchContext_)) {};
 };
 
 ComputeContext* NeuralNet::createComputeContext(
@@ -2157,25 +2161,25 @@ ComputeContext* NeuralNet::createComputeContext(
   enabled_t useNHWCMode,
   const LoadedModel* loadedModel
 ) {
-  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
-    return new ComputeContext(std::unique_ptr<TorchNeuralNet::ComputeContext>(TorchNeuralNet::createComputeContext(
-      gpuIdxs,
-      logger,
-      nnXLen,
-      nnYLen,
-      openCLTunerFile,
-      homeDataDirOverride,
-      openCLReTunePerBoardSize,
-      useFP16Mode,
-      useNHWCMode,
-      loadedModel->torchModel.get()
-    )));
-  }
   ComputeContext* context = new ComputeContext();
   context->nnXLen = nnXLen;
   context->nnYLen = nnYLen;
   context->useFP16Mode = useFP16Mode;
   context->useNHWCMode = useNHWCMode;
+  if (loadedModel->torchModel != nullptr) {
+    context->torchContext = std::unique_ptr<TorchNeuralNet::ComputeContext>(TorchNeuralNet::createComputeContext(
+        gpuIdxs,
+        logger,
+        nnXLen,
+        nnYLen,
+        openCLTunerFile,
+        homeDataDirOverride,
+        openCLReTunePerBoardSize,
+        useFP16Mode,
+        useNHWCMode,
+        loadedModel->torchModel.get()
+    ));
+  }
   return context;
 }
 
@@ -2207,14 +2211,16 @@ struct ComputeHandle {
     bool requireExactNNLen_,
     bool inputsUseNHWC_,
     bool useFP16,
-    bool useNHWC
+    bool useNHWC,
+    std::unique_ptr<TorchNeuralNet::ComputeHandle> torchHandle_
   ) :
     usingFP16(useFP16),
     nnXLen(context->nnXLen),
     nnYLen(context->nnYLen),
     requireExactNNLen(requireExactNNLen_),
     inputsUseNHWC(inputsUseNHWC_),
-    usingNHWC(useNHWC)
+    usingNHWC(useNHWC),
+    torchHandle(std::move(torchHandle_))
   {
     cudaHandles = std::make_unique<CudaHandles>(majorComputeCapability,minorComputeCapability);
     model = std::make_unique<Model>(
@@ -2256,10 +2262,10 @@ ComputeHandle* NeuralNet::createComputeHandle(
   int gpuIdxForThisThread,
   int serverThreadIdx
 ) {
-  if (context != nullptr && context->torchContext != nullptr) {
-    assert(loadedModel != nullptr);
-    assert(loadedModel->torchModel != nullptr);
-    return new ComputeHandle(std::unique_ptr<TorchNeuralNet::ComputeHandle>(TorchNeuralNet::createComputeHandle(
+  std::unique_ptr<TorchNeuralNet::ComputeHandle> torchHandle;
+  if (loadedModel->torchModel != nullptr) {
+    assert(context->torchContext != nullptr);
+    torchHandle = std::unique_ptr<TorchNeuralNet::ComputeHandle>(TorchNeuralNet::createComputeHandle(
         context->torchContext.get(),
         loadedModel->torchModel.get(),
         logger,
@@ -2268,7 +2274,10 @@ ComputeHandle* NeuralNet::createComputeHandle(
         inputsUseNHWC,
         gpuIdxForThisThread,
         serverThreadIdx
-    )));
+    ));
+  }
+  if (loadedModel->modelDesc.name.empty()) {
+    return new ComputeHandle(std::move(torchHandle));
   }
 
   //Use whatever CUDA believes GPU 0 to be.
@@ -2332,7 +2341,7 @@ ComputeHandle* NeuralNet::createComputeHandle(
   }
 
   ComputeHandle* gpuHandle = new ComputeHandle(
-    context,loadedModel,prop.major,prop.minor,maxBatchSize,requireExactNNLen,inputsUseNHWC,useFP16,useNHWC
+    context,loadedModel,prop.major,prop.minor,maxBatchSize,requireExactNNLen,inputsUseNHWC,useFP16,useNHWC,std::move(torchHandle)
   );
   return gpuHandle;
 }
@@ -2397,7 +2406,13 @@ struct InputBuffers {
 
   std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers;
 
-  InputBuffers(const LoadedModel* loadedModel, int maxBatchSz, int nnXLen, int nnYLen) {
+  InputBuffers(
+      const LoadedModel* loadedModel,
+      int maxBatchSz,
+      int nnXLen,
+      int nnYLen,
+      std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers_
+  ) : torchBuffers(std::move(torchBuffers_)) {
     const ModelDesc& m = loadedModel->modelDesc;
 
     int policyChannels = m.version >= 12 ? 2 : 1;
@@ -2466,12 +2481,17 @@ struct InputBuffers {
 };
 
 InputBuffers* NeuralNet::createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen) {
-  if (loadedModel != nullptr && loadedModel->torchModel != nullptr) {
-    return new InputBuffers(std::unique_ptr<TorchNeuralNet::InputBuffers>(
-          TorchNeuralNet::createInputBuffers(loadedModel->torchModel.get(), maxBatchSize, nnXLen, nnYLen)
-    ));
+  std::unique_ptr<TorchNeuralNet::InputBuffers> torchBuffers;
+  if (loadedModel->torchModel != nullptr) {
+    torchBuffers = std::unique_ptr<TorchNeuralNet::InputBuffers>(
+        TorchNeuralNet::createInputBuffers(loadedModel->torchModel.get(), maxBatchSize, nnXLen, nnYLen)
+    );
   }
-  return new InputBuffers(loadedModel,maxBatchSize,nnXLen,nnYLen);
+  if (loadedModel->modelDesc.name.empty()) {
+    return new InputBuffers(std::move(torchBuffers));
+  }
+  InputBuffers* buffers = new InputBuffers(loadedModel,maxBatchSize,nnXLen,nnYLen,std::move(torchBuffers));
+  return buffers;
 }
 void NeuralNet::freeInputBuffers(InputBuffers* inputBuffers) {
   delete inputBuffers;
@@ -2487,8 +2507,8 @@ void NeuralNet::getOutput(
   NNResultBuf** inputBufs,
   vector<NNOutput*>& outputs
 ) {
-  if (gpuHandle != nullptr && gpuHandle->torchHandle != nullptr) {
-    assert(inputBuffers != nullptr);
+  assert(numBatchEltsFilled > 0);
+  if (gpuHandle->torchHandle != nullptr) {
     assert(inputBuffers->torchBuffers != nullptr);
     TorchNeuralNet::getOutput(
         gpuHandle->torchHandle.get(),
@@ -2523,7 +2543,6 @@ void NeuralNet::getOutput(
   }
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
-  assert(numBatchEltsFilled > 0);
   const int batchSize = numBatchEltsFilled;
   const int nnXLen = gpuHandle->nnXLen;
   const int nnYLen = gpuHandle->nnYLen;
@@ -2725,6 +2744,7 @@ void NeuralNet::getOutput(
       ASSERT_UNREACHABLE;
     }
   }
+
   // std::cerr << "CUDA outputs\n";
   // std::cerr << "batch elems=" << numBatchEltsFilled << '\n';
   // for (int b = 0; b < numBatchEltsFilled; b++) {
@@ -2747,8 +2767,6 @@ void NeuralNet::getOutput(
   //   }
   //   std::cerr << outputs[b]->policyProbs[361] << '\n';
   // }
-
-  // exit(0);
 }
 
 //TESTING ----------------------------------------------------------------------------------

@@ -3,6 +3,9 @@
 #include <cassert>
 #include <iostream>
 
+#include <torch/csrc/jit/codegen/cuda/interface.h>
+
+#include "../core/global.h"
 #include "../neuralnet/modelversion.h"
 
 namespace {
@@ -19,8 +22,24 @@ const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSI
 
 namespace TorchNeuralNet {
 
-LoadedModel::LoadedModel(const std::string& fileName) {
-  model = torch::jit::load(fileName);
+LoadedModel::LoadedModel(const std::string& fileName)
+  : model(torch::jit::load(fileName)) {
+  // We disable optimizations that make the TorchScript KataGo models crash.
+  //
+  // In particular, what I (tomtseng) saw was that with model b18-s7530m and
+  // libtorch v2.0.1 + CUDA 11.8, the second time I executed the model with
+  // batch size > 1 on CUDA, the model would crash (e.g., with an illegal CUDA
+  // memory access) or return NaNs. The first few calls of a model are when
+  // TorchScript performs profiling and optimization, hence why these calls are
+  // slower and why this issue occurs on the second call of the model.
+  //
+  // This issue would also occur when I ran the TorchScript models in Python.
+  // The fix in Python was to either turn off the default GPU fuser NVFuser
+  // (https://pytorch.org/docs/stable/jit.html#fusion-backends) with
+  // `torch._C._jit_set_nvfuser_enabled(False)` or to first run the model twice
+  // on the CPU (maybe this makes the model optimize with the default CPU fuser
+  // NNC instead of NVFuser, even after moving the model to the GPU?).
+  torch::jit::fuser::cuda::setEnabled(false);
 }
 
 LoadedModel::LoadedModel(torch::jit::script::Module model_)
@@ -84,10 +103,6 @@ ComputeHandle::ComputeHandle(
     int maxBatchSize_,
     int gpuIdxForThisThread
 )
-  // It might be fine for all threads on the same GPUs to share the model
-  // assuming the model doesn't modify any internal state on its forward(), but
-  // we'll follow the convention from the other backends of giving each thread
-  // its own copy of the model.
   : model(model_->model.clone())
   , device(torch::Device(at::kCUDA, gpuIdxForThisThread))
   , maxBatchSize(maxBatchSize_)
@@ -126,7 +141,7 @@ void freeComputeHandle(ComputeHandle* gpuHandle) {
   delete gpuHandle;
 }
 
-InputBuffers::InputBuffers(int maxBatchSize, int nnXLen, int nnYLen)
+InputBuffers::InputBuffers(int maxBatchSize)
   : hostSpatialInputs(torch::empty({maxBatchSize, NUM_SPATIAL_FEATURES, MAX_BOARD_LEN, MAX_BOARD_LEN}))
   , hostGlobalInputs(torch::empty({maxBatchSize, NUM_GLOBAL_FEATURES})) {
   const size_t NUM_INPUTS = 2;
@@ -135,7 +150,9 @@ InputBuffers::InputBuffers(int maxBatchSize, int nnXLen, int nnYLen)
 
 InputBuffers* createInputBuffers(const LoadedModel* loadedModel, int maxBatchSize, int nnXLen, int nnYLen) {
   (void)loadedModel;
-  return new InputBuffers(maxBatchSize, nnXLen, nnYLen);
+  (void)nnXLen;
+  (void)nnYLen;
+  return new InputBuffers(maxBatchSize);
 }
 
 void freeInputBuffers(InputBuffers* inputBuffers) {
@@ -154,6 +171,33 @@ void getOutput(
   assert(batchSize > 0);
   const int nnXLen = gpuHandle->nnXLen;
   const int nnYLen = gpuHandle->nnYLen;
+  if (nnXLen != MAX_BOARD_LEN || nnYLen != MAX_BOARD_LEN) {
+    // The PyTorch model assumes that smaller board sizes are
+    // input as following example channel 0 spatial input (signifying which
+    // locations are on the board) for a 5x5 input:
+    //   1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   ...
+    //   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //
+    // If nnXLen and nnYLen are set to 5 instead of MAX_BOARD_LEN==19,
+    // the inputs get populated instead as
+    //   1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+    //   1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //   ...
+    //   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+    //
+    // The other backends handle this but I haven't investigated how. For now
+    // we'll just enforce that nnXLen and nnYLen are MAX_BOARD_LEN. If a user
+    // wants to play on a 5x5 board, they should include MAX_BOARD_LEN==19 in
+    // the bSizes config parameter, otherwise we throw an exception here.
+    throw StringError(Global::strprintf("Board len not yet supported: %d x %d", nnXLen, nnYLen));
+  }
   constexpr bool INPUTS_USE_NHWC = false;
 
   const auto& spatialInputs = inputBuffers->hostSpatialInputs;
@@ -186,7 +230,12 @@ void getOutput(
   for (int row = 0; row < batchSize; row++) {
     NNOutput* output = outputs[row];
 
-    float policyOptimism = (float)inputBufs[row]->policyOptimism;
+    // We're processing the optimistic policy head, which assumes model version
+    // >= 12.
+    // TODO(tomtseng): just case on policyOutputs.size(1) to see whether the
+    // optimistic head channel exists, and ignore optimism otherwise.
+    assert(MODEL_VERSION >= 12);
+    const float policyOptimism = (float)inputBufs[row]->policyOptimism;
     const auto& policyOutput = policyOutputs[row][0];
     const auto& optimisticPolicyOutput = policyOutputs[row][5];
     for (int i = 0; i < nnYLen * nnXLen + 1; i++) {

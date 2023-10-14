@@ -76,9 +76,9 @@ int getModelVersion(const LoadedModel* model);
 struct ComputeContext {
   const int nnXLen;
   const int nnYLen;
-  const at::ScalarType dType;
+  const bool useFP16;
 
-  ComputeContext(int nnXLen, int nnYLen, enabled_t useFP16);
+  ComputeContext(int nnXLen, int nnYLen, bool useFP16);
 };
 ComputeContext* createComputeContext(
   const std::vector<int>& gpuIdxs,
@@ -100,7 +100,7 @@ struct ComputeHandle {
   const int maxBatchSize;
   const int nnXLen;
   const int nnYLen;
-  const at::ScalarType dType;
+  const bool useFP16;
 
   ComputeHandle(
       const ComputeContext* context,

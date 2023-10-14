@@ -1,12 +1,27 @@
 #include "../neuralnet/pytorchbackend.h"
 
 #include <cassert>
+// #include <chrono> // for benchmarking
 #include <iostream>
 
+#include <ATen/autocast_mode.h>
 #include <torch/csrc/jit/codegen/cuda/interface.h>
 
 #include "../core/global.h"
 #include "../neuralnet/modelversion.h"
+
+using namespace torch::indexing;
+
+// #define TSTART do {  \
+//   t1 = std::chrono::high_resolution_clock::now(); \
+// } while (0)
+// #define TEND(desc) do { \
+//   const auto t2 = std::chrono::high_resolution_clock::now(); \
+//   std::cout << desc << ' ' << std::chrono::duration<double, std::milli>(t2 - t1).count() << '\n'; \
+// } while (0)
+#define TSTART do {} while (0)
+#define TEND(desc) do {} while (0)
+
 
 namespace {
 
@@ -60,10 +75,11 @@ int getModelVersion(const LoadedModel*) {
   return MODEL_VERSION;
 }
 
-ComputeContext::ComputeContext(int nnXLen_, int nnYLen_, enabled_t useFP16)
+ComputeContext::ComputeContext(int nnXLen_, int nnYLen_, bool useFP16_)
   : nnXLen(nnXLen_)
   , nnYLen(nnYLen_)
-  , dType(useFP16 == enabled_t::False ? torch::kFloat32 : torch::kFloat16) {}
+  , useFP16(useFP16_) {
+}
 
 ComputeContext* createComputeContext(
   const std::vector<int>& gpuIdxs,
@@ -78,7 +94,6 @@ ComputeContext* createComputeContext(
   const LoadedModel* loadedModel
 ) {
   (void)gpuIdxs;
-  (void)logger;
   (void)openCLTunerFile;
   (void)homeDataDirOverride;
   (void)openCLReTunePerBoardSize;
@@ -86,10 +101,17 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
+  const bool useFP16 = useFP16Mode  != enabled_t::False;
+  if (useFP16) {
+    // There doesn't seem to be a way to autocast without making it a global
+    // setting.
+    logger->write("Enabling useFP16 for all TorchScript models");
+    at::autocast::set_enabled(true);
+  }
   assert(nnXLen <= MAX_BOARD_LEN);
   assert(nnYLen <= MAX_BOARD_LEN);
 
-  ComputeContext* context = new ComputeContext(nnXLen, nnYLen, useFP16Mode);
+  ComputeContext* context = new ComputeContext(nnXLen, nnYLen, useFP16);
   return context;
 }
 
@@ -108,9 +130,9 @@ ComputeHandle::ComputeHandle(
   , maxBatchSize(maxBatchSize_)
   , nnXLen(context->nnXLen)
   , nnYLen(context->nnYLen)
-  , dType(context->dType) {
+  , useFP16(context->useFP16) {
     model.model.eval();
-    model.model.to(device, context->dType);
+    model.model.to(device);
   }
 
 ComputeHandle* createComputeHandle(
@@ -166,6 +188,9 @@ void getOutput(
   NNResultBuf** inputBufs,
   std::vector<NNOutput*>& outputs
 ) {
+  // std::chrono::time_point tStart = std::chrono::high_resolution_clock::now();
+  // std::chrono::time_point t1 = tStart;
+
   const int batchSize = numBatchEltsFilled;
   assert(batchSize <= gpuHandle->maxBatchSize);
   assert(batchSize > 0);
@@ -203,49 +228,63 @@ void getOutput(
   const auto& spatialInputs = inputBuffers->hostSpatialInputs;
   const auto& globalInputs = inputBuffers->hostGlobalInputs;
   for (int row = 0; row < batchSize; row++) {
+    TSTART;
     SymmetryHelpers::copyInputsWithSymmetry(inputBufs[row]->rowSpatial, spatialInputs[row].data_ptr<float>(), 1, nnYLen, nnXLen, NUM_SPATIAL_FEATURES, INPUTS_USE_NHWC, inputBufs[row]->symmetry);
+    TEND("copy spatial");
     const float* rowGlobal = inputBufs[row]->rowGlobal;
+    TSTART;
     std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
+    TEND("copy global");
   }
 
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  modelInputs.emplace_back(spatialInputs.slice(0, 0, batchSize).to(gpuHandle->device, gpuHandle->dType));
-  modelInputs.emplace_back(globalInputs.slice(0, 0, batchSize).to(gpuHandle->device, gpuHandle->dType));
+  TSTART;
+  modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
+  modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
+  TEND("slice+mv inputs");
 
   c10::IValue modelOutput;
   {
     torch::NoGradGuard no_grad;
+    TSTART;
     modelOutput = gpuHandle->model.model.forward(modelInputs);
+    TEND("forward");
   }
-  const auto& output_tuple = modelOutput.toTupleRef().elements();
-  const auto& mainOutput = output_tuple[0].toTupleRef().elements();
-  const auto& policyOutputs = mainOutput[0].toTensor().to(at::kCPU);
-  const auto& valueOutputs = mainOutput[1].toTensor().to(at::kCPU);
-  const auto& miscValueOutputs = mainOutput[2].toTensor().to(at::kCPU);
-  const auto& moreMiscValueOutputs = mainOutput[3].toTensor().to(at::kCPU);
-  const auto& ownershipOutputs = mainOutput[4].toTensor().to(at::kCPU);
+  TSTART;
+  const auto& modelOutputs = modelOutput.toTupleRef().elements();
+  at::Tensor policyOutputs = modelOutputs[0].toTensor();
+  const at::Tensor& valueOutputs = modelOutputs[1].toTensor().to(at::kCPU);
+  const at::Tensor& miscValueOutputs = modelOutputs[2].toTensor().to(at::kCPU);
+  const at::Tensor& moreMiscValueOutputs = modelOutputs[3].toTensor().to(at::kCPU);
+  at::Tensor ownershipOutputs;
+  TEND("mv outputs");
 
-  float policyProbsTmp[NNPos::MAX_NN_POLICY_SIZE];
+  TSTART;
+  // We're processing the optimistic policy head, which assumes model version
+  // >= 12.
+  // TODO(tomtseng): just case on policyOutputs.size(1) to see whether the
+  // optimistic head channel exists, and ignore optimism otherwise.
+  const bool has_optimistic_policy = policyOutputs.size(1) > 1;
+  at::Tensor policies = policyOutputs.index({Slice(), 0});
+  at::Tensor optimisticPolicyDiffs;
+  if (has_optimistic_policy) {
+    optimisticPolicyDiffs = policyOutputs.index({Slice(), 1}).sub_(policies);
+  }
   for (int row = 0; row < batchSize; row++) {
     NNOutput* output = outputs[row];
 
-    // We're processing the optimistic policy head, which assumes model version
-    // >= 12.
-    // TODO(tomtseng): just case on policyOutputs.size(1) to see whether the
-    // optimistic head channel exists, and ignore optimism otherwise.
-    assert(MODEL_VERSION >= 12);
-    const float policyOptimism = (float)inputBufs[row]->policyOptimism;
-    const auto& policyOutput = policyOutputs[row][0];
-    const auto& optimisticPolicyOutput = policyOutputs[row][5];
-    for (int i = 0; i < nnYLen * nnXLen + 1; i++) {
-      const float p = policyOutput[i].item<float>();
-      const float pOptimistic = optimisticPolicyOutput[i].item<float>();
-      policyProbsTmp[i] = p + (pOptimistic - p) * policyOptimism;
+    const int numPolicyValues = nnYLen * nnXLen + 1;
+    at::Tensor policy = policies.index({row, Slice(0, numPolicyValues)});
+    if (has_optimistic_policy) {
+      const float policyOptimism = (float)inputBufs[row]->policyOptimism;
+      // final policy = policy + (policy - optimisticPolicy) * policyoptimism
+      policy.add_(optimisticPolicyDiffs.index({row, Slice(0, numPolicyValues)}), policyOptimism);
     }
-    SymmetryHelpers::copyOutputsWithSymmetry(policyProbsTmp, output->policyProbs, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
+    policy = policy.to(at::kCPU, torch::kFloat32).contiguous();
+    SymmetryHelpers::copyOutputsWithSymmetry(policy.data_ptr<float>(), output->policyProbs, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
     // Copy the policy output for passing as well.
-    output->policyProbs[nnYLen * nnXLen] = policyProbsTmp[nnYLen * nnXLen];
+    output->policyProbs[nnYLen * nnXLen] = policy[nnYLen * nnXLen].item<float>();
 
     const auto& valueOutput = valueOutputs[row];
     output->whiteWinProb = valueOutput[0].item<float>();
@@ -263,9 +302,16 @@ void getOutput(
     output->shorttermScoreError = moreMiscValueOutput[1].item<float>();
 
     if (output->whiteOwnerMap != NULL) {
+      if (!ownershipOutputs.defined()) {
+        ownershipOutputs = modelOutputs[4].toTensor().to(at::kCPU);
+      }
       SymmetryHelpers::copyOutputsWithSymmetry(ownershipOutputs[row].data_ptr<float>(), output->whiteOwnerMap, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
     }
   }
+  TEND("process out");
+
+  // std::chrono::time_point tEnd = std::chrono::high_resolution_clock::now();
+  // std::cout << "torch getOutput: " << std::chrono::duration<double, std::milli>(tEnd - tStart).count() << "\n\n";
 }
 
 }  // namespace TorchNeuralNet

@@ -22,6 +22,8 @@
 #include "../core/using.h"
 //------------------------
 
+// #include <chrono>
+
 using half_t = half_float::half;
 
 //Define this to print out some of the intermediate values of the neural net
@@ -2541,6 +2543,7 @@ void NeuralNet::getOutput(
     // }
     return;
   }
+  // auto tStart = std::chrono::high_resolution_clock::now();
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   const int batchSize = numBatchEltsFilled;
@@ -2767,6 +2770,8 @@ void NeuralNet::getOutput(
   //   }
   //   std::cerr << outputs[b]->policyProbs[361] << '\n';
   // }
+  // auto tEnd = std::chrono::high_resolution_clock::now();
+  // std::cout << "cuda getOutput: " << std::chrono::duration<double, std::milli>(tEnd - tStart).count() << "\n\n";
 }
 
 //TESTING ----------------------------------------------------------------------------------

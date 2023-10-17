@@ -1,9 +1,11 @@
+import einops
 import math
 import numpy as np
 import torch
 import torch.nn
 import torch.nn.functional
 import torch.nn.init
+import transformers
 import packaging
 import packaging.version
 from typing import List, Dict, Optional
@@ -1374,87 +1376,109 @@ class Model(torch.nn.Module):
         self.global_input_shape = [19]
 
         self.blocks = torch.nn.ModuleList()
-        for block_config in self.block_kind:
-            block_name = block_config[0]
-            block_kind = block_config[1]
-            use_gpool_this_block = False
-            if block_kind.endswith("gpool"):
-                use_gpool_this_block = True
-                block_kind = block_kind[:-5]
+        if config.get("vit"):
+            patch_size = 4
+            self.num_patches_one_dim = (self.pos_len + patch_size - 1) // patch_size
+            # if patch_size does not divide image size (pos_len), the
+            # remainder of the image just gets cut off (i.e., a 19x19 img with
+            # patch size 4 will get cut to a 16x16 img). so we need to increase
+            # img size to be divisble by patch size
+            padded_image_size = self.num_patches_one_dim * patch_size
+            self.padding = padded_image_size - self.pos_len
+            num_channels = self.bin_input_shape[0] + self.global_input_shape[0] # spatial dims + global dims
+            vit_config = transformers.ViTConfig(
+                    hidden_size=self.c_trunk,
+                    num_hidden_layers=self.num_total_blocks,
+                    num_attention_heads=6,
+                    intermediate_size=self.c_trunk * 4,
+                    image_size=padded_image_size,
+                    patch_size=patch_size,
+                    num_channels=num_channels
+            )
+            self.vit = transformers.ViTModel(vit_config)
+            self.upsampler = torch.nn.Upsample(scale_factor=patch_size)
+        else:
+            for block_config in self.block_kind:
+                block_name = block_config[0]
+                block_kind = block_config[1]
+                use_gpool_this_block = False
+                if block_kind.endswith("gpool"):
+                    use_gpool_this_block = True
+                    block_kind = block_kind[:-5]
 
-            if block_kind == "regular":
-                self.blocks.append(ResBlock(
-                    name=block_name,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottle1" or block_kind == "bottle":
-                self.blocks.append(BottleneckResBlock(
-                    name=block_name,
-                    internal_length=1,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottle2":
-                self.blocks.append(BottleneckResBlock(
-                    name=block_name,
-                    internal_length=2,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottle3":
-                self.blocks.append(BottleneckResBlock(
-                    name=block_name,
-                    internal_length=3,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottlenest2":
-                self.blocks.append(NestedBottleneckResBlock(
-                    name=block_name,
-                    internal_length=2,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottlenest3":
-                self.blocks.append(NestedBottleneckResBlock(
-                    name=block_name,
-                    internal_length=3,
-                    c_main=self.c_trunk,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            elif block_kind == "bottlenest2bottlenest2":
-                self.blocks.append(NestedNestedBottleneckResBlock(
-                    name=block_name,
-                    internal_length=2,
-                    sub_internal_length=2,
-                    c_main=self.c_trunk,
-                    c_outermid=self.c_outermid,
-                    c_mid=self.c_mid,
-                    c_gpool=(self.c_gpool if use_gpool_this_block else None),
-                    config=self.config,
-                    activation=self.activation,
-                ))
-            else:
-                assert False, f"Unknown block kind: {block_config[1]}"
+                if block_kind == "regular":
+                    self.blocks.append(ResBlock(
+                        name=block_name,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottle1" or block_kind == "bottle":
+                    self.blocks.append(BottleneckResBlock(
+                        name=block_name,
+                        internal_length=1,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottle2":
+                    self.blocks.append(BottleneckResBlock(
+                        name=block_name,
+                        internal_length=2,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottle3":
+                    self.blocks.append(BottleneckResBlock(
+                        name=block_name,
+                        internal_length=3,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottlenest2":
+                    self.blocks.append(NestedBottleneckResBlock(
+                        name=block_name,
+                        internal_length=2,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottlenest3":
+                    self.blocks.append(NestedBottleneckResBlock(
+                        name=block_name,
+                        internal_length=3,
+                        c_main=self.c_trunk,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                elif block_kind == "bottlenest2bottlenest2":
+                    self.blocks.append(NestedNestedBottleneckResBlock(
+                        name=block_name,
+                        internal_length=2,
+                        sub_internal_length=2,
+                        c_main=self.c_trunk,
+                        c_outermid=self.c_outermid,
+                        c_mid=self.c_mid,
+                        c_gpool=(self.c_gpool if use_gpool_this_block else None),
+                        config=self.config,
+                        activation=self.activation,
+                    ))
+                else:
+                    assert False, f"Unknown block kind: {block_config[1]}"
 
         if self.trunk_normless:
             self.norm_trunkfinal = BiasMask(self.c_trunk, self.config, is_after_batchnorm=True)
@@ -1581,60 +1605,77 @@ class Model(torch.nn.Module):
     def forward(self, input_spatial, input_global):
         # float_formatter = "{:.3f}".format
         # np.set_printoptions(formatter={'float_kind':float_formatter}, threshold=1000000, linewidth=10000)
-
         mask = input_spatial[:, 0:1, :, :].contiguous()
         mask_sum_hw = torch.sum(mask,dim=(2,3),keepdim=True)
         mask_sum = torch.sum(mask)
 
-        x_spatial = self.conv_spatial(input_spatial)
-        x_global = self.linear_global(input_global).unsqueeze(-1).unsqueeze(-1)
-        out = x_spatial + x_global
-        # print("TENSOR BEFORE TRUNK")
-        # print(out)
+        if self.config.get("vit"):
+            # concat global features onto spatial features
+            out = torch.cat([
+                input_spatial,
+                input_global.unsqueeze(-1).unsqueeze(-1).expand(-1, self.global_input_shape[0], self.pos_len, self.pos_len)
+            ], dim=1)
+            out[:,-self.global_input_shape[0]:] *= input_spatial[:, 0:1, :, :] # mask
 
-        if self.has_intermediate_head:
-            count = 0
-            for block in self.blocks[:self.intermediate_head_blocks]:
-                # print("TENSOR BEFORE BLOCK")
-                # print(count)
-                # print(out)
-                out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
-                count += 1
+            out = torch.nn.functional.pad(out, (0, self.padding, 0, self.padding))
+            # output is batch_size x (sequence_length = num_patches + 1) x hidden_size
+            out = self.vit(out).last_hidden_state
+            # remove dummy patch
+            out = out[:, 1:]
 
-            # print("INTERMEDIATE")
-            iout = out
-            iout = self.norm_intermediate_trunkfinal(iout, mask=mask, mask_sum=mask_sum)
-            iout = self.act_intermediate_trunkfinal(iout)
-            iout_policy = self.intermediate_policy_head(iout, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
-            (
-                iout_value,
-                iout_miscvalue,
-                iout_moremiscvalue,
-                iout_ownership,
-                iout_scoring,
-                iout_futurepos,
-                iout_seki,
-                iout_scorebelief_logprobs,
-            ) = self.intermediate_value_head(iout, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum, input_global=input_global)
-
-            for block in self.blocks[self.intermediate_head_blocks:]:
-                # print("TENSOR BEFORE BLOCK")
-                # print(count)
-                # print(out)
-                out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
-                count += 1
-
+            out = einops.rearrange(out, "b (h w) c -> b c h w", h=self.num_patches_one_dim)
+            # TODO this upsampler is bad. should learn an unembedding instead
+            out = self.upsampler(out)[:, :, :self.pos_len, :self.pos_len]
         else:
-            count = 0
-            for block in self.blocks:
-                # print("TENSOR BEFORE BLOCK")
-                # print(count)
-                # print(out)
-                out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
-                count += 1
+            x_spatial = self.conv_spatial(input_spatial)
+            x_global = self.linear_global(input_global).unsqueeze(-1).unsqueeze(-1)
+            out = x_spatial + x_global
+            # print("TENSOR BEFORE TRUNK")
+            # print(out)
 
-        out = self.norm_trunkfinal(out, mask=mask, mask_sum=mask_sum)
-        out = self.act_trunkfinal(out)
+            if self.has_intermediate_head:
+                count = 0
+                for block in self.blocks[:self.intermediate_head_blocks]:
+                    # print("TENSOR BEFORE BLOCK")
+                    # print(count)
+                    # print(out)
+                    out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
+                    count += 1
+
+                # print("INTERMEDIATE")
+                iout = out
+                iout = self.norm_intermediate_trunkfinal(iout, mask=mask, mask_sum=mask_sum)
+                iout = self.act_intermediate_trunkfinal(iout)
+                iout_policy = self.intermediate_policy_head(iout, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
+                (
+                    iout_value,
+                    iout_miscvalue,
+                    iout_moremiscvalue,
+                    iout_ownership,
+                    iout_scoring,
+                    iout_futurepos,
+                    iout_seki,
+                    iout_scorebelief_logprobs,
+                ) = self.intermediate_value_head(iout, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum, input_global=input_global)
+
+                for block in self.blocks[self.intermediate_head_blocks:]:
+                    # print("TENSOR BEFORE BLOCK")
+                    # print(count)
+                    # print(out)
+                    out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
+                    count += 1
+
+            else:
+                count = 0
+                for block in self.blocks:
+                    # print("TENSOR BEFORE BLOCK")
+                    # print(count)
+                    # print(out)
+                    out = block(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)
+                    count += 1
+
+            out = self.norm_trunkfinal(out, mask=mask, mask_sum=mask_sum)
+            out = self.act_trunkfinal(out)
 
         # print("MAIN")
         out_policy = self.policy_head(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)

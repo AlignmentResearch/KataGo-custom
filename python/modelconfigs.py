@@ -1349,6 +1349,30 @@ sandbox = {
     "v2_size":112,
 }
 
+vit = {
+    "version":14,
+    "initial_conv_1x1": True,
+    "vit": True,
+
+    # input/output dims are batch_size * c_trunk * 19 * 19
+
+    # idk what most of these are yet but we need to populate them
+    "norm_kind":"fixup",
+    "bnorm_epsilon": 1e-4,
+    "bnorm_running_avg_momentum": 0.001,
+    "trunk_num_channels":96,
+    "mid_num_channels":48,
+    "gpool_num_channels":16,
+    "block_kind": [
+        "dummy" for _ in range(6)
+    ],
+    "p1_num_channels":12,
+    "g1_num_channels":12,
+    "v1_num_channels":24,
+    "sbv2_num_channels":28,
+    "num_scorebeliefs":2,
+    "v2_size":16,
+}
 
 base_config_of_name = {
     # Micro-sized model configs
@@ -1395,6 +1419,7 @@ base_config_of_name = {
     "b20c640nbt": b20c640nbt,
 
     "sandbox": sandbox,
+    "vit": vit,
 }
 
 config_of_name = {}

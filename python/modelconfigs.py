@@ -1353,25 +1353,26 @@ vit = {
     "version":14,
     "initial_conv_1x1": True,
     "vit": True,
+    "trunk_num_channels":384,
+    "block_kind": [ "dummy" for _ in range(10) ], # controls the number of blocks
 
-    # input/output dims are batch_size * c_trunk * 19 * 19
+    # ViT-specific parameters.
+    "patch_size":2,
+    "num_attention_heads":8,
+    "feed_forward_num_channels":384*4,
 
-    # idk what most of these are yet but we need to populate them
+    # not sure what most of these are but we need to populate them
     "norm_kind":"fixup",
     "bnorm_epsilon": 1e-4,
     "bnorm_running_avg_momentum": 0.001,
-    "trunk_num_channels":96,
-    "mid_num_channels":48,
-    "gpool_num_channels":16,
-    "block_kind": [
-        "dummy" for _ in range(6)
-    ],
-    "p1_num_channels":12,
-    "g1_num_channels":12,
-    "v1_num_channels":24,
-    "sbv2_num_channels":28,
-    "num_scorebeliefs":2,
-    "v2_size":16,
+    "mid_num_channels":192,
+    "gpool_num_channels":64,
+    "p1_num_channels":48,
+    "g1_num_channels":48,
+    "v1_num_channels":48,
+    "sbv2_num_channels":96,
+    "num_scorebeliefs":8,
+    "v2_size":112,
 }
 
 base_config_of_name = {

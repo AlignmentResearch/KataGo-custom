@@ -1,4 +1,4 @@
-"""TODO(tomtseng) write a header comment
+"""Exports PyTorch models as TorchScript models.
 
 NOTE(tomtseng) on FP16: Enabling FP16 consists of invoking a model wrapped `with
 torch.cuda.amp.autocast()`, or at least that's what train.py does. I'm not sure
@@ -6,7 +6,10 @@ if tracing with autocast is supported---I get an error when tracing KataGo
 models with autocast. I'm also not sure if tracing with autocast is needed in
 order to have the resulting TorchScript model be autocastable.
 """
+import argparse
 import os
+from pathlib import Path
+from typing import Optional
 
 import torch
 
@@ -14,22 +17,6 @@ import data_processing_pytorch
 import load_model
 import modelconfigs
 from model_pytorch import Model
-
-BATCH_SIZE = 1
-DESTINATION_PATH = "/nas/ucb/ttseng/go_attack/torchscript/traced-test-model.pt"
-GPU_ID = 1
-RANK = 0
-TRAIN_DATA = [
-    "/nas/ucb/k8/go-attack/victimplay/ttseng-cyclic-vs-b18-s6201m-20230517-130803/selfplay/t0-s9737216-d2331818/tdata/0B45CABDA2418864.npz"
-]
-USE_SWA = True
-WORLD_SIZE = 1
-
-if torch.cuda.is_available():
-    device = torch.device("cuda", GPU_ID)
-else:
-    print("No GPU, using CPU")
-    device = torch.device("cpu")
 
 
 class EvalModel(torch.nn.Module):
@@ -83,38 +70,109 @@ class EvalModel(torch.nn.Module):
         )
 
 
-# TODO argparse stuff instead of hardcoding
+def get_device(gpu_idx: Optional[int]):
+    if gpu_idx is None:
+        return torch.device("cpu")
+    else:
+        assert torch.cuda.is_available()
+        return torch.device("cuda", gpu_idx)
 
-model, swa_model, _ = load_model.load_model(
-    checkpoint_file="/nas/ucb/ttseng/go_attack/victim-weights/kata1-b18c384nbt-s7529928448-d3667707199/model.ckpt",
-    use_swa=USE_SWA,
-    device=device,
-)
-config = model.config
-pos_len = model.pos_len
-if swa_model is not None:
-    model = swa_model
-model = EvalModel(model)
-model.eval()
 
-input_batch = next(
-    data_processing_pytorch.read_npz_training_data(
-        npz_files=TRAIN_DATA,
-        batch_size=BATCH_SIZE,
-        world_size=WORLD_SIZE,
-        rank=RANK,
-        pos_len=pos_len,
+def get_model(checkpoint_file: str, use_swa: bool, device: torch.device):
+    model, swa_model, _ = load_model.load_model(
+        checkpoint_file="/nas/ucb/ttseng/go_attack/victim-weights/kata1-b18c384nbt-s7529928448-d3667707199/model.ckpt",
+        use_swa=use_swa,
         device=device,
-        randomize_symmetries=True,
-        model_config=config,
     )
-)
+    config = model.config
+    pos_len = model.pos_len
+    if swa_model is not None:
+        model = swa_model
+    model = EvalModel(model)
+    model.eval()
+    return model, config, pos_len
 
-with torch.no_grad():
-    traced_script_module = torch.jit.trace(
-        func=model,
-        example_inputs=(input_batch["binaryInputNCHW"], input_batch["globalInputNC"]),
+
+def get_model_input(
+    model_config: modelconfigs.ModelConfig, pos_len: int, device: torch.device
+):
+    TRAIN_DATA_CANDIDATES = [
+        "/nas/ucb/k8/go-attack/victimplay/ttseng-cyclic-vs-b18-s6201m-20230517-130803/selfplay/t0-s9737216-d2331818/tdata/0B45CABDA2418864.npz",
+        "/shared/victimplay/ttseng-avoid-pass-alive-coldstart-39-20221025-175949/selfplay/t0-s497721856-d125043118/tdata/F1667E395BA3B8B0.npz",
+    ]
+    train_data = None
+    for f in TRAIN_DATA_CANDIDATES:
+        if Path(f).exists():
+            train_data = f
+            break
+    if train_data is None:
+        raise RuntimeError(f"No training data exists: {TRAIN_DATA_CANDIDATES}")
+    train_data = [train_data]
+
+    input_batch = next(
+        data_processing_pytorch.read_npz_training_data(
+            npz_files=train_data,
+            batch_size=1,
+            world_size=1,
+            rank=0,
+            pos_len=pos_len,
+            device=device,
+            randomize_symmetries=True,
+            model_config=model_config,
+        )
     )
-traced_script_module.cpu()
-traced_script_module.save(DESTINATION_PATH)
-print("Model saved to", DESTINATION_PATH)
+    return input_batch
+
+
+def main():
+    DESCRIPTION = """
+    Exports a PyTorch model as a TorchScript model.
+    """
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser.add_argument(
+        "-checkpoint", help="PyTorch checkpoint to export", required=True
+    )
+    parser.add_argument(
+        "-export-dir",
+        help="Directory to save output models to",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument(
+        "-filename-prefix",
+        help="Filename prefix to save to within directory",
+        required=True,
+    )
+    parser.add_argument("-use-swa", help="Use SWA model", action="store_true")
+    parser.add_argument(
+        "-gpu-idx",
+        help="GPU index to use for running model. Defaults to CPU if flag is not specified.",
+        type=int,
+    )
+    args = parser.parse_args()
+
+    device = get_device(args.gpu_idx)
+    model, model_config, pos_len = get_model(
+        checkpoint_file=args.checkpoint, use_swa=args.use_swa, device=device
+    )
+    input_batch = get_model_input(
+        model_config=model_config, pos_len=pos_len, device=device
+    )
+
+    with torch.no_grad():
+        traced_script_module = torch.jit.trace(
+            func=model,
+            example_inputs=(
+                input_batch["binaryInputNCHW"],
+                input_batch["globalInputNC"],
+            ),
+        )
+    traced_script_module.cpu()
+
+    destination = args.export_dir / f"{args.filename_prefix}.pt"
+    traced_script_module.save(destination)
+    print("Model saved to", destination)
+
+
+if __name__ == "__main__":
+    main()

@@ -125,9 +125,7 @@ def get_model_input(
 
 
 def main():
-    DESCRIPTION = """
-    Exports a PyTorch model as a TorchScript model.
-    """
+    DESCRIPTION = """Exports a PyTorch model as a TorchScript model."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
         "-checkpoint", help="PyTorch checkpoint to export", required=True

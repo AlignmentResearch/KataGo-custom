@@ -275,6 +275,8 @@ add_executable(katago
   main.cpp
   )
 
+# Expect libtorch to be installed at /opt/libtorch.
+list(APPEND CMAKE_PREFIX_PATH "/opt/libtorch")
 find_package(Torch REQUIRED)
 target_link_libraries(katago "${TORCH_LIBRARIES}")
 

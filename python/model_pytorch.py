@@ -1366,12 +1366,6 @@ class Model(torch.nn.Module):
 
         self.activation = "relu" if "activation" not in config else config["activation"]
 
-        if config["initial_conv_1x1"]:
-            self.conv_spatial = torch.nn.Conv2d(22, self.c_trunk, kernel_size=1, padding="same", bias=False)
-        else:
-            self.conv_spatial = torch.nn.Conv2d(22, self.c_trunk, kernel_size=3, padding="same", bias=False)
-        self.linear_global = torch.nn.Linear(19, self.c_trunk, bias=False)
-
         self.bin_input_shape = [22, pos_len, pos_len]
         self.global_input_shape = [19]
 
@@ -1400,6 +1394,12 @@ class Model(torch.nn.Module):
             self.vit = transformers.ViTModel(vit_config)
             self.unembedder = torch.nn.Linear(self.c_trunk, self.c_trunk * self.patch_size * self.patch_size)
         else:
+            if config["initial_conv_1x1"]:
+                self.conv_spatial = torch.nn.Conv2d(22, self.c_trunk, kernel_size=1, padding="same", bias=False)
+            else:
+                self.conv_spatial = torch.nn.Conv2d(22, self.c_trunk, kernel_size=3, padding="same", bias=False)
+            self.linear_global = torch.nn.Linear(19, self.c_trunk, bias=False)
+
             for block_config in self.block_kind:
                 block_name = block_config[0]
                 block_kind = block_config[1]
@@ -1531,31 +1531,32 @@ class Model(torch.nn.Module):
         with torch.no_grad():
             spatial_scale = 0.8
             global_scale = 0.6
-            init_weights(self.conv_spatial.weight, self.activation, scale=spatial_scale)
-            init_weights(self.linear_global.weight, self.activation, scale=global_scale)
 
-            if self.norm_kind == "fixup":
-                fixup_scale = 1.0 / math.sqrt(self.num_total_blocks)
-                for block in self.blocks:
-                    block.initialize(fixup_scale=fixup_scale)
-            elif self.norm_kind == "fixscale" or self.norm_kind == "fixbrenorm" or self.norm_kind == "fixscaleonenorm":
-                for i, block in enumerate(self.blocks):
-                    block.initialize(fixup_scale=1.0 / math.sqrt(i+1.0))
-                self.norm_trunkfinal.set_scale(1.0 / math.sqrt(self.num_total_blocks+1.0))
+            if self.is_vit:
+                bias_scale = 0.2
+                init_weights(self.unembedder.weight, self.activation, scale=1.0)
+                init_weights(self.unembedder.bias, self.activation, scale=bias_scale, fan_tensor=self.unembedder.weight)
             else:
-                for block in self.blocks:
-                    block.initialize(fixup_scale=1.0)
+                init_weights(self.conv_spatial.weight, self.activation, scale=spatial_scale)
+                init_weights(self.linear_global.weight, self.activation, scale=global_scale)
+
+                if self.norm_kind == "fixup":
+                    fixup_scale = 1.0 / math.sqrt(self.num_total_blocks)
+                    for block in self.blocks:
+                        block.initialize(fixup_scale=fixup_scale)
+                elif self.norm_kind == "fixscale" or self.norm_kind == "fixbrenorm" or self.norm_kind == "fixscaleonenorm":
+                    for i, block in enumerate(self.blocks):
+                        block.initialize(fixup_scale=1.0 / math.sqrt(i+1.0))
+                    self.norm_trunkfinal.set_scale(1.0 / math.sqrt(self.num_total_blocks+1.0))
+                else:
+                    for block in self.blocks:
+                        block.initialize(fixup_scale=1.0)
 
             self.policy_head.initialize()
             self.value_head.initialize()
             if self.has_intermediate_head:
                 self.intermediate_policy_head.initialize()
                 self.intermediate_value_head.initialize()
-
-            if self.is_vit:
-                bias_scale = 0.2
-                init_weights(self.unembedder.weight, self.activation, scale=1.0)
-                init_weights(self.unembedder.bias, self.activation, scale=bias_scale, fan_tensor=self.unembedder.weight)
 
     def get_norm_kind(self) -> bool:
         return self.norm_kind
@@ -1570,10 +1571,16 @@ class Model(torch.nn.Module):
         reg_dict["noreg"] = []
         reg_dict["output_noreg"] = []
 
-        reg_dict["normal"].append(self.conv_spatial.weight)
-        reg_dict["normal"].append(self.linear_global.weight)
-        for block in self.blocks:
-            block.add_reg_dict(reg_dict)
+        if self.is_vit:
+            reg_dict["normal"].append(self.unembedder.weight)
+            reg_dict["normal"].append(self.unembedder.bias)
+            for param in self.vit.parameters():
+                reg_dict["normal"].append(param)
+        else:
+            reg_dict["normal"].append(self.conv_spatial.weight)
+            reg_dict["normal"].append(self.linear_global.weight)
+            for block in self.blocks:
+                block.add_reg_dict(reg_dict)
         self.norm_trunkfinal.add_reg_dict(reg_dict)
         self.policy_head.add_reg_dict(reg_dict)
         self.value_head.add_reg_dict(reg_dict)

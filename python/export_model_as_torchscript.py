@@ -145,13 +145,13 @@ def main():
     )
     parser.add_argument("-use-swa", help="Use SWA model", action="store_true")
     parser.add_argument(
-        "-gpu-idx",
+        "-gpu",
         help="GPU index to use for running model. Defaults to CPU if flag is not specified.",
         type=int,
     )
     args = parser.parse_args()
 
-    device = get_device(args.gpu_idx)
+    device = get_device(args.gpu)
     model, model_config, pos_len = get_model(
         checkpoint_file=args.checkpoint, use_swa=args.use_swa, device=device
     )

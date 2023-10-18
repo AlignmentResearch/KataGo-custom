@@ -89,7 +89,10 @@ function exportStuff() {
                 set +x
 
                 rm -r "$SRC"
-                gzip "$TMPDST"/model.bin
+                if [ "$USETORCHSCRIPT" -eq 0 ]
+                then
+                  gzip "$TMPDST"/model.bin
+                fi
 
                 #Make a bunch of the directories that selfplay will need so that there isn't a race on the selfplay
                 #machines to concurrently make it, since sometimes concurrent making of the same directory can corrupt

@@ -93,8 +93,6 @@ if __name__ == "__main__":
     parser.add_argument('-main-loss-scale', type=float, help='Loss factor scale for main head', required=False)
     parser.add_argument('-intermediate-loss-scale', type=float, help='Loss factor scale for intermediate head', required=False)
 
-    parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, action='store_true')
-
     args = vars(parser.parse_args())
 
 
@@ -174,8 +172,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
 
     main_loss_scale = args["main_loss_scale"]
     intermediate_loss_scale = args["intermediate_loss_scale"]
-
-    disable_vtimeloss = args["disable_vtimeloss"]
 
     if lr_scale is None:
         lr_scale = 1.0
@@ -561,7 +557,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
     def update_and_return_lr_and_wd():
         per_sample_lr = 0.00003 * lr_scale
 
-        # Warmup for initial training
+        # Warm-up for initial training
         warmup_scale = 1.0
         if model_config["norm_kind"] == "fixup" or model_config["norm_kind"] == "fixscale" or model_config["norm_kind"] == "fixscaleonenorm":
             if train_state["global_step_samples"] < 1000000:
@@ -1016,7 +1012,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                     td_value_loss_scales=td_value_loss_scales,
                     main_loss_scale=main_loss_scale,
                     intermediate_loss_scale=intermediate_loss_scale,
-                    use_vtimeloss=not disable_vtimeloss,
                 )
 
                 # DDP averages loss across instances, so to preserve LR as per-sample lr, we scale by world size.
@@ -1096,7 +1091,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                     metrics["time_since_last_print"] = timediff
                     log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out)
 
-                # Update LR more frequently at the start for smoother warmup ramp and wd adjustment
+                # Update LR more frequently at the start for smoother warm-up ramp and wd adjustment
                 if train_state["global_step_samples"] <= 50000000 and batch_count_this_epoch % 10 == 0:
                     lr_right_now, normal_weight_decay_right_now = update_and_return_lr_and_wd()
 
@@ -1186,7 +1181,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                             td_value_loss_scales=td_value_loss_scales,
                             main_loss_scale=main_loss_scale,
                             intermediate_loss_scale=intermediate_loss_scale,
-                            use_vtimeloss=not disable_vtimeloss,
                         )
                         metrics = detensorify_metrics(metrics)
                         accumulate_metrics(val_metric_sums, val_metric_weights, metrics, batch_size, decay=1.0, new_weight=1.0)

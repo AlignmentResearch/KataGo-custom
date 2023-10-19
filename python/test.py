@@ -208,11 +208,10 @@ def main(args):
                 td_value_loss_scales=td_value_loss_scales,
                 main_loss_scale=1.0,
                 intermediate_loss_scale=None,
-                use_vtimeloss=True,
             )
             metrics = detensorify_metrics(metrics)
 
-            # Ignore first batch, treat as a warmup so timings are a bit more accurate.
+            # Ignore first batch, treat as a warm-up so timings are a bit more accurate.
             if is_first_batch:
                 is_first_batch = False
                 continue

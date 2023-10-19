@@ -94,7 +94,7 @@ int MainCmds::match(const vector<string>& args) {
       secondaryBotIdxs = cfg.getInts("secondaryBots",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
     std::vector<int> secondaryBot2Idxs;
     if(cfg.contains("secondaryBots2"))
-      secondaryBotIdxs = cfg.getInts("secondaryBots2",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
+      secondaryBot2Idxs = cfg.getInts("secondaryBots2",0,Setup::MAX_BOT_PARAMS_FROM_CFG);
     for(const auto& botIdxs : {secondaryBotIdxs, secondaryBot2Idxs}) {
       for(int i = 0; i<botIdxs.size(); i++)
         assert(botIdxs[i] >= 0 && botIdxs[i] < numBots);

@@ -74,13 +74,14 @@ def get_device(gpu_idx: Optional[int]):
     if gpu_idx is None:
         return torch.device("cpu")
     else:
-        assert torch.cuda.is_available()
+        if not torch.cuda.is_available():
+            raise RuntimeError(f"CUDA not available with this PyTorch")
         return torch.device("cuda", gpu_idx)
 
 
 def get_model(checkpoint_file: str, use_swa: bool, device: torch.device):
     model, swa_model, _ = load_model.load_model(
-        checkpoint_file="/nas/ucb/ttseng/go_attack/victim-weights/kata1-b18c384nbt-s7529928448-d3667707199/model.ckpt",
+        checkpoint_file=checkpoint_file,
         use_swa=use_swa,
         device=device,
     )

@@ -14,15 +14,16 @@
 // and combine less intrusively with other backends.
 //
 // nninterface.h is a namespace with global functions. Backends like
-// cudabackend.cpp and trtbackend.cpp implement these global functions. It's
-// the responsibility of the Makefile to only compile one these implementations
-// into the executable. We can't have two backends compiled into one executable, but this
-// is fine because only one backend is needed at once.
+// cudabackend.cpp and trtbackend.cpp implement these global functions. In
+// upstream KataGo, it's the responsibility of the Makefile to compile only one
+// these implementations into the executable. Multiple backends cannot be
+// compiled into one executable, but this is fine because upstream KataGo only
+// needs one backend at once.
 //
 // Adding this PyTorch backend changes the situation since we want to be able to
 // combine the PyTorch backend with another backend (e.g., the CUDA
 // backend)---we will want to play PyTorch models against older, non-PyTorch
-// models (e.g., the cyclic adversary or b40-s1184m), and those non-PyTorch
+// models (e.g., the cyclic adversary or b40-s11841m), and those non-PyTorch
 // models will naturally require a non-PyTorch backend unless we write a
 // conversion script to port them to PyTorch.
 //
@@ -30,17 +31,17 @@
 // different namespace TorchNeuralNet. The cleaner way to do this is to turn
 // nninterface.h into a class interface (let's say the interface is called
 // NeuralNet for the purpose of this discussion) rather than a namespace with
-// global functions, and then have the different backends subclass and implement
-// this interface. This will have less code duplication, and hopefully it's easy
-// for the caller the just around a NeuralNet, agnostic to the NeuralNet's
-// subclass.
-// One tricky part of changing nninterface.h into interface is that the
+// global functions. Then the different backends will subclass and implement
+// this interface. This will have less code duplication, and the caller can use
+// a NeuralNet without knowing which backend subclass instantiated it.
+// One tricky part of changing nninterface.h into an interface is that the
 // interface creates these black-box objects LoadedModel, ComputeContext,
 // ComputeHandle, and InputBuffers whose contents are backend-specific, and the
-// caller needs to pass these objects into subsequent function calls. But we
-// don't want the caller to be able to accidentally pass a CUDA ComputeContext
-// into a PyTorch-backend NeuralNet function call. I can think of three ways to
-// handle this example of having a ComputeContext of the wrong subclass:
+// caller needs to pass these objects into subsequent NeuralNet function calls.
+// But we don't want the caller to be able to accidentally pass a CUDA
+// ComputeContext into a PyTorch-backend NeuralNet function call. I can think of
+// three ways to handle this example of having a ComputeContext of the wrong
+// subclass:
 // (1) The brain-dead code-smelly way is to have each backend dynamic_cast its
 // ComputeContext to its expected subclass, and we'll get a runtime error if the
 // ComputeContext is wrong.
@@ -48,9 +49,9 @@
 // to pass these black-box objects around and it's instead NeuralNet's
 // responsibility to manage them behind the scenes.
 //   - If FAR AI were the sole maintainers of this codebase, we should do this.
-//   But since we may want to merge upstream changes from lightvector, we may
-//   want to opt for an option that minimizes merge conflicts by minimzing
-//   changes to nninterface.h.
+//   But since we may want to merge upstream KataGo changes, we may want to opt
+//   for an option that minimizes merge conflicts by minimzing changes to
+//   nninterface.h.
 // (3) Make NeuralNet take the black-box objects as template arguments, and
 // subclass implementations would fill in the template arguments with their
 // versions of the black-box objects. This would give compile-time type checks

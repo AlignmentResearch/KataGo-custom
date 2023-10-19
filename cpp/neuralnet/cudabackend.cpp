@@ -9,9 +9,8 @@
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nneval.h"
 #include "../neuralnet/desc.h"
-// TODO(tomtseng): The PyTorch backend should not be used here. We're crudely
-// bolting the PyTorch backend here while we prototype the PyTorch backend
-// implementation.
+// TODO(tomtseng): We're crudely bolting the PyTorch backend here while we
+// prototype the PyTorch backend implementation, but it doesn't belong here.
 #include "../neuralnet/pytorchbackend.h"
 
 #include "../core/simpleallocator.h"
@@ -21,8 +20,6 @@
 //------------------------
 #include "../core/using.h"
 //------------------------
-
-// #include <chrono>
 
 using half_t = half_float::half;
 
@@ -2277,9 +2274,9 @@ ComputeHandle* NeuralNet::createComputeHandle(
         gpuIdxForThisThread,
         serverThreadIdx
     ));
-  }
-  if (loadedModel->modelDesc.name.empty()) {
-    return new ComputeHandle(std::move(torchHandle));
+    if (loadedModel->modelDesc.name.empty()) {
+      return new ComputeHandle(std::move(torchHandle));
+    }
   }
 
   //Use whatever CUDA believes GPU 0 to be.
@@ -2488,9 +2485,9 @@ InputBuffers* NeuralNet::createInputBuffers(const LoadedModel* loadedModel, int 
     torchBuffers = std::unique_ptr<TorchNeuralNet::InputBuffers>(
         TorchNeuralNet::createInputBuffers(loadedModel->torchModel.get(), maxBatchSize, nnXLen, nnYLen)
     );
-  }
-  if (loadedModel->modelDesc.name.empty()) {
-    return new InputBuffers(std::move(torchBuffers));
+    if (loadedModel->modelDesc.name.empty()) {
+      return new InputBuffers(std::move(torchBuffers));
+    }
   }
   InputBuffers* buffers = new InputBuffers(loadedModel,maxBatchSize,nnXLen,nnYLen,std::move(torchBuffers));
   return buffers;
@@ -2519,31 +2516,8 @@ void NeuralNet::getOutput(
         inputBufs,
         outputs
     );
-    // std::cerr << "PyTorch outputs\n";
-    // std::cerr << "batch elems=" << numBatchEltsFilled << '\n';
-    // for (int b = 0; b < numBatchEltsFilled; b++) {
-    //   std::cerr << "elem=" << b << '\n';
-    //   std::cerr << outputs[b]->whiteWinProb << ' '
-    //             << outputs[b]->whiteLossProb << ' '
-    //             << outputs[b]->whiteNoResultProb << '\n';
-    //   std::cerr << outputs[b]->whiteScoreMean << ' '
-    //             << outputs[b]->whiteScoreMeanSq << ' '
-    //             << outputs[b]->whiteLead << ' '
-    //             << outputs[b]->varTimeLeft << ' '
-    //             << outputs[b]->shorttermWinlossError << ' '
-    //             << outputs[b]->shorttermScoreError
-    //             << '\n';
-    //   for (int i = 0; i < 19; i++) {
-    //     for (int j = 0; j < 19; j++) {
-    //       std::cerr << outputs[b]->policyProbs[i * 19 + j] << ' ';
-    //     }
-    //     std::cerr << '\n';
-    //   }
-    //   std::cerr << outputs[b]->policyProbs[361] << '\n';
-    // }
     return;
   }
-  // auto tStart = std::chrono::high_resolution_clock::now();
 
   assert(numBatchEltsFilled <= inputBuffers->maxBatchSize);
   const int batchSize = numBatchEltsFilled;
@@ -2748,30 +2722,6 @@ void NeuralNet::getOutput(
     }
   }
 
-  // std::cerr << "CUDA outputs\n";
-  // std::cerr << "batch elems=" << numBatchEltsFilled << '\n';
-  // for (int b = 0; b < numBatchEltsFilled; b++) {
-  //   std::cerr << "elem=" << b << '\n';
-  //   std::cerr << outputs[b]->whiteWinProb << ' '
-  //             << outputs[b]->whiteLossProb << ' '
-  //             << outputs[b]->whiteNoResultProb << '\n';
-  //   std::cerr << outputs[b]->whiteScoreMean << ' '
-  //             << outputs[b]->whiteScoreMeanSq << ' '
-  //             << outputs[b]->whiteLead << ' '
-  //             << outputs[b]->varTimeLeft << ' '
-  //             << outputs[b]->shorttermWinlossError << ' '
-  //             << outputs[b]->shorttermScoreError
-  //             << '\n';
-  //   for (int i = 0; i < 19; i++) {
-  //     for (int j = 0; j < 19; j++) {
-  //       std::cerr << outputs[b]->policyProbs[i * 19 + j] << ' ';
-  //     }
-  //     std::cerr << '\n';
-  //   }
-  //   std::cerr << outputs[b]->policyProbs[361] << '\n';
-  // }
-  // auto tEnd = std::chrono::high_resolution_clock::now();
-  // std::cout << "cuda getOutput: " << std::chrono::duration<double, std::milli>(tEnd - tStart).count() << "\n\n";
 }
 
 //TESTING ----------------------------------------------------------------------------------

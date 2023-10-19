@@ -1,7 +1,6 @@
 #include "../neuralnet/pytorchbackend.h"
 
 #include <cassert>
-// #include <chrono> // for benchmarking
 #include <iostream>
 
 #include <ATen/autocast_mode.h>
@@ -11,17 +10,6 @@
 #include "../neuralnet/modelversion.h"
 
 using namespace torch::indexing;
-
-// #define TSTART do {  \
-//   t1 = std::chrono::high_resolution_clock::now(); \
-// } while (0)
-// #define TEND(desc) do { \
-//   const auto t2 = std::chrono::high_resolution_clock::now(); \
-//   std::cout << desc << ' ' << std::chrono::duration<double, std::milli>(t2 - t1).count() << '\n'; \
-// } while (0)
-#define TSTART do {} while (0)
-#define TEND(desc) do {} while (0)
-
 
 namespace {
 
@@ -188,9 +176,6 @@ void getOutput(
   NNResultBuf** inputBufs,
   std::vector<NNOutput*>& outputs
 ) {
-  // std::chrono::time_point tStart = std::chrono::high_resolution_clock::now();
-  // std::chrono::time_point t1 = tStart;
-
   const int batchSize = numBatchEltsFilled;
   assert(batchSize <= gpuHandle->maxBatchSize);
   assert(batchSize > 0);
@@ -228,43 +213,28 @@ void getOutput(
   const auto& spatialInputs = inputBuffers->hostSpatialInputs;
   const auto& globalInputs = inputBuffers->hostGlobalInputs;
   for (int row = 0; row < batchSize; row++) {
-    TSTART;
     SymmetryHelpers::copyInputsWithSymmetry(inputBufs[row]->rowSpatial, spatialInputs[row].data_ptr<float>(), 1, nnYLen, nnXLen, NUM_SPATIAL_FEATURES, INPUTS_USE_NHWC, inputBufs[row]->symmetry);
-    TEND("copy spatial");
     const float* rowGlobal = inputBufs[row]->rowGlobal;
-    TSTART;
     std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
-    TEND("copy global");
   }
 
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  TSTART;
   modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
   modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
-  TEND("slice+mv inputs");
 
   c10::IValue modelOutput;
   {
     torch::NoGradGuard no_grad;
-    TSTART;
     modelOutput = gpuHandle->model.model.forward(modelInputs);
-    TEND("forward");
   }
-  TSTART;
   const auto& modelOutputs = modelOutput.toTupleRef().elements();
   at::Tensor policyOutputs = modelOutputs[0].toTensor();
   const at::Tensor& valueOutputs = modelOutputs[1].toTensor().to(at::kCPU);
   const at::Tensor& miscValueOutputs = modelOutputs[2].toTensor().to(at::kCPU);
   const at::Tensor& moreMiscValueOutputs = modelOutputs[3].toTensor().to(at::kCPU);
   at::Tensor ownershipOutputs;
-  TEND("mv outputs");
 
-  TSTART;
-  // We're processing the optimistic policy head, which assumes model version
-  // >= 12.
-  // TODO(tomtseng): just case on policyOutputs.size(1) to see whether the
-  // optimistic head channel exists, and ignore optimism otherwise.
   const bool has_optimistic_policy = policyOutputs.size(1) > 1;
   at::Tensor policies = policyOutputs.index({Slice(), 0});
   at::Tensor optimisticPolicyDiffs;
@@ -278,7 +248,7 @@ void getOutput(
     at::Tensor policy = policies.index({row, Slice(0, numPolicyValues)});
     if (has_optimistic_policy) {
       const float policyOptimism = (float)inputBufs[row]->policyOptimism;
-      // final policy = policy + (policy - optimisticPolicy) * policyoptimism
+      // final policy = policy + (policy - optimisticPolicy) * policyOptimism
       policy.add_(optimisticPolicyDiffs.index({row, Slice(0, numPolicyValues)}), policyOptimism);
     }
     policy = policy.to(at::kCPU, torch::kFloat32).contiguous();
@@ -308,10 +278,6 @@ void getOutput(
       SymmetryHelpers::copyOutputsWithSymmetry(ownershipOutputs[row].data_ptr<float>(), output->whiteOwnerMap, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
     }
   }
-  TEND("process out");
-
-  // std::chrono::time_point tEnd = std::chrono::high_resolution_clock::now();
-  // std::cout << "torch getOutput: " << std::chrono::duration<double, std::milli>(tEnd - tStart).count() << "\n\n";
 }
 
 }  // namespace TorchNeuralNet

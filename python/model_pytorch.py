@@ -1636,7 +1636,7 @@ class Model(torch.nn.Module):
             # Output is batch_size x (sequence_length = num_patches + 1) x
             # hidden_size.
             out = self.vit(out).last_hidden_state
-            # Remove dummy patch usually used for attaching a classification
+            # Remove [CLS] patch usually used for attaching a classification
             # head.
             out = out[:, 1:]
 

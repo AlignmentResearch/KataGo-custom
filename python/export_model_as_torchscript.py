@@ -39,13 +39,13 @@ class EvalModel(torch.nn.Module):
             else model
         )
         has_optimistic_head = module.policy_head.conv2p.weight.shape[0] > 5
-        # Optimistic policy head exists at channel 5 and we should output it along
-        # with the self policy output at channel 0.
+        # The optimistic policy head exists at channel 5. We need to output it
+        # along with the self policy output at channel 0.
         policy_output_channels = [0, 5] if has_optimistic_head else [0]
-        # We need to register policy_output_channels this as a buffer instead
-        # of defining+using it in forward(). Otherwise the TorchScript tracer
-        # saves it as a tensor with a fixed device, i.e., it won't get moved
-        # when the TorchScript model moves devices. Since tensor indices like
+        # We need to register policy_output_channels as a buffer instead of
+        # defining+using it in forward(). Otherwise the TorchScript tracer saves
+        # it as a tensor with a fixed device, i.e., it won't get moved when the
+        # TorchScript model moves devices. Since tensor indices like
         # policy_output_channels should be on the same device that the indexed
         # tensor is on, an error will then occur if the TorchScript model is
         # executed on a different device than the device it was traced on.
@@ -56,8 +56,8 @@ class EvalModel(torch.nn.Module):
         )
 
     def forward(self, input_spatial, spatial_global):
-        # The output of self.model() is a tuple of tuples, where the first tuple
-        # is the main head output.
+        # The output of self.model() is a tuple of tuples where the first item
+        # of the outer tuple is the main head output.
         policy, value, miscvalue, moremiscvalue, ownership, _, _, _, _ = self.model(
             input_spatial, spatial_global
         )[0]

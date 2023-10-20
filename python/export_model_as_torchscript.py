@@ -9,7 +9,7 @@ order to have the resulting TorchScript model be autocastable.
 import argparse
 import os
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional, Tuple
 
 import torch
 
@@ -29,7 +29,7 @@ class EvalModel(torch.nn.Module):
     changing the interface of the TorchScript model.
     """
 
-    def __init__(self, model):
+    def __init__(self, model: torch.nn.Module):
         super(EvalModel, self).__init__()
         self.model = model
 
@@ -55,7 +55,7 @@ class EvalModel(torch.nn.Module):
             persistent=False,
         )
 
-    def forward(self, input_spatial, spatial_global):
+    def forward(self, input_spatial: torch.tensor, spatial_global: torch.tensor):
         # The output of self.model() is a tuple of tuples where the first item
         # of the outer tuple is the main head output.
         policy, value, miscvalue, moremiscvalue, ownership, _, _, _, _ = self.model(
@@ -70,7 +70,7 @@ class EvalModel(torch.nn.Module):
         )
 
 
-def get_device(gpu_idx: Optional[int]):
+def get_device(gpu_idx: Optional[int]) -> torch.device:
     if gpu_idx is None:
         return torch.device("cpu")
     else:
@@ -79,50 +79,30 @@ def get_device(gpu_idx: Optional[int]):
         return torch.device("cuda", gpu_idx)
 
 
-def get_model(checkpoint_file: str, use_swa: bool, device: torch.device):
+def get_model(
+    checkpoint_file: str, use_swa: bool, device: torch.device
+) -> Tuple[torch.nn.Module, List[int], List[int]]:
     model, swa_model, _ = load_model.load_model(
         checkpoint_file=checkpoint_file,
         use_swa=use_swa,
         device=device,
     )
-    config = model.config
-    pos_len = model.pos_len
+    spatial_input_shape = model.bin_input_shape
+    global_input_shape = model.global_input_shape
     if swa_model is not None:
         model = swa_model
     model = EvalModel(model)
     model.eval()
-    return model, config, pos_len
+    return model, spatial_input_shape, global_input_shape
 
 
 def get_model_input(
-    model_config: modelconfigs.ModelConfig, pos_len: int, device: torch.device
-):
-    TRAIN_DATA_CANDIDATES = [
-        "/nas/ucb/k8/go-attack/victimplay/ttseng-cyclic-vs-b18-s6201m-20230517-130803/selfplay/t0-s9737216-d2331818/tdata/0B45CABDA2418864.npz",
-        "/shared/victimplay/ttseng-avoid-pass-alive-coldstart-39-20221025-175949/selfplay/t0-s497721856-d125043118/tdata/F1667E395BA3B8B0.npz",
-    ]
-    train_data = None
-    for f in TRAIN_DATA_CANDIDATES:
-        if Path(f).exists():
-            train_data = f
-            break
-    if train_data is None:
-        raise RuntimeError(f"No training data exists: {TRAIN_DATA_CANDIDATES}")
-    train_data = [train_data]
-
-    input_batch = next(
-        data_processing_pytorch.read_npz_training_data(
-            npz_files=train_data,
-            batch_size=1,
-            world_size=1,
-            rank=0,
-            pos_len=pos_len,
-            device=device,
-            randomize_symmetries=True,
-            model_config=model_config,
-        )
+    spatial_input_shape: List[int], global_input_shape: List[int], device: torch.device
+) -> Tuple[torch.tensor, torch.tensor]:
+    return (
+        torch.zeros(spatial_input_shape, device=device).unsqueeze(0),
+        torch.zeros(global_input_shape, device=device).unsqueeze(0),
     )
-    return input_batch
 
 
 def main():
@@ -151,21 +131,17 @@ def main():
     args = parser.parse_args()
 
     device = get_device(args.gpu)
-    model, model_config, pos_len = get_model(
+    model, spatial_input_shape, global_input_shape = get_model(
         checkpoint_file=args.checkpoint, use_swa=args.use_swa, device=device
     )
     input_batch = get_model_input(
-        model_config=model_config, pos_len=pos_len, device=device
+        spatial_input_shape=spatial_input_shape,
+        global_input_shape=global_input_shape,
+        device=device,
     )
 
     with torch.no_grad():
-        traced_script_module = torch.jit.trace(
-            func=model,
-            example_inputs=(
-                input_batch["binaryInputNCHW"],
-                input_batch["globalInputNC"],
-            ),
-        )
+        traced_script_module = torch.jit.trace(func=model, example_inputs=input_batch)
     traced_script_module.cpu()
 
     destination = args.export_dir / f"{args.filename_prefix}.pt"

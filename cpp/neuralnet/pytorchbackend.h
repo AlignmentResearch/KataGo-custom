@@ -34,7 +34,12 @@
 // global functions. Then the different backends will subclass and implement
 // this interface. This will have less code duplication, and the caller can use
 // a NeuralNet without knowing which backend subclass instantiated it.
-// One tricky part of changing nninterface.h into an interface is that the
+//
+// (Realistically I'll just leave nninterface.h as is instead of refactoring it
+// since this PyTorch backend is experimental code, but if someone wants to
+// merge these changes back into upstream then they'll want to refactor.)
+//
+// One tricky part of changing nninterface.h into a class interface is that the
 // interface creates these black-box objects LoadedModel, ComputeContext,
 // ComputeHandle, and InputBuffers whose contents are backend-specific, and the
 // caller needs to pass these objects into subsequent NeuralNet function calls.
@@ -47,20 +52,17 @@
 // ComputeContext is wrong.
 // (2) The clean way is to refactor nninterface.h so that the caller doesn't need
 // to pass these black-box objects around and it's instead NeuralNet's
-// responsibility to manage them behind the scenes.
-//   - If FAR AI were the sole maintainers of this codebase, we should do this.
-//   But since we may want to merge upstream KataGo changes, we may want to opt
-//   for an option that minimizes merge conflicts by minimzing changes to
-//   nninterface.h.
+// responsibility to manage them behind the scenes. This is the best solution if
+// it's possible.
 // (3) Make NeuralNet take the black-box objects as template arguments, and
 // subclass implementations would fill in the template arguments with their
 // versions of the black-box objects. This would give compile-time type checks
 // (vs. (1)'s runtime checks) and might need less refactoring of nninterface.h
 // than (2).
-//   - I think we shouldn't do this since then every place we use NeuralNet
-//   would become templated. This will cause a large code diff since templated
-//   functions have their implementations moved from .cpp files to .h files. It
-//   will be worse than (2) in terms of maintainability with upstream merges.
+//   - This will cause a large code diff since templated functions have their
+//   implementations in .cpp files rather than .h files. If we keep this
+//   experimental code around but leave it indefinitely separate from upstream,
+//   the large diff may lead to a lot of merge conflicts with upstream.
 namespace TorchNeuralNet {
 
 struct LoadedModel {

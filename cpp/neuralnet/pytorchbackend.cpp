@@ -202,10 +202,10 @@ void getOutput(
     //   ...
     //   0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
     //
-    // The other backends handle this but I haven't investigated how. For now
-    // we'll just enforce that nnXLen and nnYLen are MAX_BOARD_LEN. If a user
-    // wants to play on a 5x5 board, they should include MAX_BOARD_LEN==19 in
-    // the bSizes config parameter, otherwise we throw an exception here.
+    // The other backends handle this but I (tomtseng) haven't investigated how.
+    // For now we'll just enforce that nnXLen and nnYLen are MAX_BOARD_LEN. If a
+    // user wants to play on a 5x5 board, they should include MAX_BOARD_LEN==19
+    // in the bSizes config parameter, otherwise we throw an exception here.
     throw StringError(Global::strprintf("Board len not yet supported: %d x %d", nnXLen, nnYLen));
   }
   constexpr bool INPUTS_USE_NHWC = false;

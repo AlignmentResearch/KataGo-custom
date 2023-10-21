@@ -68,7 +68,7 @@ namespace TorchNeuralNet {
 struct LoadedModel {
   torch::jit::script::Module model;
 
-  LoadedModel(const std::string& fileName);
+  LoadedModel(const std::string& filename);
   LoadedModel(torch::jit::script::Module model);
 
 };

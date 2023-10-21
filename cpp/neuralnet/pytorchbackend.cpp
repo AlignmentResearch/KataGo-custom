@@ -6,6 +6,7 @@
 #include <ATen/autocast_mode.h>
 #include <torch/csrc/jit/codegen/cuda/interface.h>
 
+#include "../core/fileutils.h"
 #include "../core/global.h"
 #include "../neuralnet/modelversion.h"
 
@@ -51,6 +52,9 @@ LoadedModel::LoadedModel(torch::jit::script::Module model_)
 LoadedModel* loadModelFile(const std::string& file, const std::string& expectedSha256) {
   if (expectedSha256.size() != 0) {
     throw StringError("Checking sha256 for PyTorch models is not yet implemented.\n");
+  }
+  if (!FileUtils::exists(file)) {
+    throw IOError("File does not exist: " + file);
   }
   return new LoadedModel(file);
 }

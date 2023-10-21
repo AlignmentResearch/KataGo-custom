@@ -10,7 +10,8 @@
 #include "../neuralnet/nneval.h"
 #include "../neuralnet/desc.h"
 // TODO(tomtseng): We're crudely bolting the PyTorch backend here while we
-// prototype the PyTorch backend implementation, but it doesn't belong here.
+// prototype the PyTorch backend implementation, but ideally we'd refactor
+// things so that the PyTorch backend is independent of the other backends.
 #include "../neuralnet/pytorchbackend.h"
 
 #include "../core/simpleallocator.h"

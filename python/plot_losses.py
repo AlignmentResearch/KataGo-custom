@@ -8,22 +8,27 @@ def main():
     DESCRIPTION = """Plots loss from PyTorch training."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument(
-        "-dir", help="Path to the training run directory", type=Path, required=True
+        "dirs", help="Path to the training run directory", type=Path, nargs="+"
     )
     parser.add_argument(
         "-output", help="Path to write the loss plot", type=Path, required=True
     )
     args = parser.parse_args()
 
-    train_metrics_file = args.dir / "train" / "t0" / "metrics_train.json"
-    losses = []
-    with open(train_metrics_file) as f:
-        for line in f:
-            metrics = json.loads(line)
-            losses.append(metrics["loss"])
+    for d in args.dirs:
+        train_metrics_file = d / "train" / "t0" / "metrics_train.json"
+        nsamps = []
+        losses = []
+        with open(train_metrics_file) as f:
+            for line in f:
+                metrics = json.loads(line)
+                nsamps.append(metrics["nsamp"])
+                losses.append(metrics["loss"])
+        plt.plot(nsamps, losses, label=d.name)
 
-    plt.plot(losses)
+    plt.xlabel("steps")
     plt.ylabel("loss")
+    plt.legend()
     plt.savefig(args.output)
 
 

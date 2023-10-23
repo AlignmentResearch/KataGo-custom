@@ -100,6 +100,7 @@ void freeComputeContext(ComputeContext* context);
 struct ComputeHandle {
   LoadedModel model;
   const torch::Device device;
+  Logger* logger;
   const int maxBatchSize;
   const int nnXLen;
   const int nnYLen;
@@ -108,6 +109,7 @@ struct ComputeHandle {
   ComputeHandle(
       const ComputeContext* context,
       const LoadedModel* model,
+      Logger* logger,
       int maxBatchSize,
       int gpuIdxForThisThread
   );

@@ -1,7 +1,7 @@
 #include "../neuralnet/pytorchbackend.h"
 
 #include <cassert>
-#include <iostream>
+#include <sstream>
 
 #include <ATen/autocast_mode.h>
 #include <torch/csrc/jit/codegen/cuda/interface.h>
@@ -114,11 +114,13 @@ void freeComputeContext(ComputeContext* context) {
 ComputeHandle::ComputeHandle(
     const ComputeContext* context,
     const LoadedModel* model_,
+    Logger* logger_,
     int maxBatchSize_,
     int gpuIdxForThisThread
 )
   : model(model_->model.clone())
   , device(torch::Device(at::kCUDA, gpuIdxForThisThread))
+  , logger(logger_)
   , maxBatchSize(maxBatchSize_)
   , nnXLen(context->nnXLen)
   , nnYLen(context->nnYLen)
@@ -137,7 +139,6 @@ ComputeHandle* createComputeHandle(
   int gpuIdxForThisThread,
   int serverThreadIdx
 ) {
-  (void)logger;
   (void)requireExactNNLen;
   (void)serverThreadIdx;
 
@@ -148,7 +149,7 @@ ComputeHandle* createComputeHandle(
     gpuIdxForThisThread = 0;
   }
 
-  return new ComputeHandle(context, loadedModel, maxBatchSize, gpuIdxForThisThread);
+  return new ComputeHandle(context, loadedModel, logger, maxBatchSize, gpuIdxForThisThread);
 }
 
 void freeComputeHandle(ComputeHandle* gpuHandle) {
@@ -230,7 +231,20 @@ void getOutput(
   c10::IValue modelOutput;
   {
     torch::NoGradGuard no_grad;
-    modelOutput = gpuHandle->model.model.forward(modelInputs);
+    try {
+      modelOutput = gpuHandle->model.model.forward(modelInputs);
+    } catch (...) {
+      if (gpuHandle->logger != nullptr) {
+        std::stringstream str;
+        str << "Model evaluation failed on the following input:";
+        for (const auto& input: modelInputs) {
+          str << '\n' << input;
+        }
+        gpuHandle->logger->write(str.str());
+        exit(0);
+      }
+      throw;
+    }
   }
   const auto& modelOutputs = modelOutput.toTupleRef().elements();
   at::Tensor policyOutputs = modelOutputs[0].toTensor();

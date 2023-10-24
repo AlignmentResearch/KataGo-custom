@@ -233,7 +233,7 @@ void getOutput(
     torch::NoGradGuard no_grad;
     try {
       modelOutput = gpuHandle->model.model.forward(modelInputs);
-    } catch (...) {
+    } catch (const c10::Error&) {
       if (gpuHandle->logger != nullptr) {
         std::stringstream str;
         str << "Model evaluation failed on the following input:";

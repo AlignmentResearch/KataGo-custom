@@ -22,7 +22,7 @@ def act(activation, inplace=False):
     if activation == "mish":
         return torch.nn.Mish(inplace=inplace)
     if activation == "gelu":
-        return torch.nn.GELU(inplace=inplace)
+        return torch.nn.GELU()
     if activation == "hardswish":
         if packaging.version.parse(torch.__version__) > packaging.version.parse("1.6.0"):
             return torch.nn.Hardswish(inplace=inplace)
@@ -1323,12 +1323,14 @@ class Model(torch.nn.Module):
         super(Model, self).__init__()
 
         self.config = config
+        self.is_vit = config.get("vit")
+        if not self.is_vit:
+            self.c_mid = config["mid_num_channels"]
+            self.c_outermid = config["outermid_num_channels"] if "outermid_num_channels" in config else self.c_mid
+            self.c_gpool = config["gpool_num_channels"]
         self.norm_kind = config["norm_kind"]
         self.block_kind = config["block_kind"]
         self.c_trunk = config["trunk_num_channels"]
-        self.c_mid = config["mid_num_channels"]
-        self.c_gpool = config["gpool_num_channels"]
-        self.c_outermid = config["outermid_num_channels"] if "outermid_num_channels" in config else self.c_mid
         self.c_p1 = config["p1_num_channels"]
         self.c_g1 = config["g1_num_channels"]
         self.c_v1 = config["v1_num_channels"]
@@ -1369,8 +1371,6 @@ class Model(torch.nn.Module):
         self.bin_input_shape = [22, pos_len, pos_len]
         self.global_input_shape = [19]
 
-        self.blocks = torch.nn.ModuleList()
-        self.is_vit = config.get("vit")
         if self.is_vit:
             self.patch_size = config["patch_size"]
             self.num_patches_one_dim = (self.pos_len + self.patch_size - 1) // self.patch_size
@@ -1394,6 +1394,7 @@ class Model(torch.nn.Module):
             self.vit = transformers.ViTModel(vit_config)
             self.unembedder = torch.nn.Linear(self.c_trunk, self.c_trunk * self.patch_size * self.patch_size)
         else:
+            self.blocks = torch.nn.ModuleList()
             if config["initial_conv_1x1"]:
                 self.conv_spatial = torch.nn.Conv2d(22, self.c_trunk, kernel_size=1, padding="same", bias=False)
             else:
@@ -1482,10 +1483,11 @@ class Model(torch.nn.Module):
                 else:
                     assert False, f"Unknown block kind: {block_config[1]}"
 
-        if self.trunk_normless:
-            self.norm_trunkfinal = BiasMask(self.c_trunk, self.config, is_after_batchnorm=True)
-        else:
-            self.norm_trunkfinal = NormMask(self.c_trunk, self.config, fixup_use_gamma=False, is_last_batchnorm=True)
+            if self.trunk_normless:
+                self.norm_trunkfinal = BiasMask(self.c_trunk, self.config, is_after_batchnorm=True)
+            else:
+                self.norm_trunkfinal = NormMask(self.c_trunk, self.config, fixup_use_gamma=False, is_last_batchnorm=True)
+
         self.act_trunkfinal = act(self.activation)
 
         self.policy_head = PolicyHead(
@@ -1581,7 +1583,7 @@ class Model(torch.nn.Module):
             reg_dict["normal"].append(self.linear_global.weight)
             for block in self.blocks:
                 block.add_reg_dict(reg_dict)
-        self.norm_trunkfinal.add_reg_dict(reg_dict)
+            self.norm_trunkfinal.add_reg_dict(reg_dict)
         self.policy_head.add_reg_dict(reg_dict)
         self.value_head.add_reg_dict(reg_dict)
         if self.has_intermediate_head:
@@ -1627,7 +1629,7 @@ class Model(torch.nn.Module):
             # Concatenate global features onto spatial features.
             out = torch.cat([
                 input_spatial,
-                input_global.unsqueeze(-1).unsqueeze(-1).expand(-1, self.global_input_shape[0], self.pos_len, self.pos_len)
+                einops.repeat(input_global, "b f -> b f y x", y=self.pos_len, x=self.pos_len)
             ], dim=1)
             # Apply mask to global features.
             out[:,-self.global_input_shape[0]:] *= input_spatial[:, 0:1, :, :]

@@ -1351,28 +1351,27 @@ sandbox = {
 
 vit = {
     "version":14,
-    "initial_conv_1x1": True,
-    "vit": True,
-    "trunk_num_channels":384,
+
     "block_kind": [ "dummy" for _ in range(10) ], # controls the number of blocks
+    "trunk_num_channels":384,
+    "norm_kind":"fixup",
+    # Standard ViTs use GeLU, so let's make it the activation function
+    # throughout the whole model.
+    "activation":"gelu",
+
+    # Policy and value head parameters. These values are copied from b10c384nbt.
+    "p1_num_channels":48, # modifies policy head
+    "g1_num_channels":48, # modifies policy head
+    "v1_num_channels":48, # modifies value head
+    "sbv2_num_channels":96, # modifies value head
+    "num_scorebeliefs":8, # modifies value head
+    "v2_size":112, # modifies value head
 
     # ViT-specific parameters.
+    "vit": True,
     "patch_size":2,
     "num_attention_heads":8,
     "feed_forward_num_channels":384*4,
-
-    # not sure what most of these are but we need to populate them
-    "norm_kind":"fixup",
-    "bnorm_epsilon": 1e-4,
-    "bnorm_running_avg_momentum": 0.001,
-    "mid_num_channels":192,
-    "gpool_num_channels":64,
-    "p1_num_channels":48,
-    "g1_num_channels":48,
-    "v1_num_channels":48,
-    "sbv2_num_channels":96,
-    "num_scorebeliefs":8,
-    "v2_size":112,
 }
 
 base_config_of_name = {

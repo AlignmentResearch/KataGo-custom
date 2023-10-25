@@ -14,7 +14,7 @@ def main():
         "-output", help="Path to write the loss plot", type=Path, required=True
     )
     parser.add_argument(
-        "--validation",
+        "-validation",
         help="Print validation loss instead of train loss",
         action="store_true",
     )

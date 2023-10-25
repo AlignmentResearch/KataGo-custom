@@ -1703,7 +1703,7 @@ class Model(torch.nn.Module):
                     count += 1
 
             out = self.norm_trunkfinal(out, mask=mask, mask_sum=mask_sum)
-            out = self.act_trunkfinal(out)
+        out = self.act_trunkfinal(out)
 
         # print("MAIN")
         out_policy = self.policy_head(out, mask=mask, mask_sum_hw=mask_sum_hw, mask_sum=mask_sum)

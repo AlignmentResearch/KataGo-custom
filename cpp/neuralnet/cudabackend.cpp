@@ -2022,6 +2022,9 @@ void NeuralNet::freeLoadedModel(LoadedModel* loadedModel) {
 }
 
 string NeuralNet::getModelName(const LoadedModel* loadedModel) {
+  if (loadedModel->torchModel != nullptr) {
+    return TorchNeuralNet::getModelName(loadedModel->torchModel.get());
+  }
   return loadedModel->modelDesc.name;
 }
 

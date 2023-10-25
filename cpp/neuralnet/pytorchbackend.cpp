@@ -27,7 +27,7 @@ const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSI
 void logModelForwardFailure(ComputeHandle* handle, InputBuffers* inputBuffers) {
   if (handle->logger != nullptr) {
     std::stringstream str;
-    str << "Model evaluation failed on the following input:";
+    str << "Model evaluation failed with model " << getModelName(&handle->model) << " on input:";
     for (const auto& input: inputBuffers->modelInputs) {
       str << '\n' << input;
     }
@@ -38,8 +38,9 @@ void logModelForwardFailure(ComputeHandle* handle, InputBuffers* inputBuffers) {
 }  // namespace
 
 
-LoadedModel::LoadedModel(const std::string& fileName)
-  : model(torch::jit::load(fileName)) {
+LoadedModel::LoadedModel(const std::string& filename)
+  : model(torch::jit::load(filename))
+  , modelName(filename) {
   // We disable optimizations that make the TorchScript KataGo models crash.
   //
   // In particular, what I (tomtseng) saw was that with model b18-s7530m and
@@ -58,8 +59,9 @@ LoadedModel::LoadedModel(const std::string& fileName)
   torch::jit::fuser::cuda::setEnabled(false);
 }
 
-LoadedModel::LoadedModel(torch::jit::script::Module model_)
-  : model(std::move(model_)) {}
+LoadedModel::LoadedModel(const LoadedModel& other)
+  : model(other.model.clone())
+  , modelName(other.modelName) {}
 
 LoadedModel* loadModelFile(const std::string& file, const std::string& expectedSha256) {
   if (expectedSha256.size() != 0) {
@@ -73,6 +75,10 @@ LoadedModel* loadModelFile(const std::string& file, const std::string& expectedS
 
 void freeLoadedModel(LoadedModel* model) {
   delete model;
+}
+
+std::string getModelName(const LoadedModel* model) {
+  return model->modelName;
 }
 
 int getModelVersion(const LoadedModel*) {
@@ -130,7 +136,7 @@ ComputeHandle::ComputeHandle(
     int maxBatchSize_,
     int gpuIdxForThisThread
 )
-  : model(model_->model.clone())
+  : model(*model_)
   , device(torch::Device(at::kCUDA, gpuIdxForThisThread))
   , logger(logger_)
   , maxBatchSize(maxBatchSize_)

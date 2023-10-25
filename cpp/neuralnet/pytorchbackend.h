@@ -67,13 +67,14 @@ namespace TorchNeuralNet {
 
 struct LoadedModel {
   torch::jit::script::Module model;
+  std::string modelName;
 
   LoadedModel(const std::string& filename);
-  LoadedModel(torch::jit::script::Module model);
-
+  LoadedModel(const LoadedModel& other);
 };
 LoadedModel* loadModelFile(const std::string& file, const std::string& expectedSha256);
 void freeLoadedModel(LoadedModel* model);
+std::string getModelName(const LoadedModel* loadedModel);
 int getModelVersion(const LoadedModel* model);
 
 struct ComputeContext {

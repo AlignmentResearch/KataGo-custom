@@ -12,6 +12,8 @@
 
 using namespace torch::indexing;
 
+namespace TorchNeuralNet {
+
 namespace {
 
 // TODO(tomtseng): We should write the model version and max model board size
@@ -22,9 +24,19 @@ constexpr int MODEL_VERSION = 14;
 const int NUM_SPATIAL_FEATURES = NNModelVersion::getNumSpatialFeatures(MODEL_VERSION);
 const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSION);
 
+void logModelForwardFailure(ComputeHandle* handle, InputBuffers* inputBuffers) {
+  if (handle->logger != nullptr) {
+    std::stringstream str;
+    str << "Model evaluation failed on the following input:";
+    for (const auto& input: inputBuffers->modelInputs) {
+      str << '\n' << input;
+    }
+    handle->logger->write(str.str());
+  }
+}
+
 }  // namespace
 
-namespace TorchNeuralNet {
 
 LoadedModel::LoadedModel(const std::string& fileName)
   : model(torch::jit::load(fileName)) {
@@ -234,15 +246,10 @@ void getOutput(
     try {
       modelOutput = gpuHandle->model.model.forward(modelInputs);
     } catch (const c10::Error&) {
-      if (gpuHandle->logger != nullptr) {
-        std::stringstream str;
-        str << "Model evaluation failed on the following input:";
-        for (const auto& input: modelInputs) {
-          str << '\n' << input;
-        }
-        gpuHandle->logger->write(str.str());
-        exit(0);
-      }
+      logModelForwardFailure(gpuHandle, inputBuffers);
+      throw;
+    } catch (const std::runtime_error&) {
+      logModelForwardFailure(gpuHandle, inputBuffers);
       throw;
     }
   }

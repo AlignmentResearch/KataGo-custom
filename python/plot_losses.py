@@ -11,6 +11,17 @@ def main():
         "dirs", help="Path to the training run directory", type=Path, nargs="+"
     )
     parser.add_argument(
+        "-log-x", help="Plot the x-axis on a logarithmic scale", action="store_true"
+    )
+    parser.add_argument(
+        "-log-y", help="Plot the y-axis on a logarithmic scale", action="store_true"
+    )
+    parser.add_argument(
+        "-loss",
+        help="Which loss to plot, e.g., p0loss for policy loss.  Defaults to total loss",
+        default="loss",
+    )
+    parser.add_argument(
         "-output", help="Path to write the loss plot", type=Path, required=True
     )
     parser.add_argument(
@@ -30,11 +41,15 @@ def main():
             for line in f:
                 metrics = json.loads(line)
                 nsamps.append(metrics[nsamp_key])
-                losses.append(metrics["loss"])
+                losses.append(metrics[args.loss])
+        if args.log_x:
+            plt.xscale("log")
+        if args.log_y:
+            plt.yscale("log")
         plt.plot(nsamps, losses, label=d.name)
 
     plt.xlabel("steps")
-    plt.ylabel("loss")
+    plt.ylabel(args.loss)
     plt.legend()
     plt.savefig(args.output)
 

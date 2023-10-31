@@ -1349,6 +1349,31 @@ sandbox = {
     "v2_size":112,
 }
 
+vitp2b4c384 = {
+    "version":14,
+
+    "block_kind": [ "dummy" for _ in range(4) ], # controls the number of blocks
+    "trunk_num_channels":384,
+    "norm_kind":"fixup",
+    # Standard ViTs use GeLU, so let's make it the activation function
+    # throughout the whole model.
+    "activation":"gelu",
+
+    # ViT-specific parameters.
+    "vit": True,
+    "patch_size":2,
+    "num_attention_heads":6,
+    "feed_forward_num_channels":384*4,
+
+    # Policy and value head parameters. These values are copied from b18c384nbt.
+    "p1_num_channels":48, # policy head
+    "g1_num_channels":48, # policy head
+    "v1_num_channels":96, # value head
+    "sbv2_num_channels":112, # value head
+    "num_scorebeliefs":8, # value head
+    "v2_size":128, # value head
+}
+
 vitp2b8c768 = {
     "version":14,
 
@@ -1420,6 +1445,7 @@ base_config_of_name = {
 
     "sandbox": sandbox,
 
+    "vitp2b4c384": vitp2b4c384,
     # ViT, about as fast in TorchScript as a TorchScript b18c384nbt,though
     # TorchScript is ~2x slower than the C++ CUDA backend.
     "vitp2b8c768": vitp2b8c768,

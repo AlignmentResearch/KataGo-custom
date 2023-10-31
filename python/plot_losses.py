@@ -1,8 +1,8 @@
 import argparse
 import json
-import matplotlib.pyplot as plt
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 
 def main():
     DESCRIPTION = """Plots loss from PyTorch training."""

@@ -2002,6 +2002,10 @@ struct LoadedModel {
   LoadedModel(const string& fileName, const string& expectedSha256) {
     if (Global::isSuffix(fileName, ".pt")) {
       torchModel = std::unique_ptr<TorchNeuralNet::LoadedModel>(TorchNeuralNet::loadModelFile(fileName, expectedSha256));
+      // HACK(tomtseng): Setting the modelDesc->version makes
+      // NeuralNet::getSupportedRules() work as expected since the function
+      // depends only on model version.
+      modelDesc.version = TorchNeuralNet::getModelVersion(torchModel.get());
     } else {
       ModelDesc::loadFromFileMaybeGZipped(fileName,modelDesc,expectedSha256);
     }

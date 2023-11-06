@@ -1471,7 +1471,7 @@ base_config_of_name = {
     "sandbox": sandbox,
 
     "vitp2b4c384": vitp2b4c384,
-    "vitp2b4c384": vitp2b8c384,
+    "vitp2b8c384": vitp2b8c384,
     # ViT, about as fast in TorchScript as a TorchScript b18c384nbt,though
     # TorchScript is ~2x slower than the C++ CUDA backend.
     "vitp2b8c768": vitp2b8c768,

@@ -9,7 +9,7 @@
 #include "../neuralnet/nninputs.h"
 #include "../neuralnet/nneval.h"
 #include "../neuralnet/desc.h"
-// TODO(tomtseng): We're crudely bolting the PyTorch backend here while we
+// note(tomtseng): We're crudely bolting the PyTorch backend here while we
 // prototype the PyTorch backend implementation, but ideally we'd refactor
 // things so that the PyTorch backend is independent of the other backends.
 #include "../neuralnet/pytorchbackend.h"
@@ -1994,8 +1994,9 @@ struct LoadedModel {
   // TorchScript KataGo model.
   // Typically we don't expect both modelDesc and torchModel to be populated,
   // but for some of the remainder of the code we'll handle the case where both
-  // are populated in order to make it easier for a user to load both a typical
-  // model and its corresponding TorchScript model for debugging reasons.
+  // are populated in order to make it easier for developers to modify the code
+  // to load both a typical model and its corresponding TorchScript model for
+  // debugging reasons.
   ModelDesc modelDesc;
   std::unique_ptr<TorchNeuralNet::LoadedModel> torchModel;
 

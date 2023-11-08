@@ -30,17 +30,17 @@ whiteHandicapBonus = 0
 : Running tiny net to sanity-check that GPU is working
 : After dedups: nnModelFile0 = tests/scratch/tmpTinyModel.bin.gz useFP16 auto useNHWC auto
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 9 useFP16 = true useNHWC = true
 : Cuda backend thread 0: Model name: rect15-b2c16-s13679744-d94886722
 : After dedups: nnModelFile0 = tests/scratch/tmpTinyMishModel.bin.gz useFP16 auto useNHWC auto
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 11 useFP16 = true useNHWC = true
 : Cuda backend thread 0: Model name: b1c6nbt
 : After dedups: nnModelFile0 = tests/scratch/tmpTinyMishModel.bin.gz useFP16 auto useNHWC auto
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 11 useFP16 = true useNHWC = true
 : Cuda backend thread 0: Model name: b1c6nbt
 : Tiny net sanity check complete

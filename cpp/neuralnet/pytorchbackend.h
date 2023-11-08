@@ -10,8 +10,11 @@
 #include  "../neuralnet/nneval.h"
 #include  "../neuralnet/nninputs.h"
 
-// TODO(tomtseng): Refactor this PyTorch interface to have less code duplication
-// and combine less intrusively with other backends.
+// note(tomtseng): Ideally we'd refactor this PyTorch interface to have less code duplication
+// and combine less intrusively with other backends. (Realistically I won't
+// spend time refactoring this because this PyTorch backend is experimental
+// code, but if someone wants to merge these changes back into upstream then
+// they'll want to refactor.)
 //
 // nninterface.h is a namespace with global functions. Backends like
 // cudabackend.cpp and trtbackend.cpp implement these global functions. In
@@ -34,10 +37,6 @@
 // global functions. Then the different backends will subclass and implement
 // this interface. This will have less code duplication, and the caller can use
 // a NeuralNet without knowing which backend subclass instantiated it.
-//
-// (Realistically I'll just leave nninterface.h as is instead of refactoring it
-// since this PyTorch backend is experimental code, but if someone wants to
-// merge these changes back into upstream then they'll want to refactor.)
 //
 // One tricky part of changing nninterface.h into a class interface is that the
 // interface creates these black-box objects LoadedModel, ComputeContext,

@@ -16,9 +16,8 @@ namespace TorchNeuralNet {
 
 namespace {
 
-// TODO(tomtseng): We should write the model version and max model board size
-// separately when exporting the model. For now we'll just hard code the
-// values.
+// HACK(tomtseng): We should write the model version and max model board size
+// when exporting the model. For now we'll just hard code the values.
 constexpr int MAX_BOARD_LEN = 19;
 constexpr int MODEL_VERSION = 14;
 const int NUM_SPATIAL_FEATURES = NNModelVersion::getNumSpatialFeatures(MODEL_VERSION);

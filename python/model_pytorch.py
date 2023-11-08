@@ -1375,9 +1375,9 @@ class Model(torch.nn.Module):
             self.patch_size = config["patch_size"]
             self.num_patches_one_dim = (self.pos_len + self.patch_size - 1) // self.patch_size
             # If patch_size does not divide image size (pos_len), the
-            # remainder of the image just gets cut off, i.e., a 19x19 image with
-            # patch size 4 will get cut to a 16x16 img. We need to pad the
-            # the image size to be divisble by patch size.
+            # remainder of the image gets cut off, i.e., a 19x19 image with
+            # patch size 4 will get cut to a 16x16 img. We need to pad the image
+            # size to be divisible by patch size.
             padded_image_size = self.num_patches_one_dim * self.patch_size
             self.padding = padded_image_size - self.pos_len
 

@@ -394,6 +394,7 @@ class Curriculum:
         config: Sequence[Config],
         stats_rolling_window: int,
         game_buffer_capacity: int,
+        harden_below_visits: Optional[int],
     ):
         """Initial curriculum setup.
 
@@ -409,6 +410,8 @@ class Curriculum:
                 past the victim until at least this many games has been collected.
             game_buffer_capacity: The maximum number of games to store in the buffer.
                 This consists of all games, not just those matching the current victim.
+            harden_below_visits: Harden the victim when its visits are at most
+                this amount.
 
         Raises:
             ValueError: `game_buffer_capacity` is less than `min_games_for_stats`.
@@ -432,6 +435,7 @@ class Curriculum:
             msg = "Game buffer smaller than statistics rolling window: "
             msg += f"{self.game_buffer_capacity} < {self.stats_rolling_window}"
             raise ValueError(msg)
+        self.harden_below_visits = harden_below_visits
 
         # Parse config
         self.victims = parse_config(config)
@@ -520,6 +524,8 @@ class Curriculum:
         with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}\n")
+                if self.harden_below_visits is not None and self._cur_victim.max_visits_victim <= self.harden_below_visits:
+                    f.write(f"passingBehavior0 = avoid-pass-alive-territory\n")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)
@@ -745,6 +751,15 @@ def parse_args() -> argparse.Namespace:
         default="configs/curriculum_conf.json",
         help="Curriculum JSON config with " "victims sequence (JSON file path)",
     )
+    # From a UI standpoint it makes more sense to be able to specify in the JSON
+    # config whether hardening is desired for each victim. Adding a flag to
+    # harden at low victim visit counts is easier to implement though, and it
+    # covers the main way we use hardening during training.
+    parser.add_argument(
+        "-harden-below-visits",
+        type=int,
+        help="Enable pass-alive hardening when victim has at most this number of visits",
+    )
     parser.add_argument(
         "-d",
         "--debug",
@@ -790,6 +805,7 @@ def make_curriculum(args: argparse.Namespace) -> Curriculum:
         config=config,
         stats_rolling_window=args.stats_rolling_window,
         game_buffer_capacity=args.max_games_buffer,
+        harden_below_visits=args.harden_below_visits,
     )
 
 

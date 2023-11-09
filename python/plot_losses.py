@@ -4,6 +4,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+
 def main():
     DESCRIPTION = """Plots loss from PyTorch training."""
     parser = argparse.ArgumentParser(description=DESCRIPTION)
@@ -15,6 +16,11 @@ def main():
     )
     parser.add_argument(
         "-log-y", help="Plot the y-axis on a logarithmic scale", action="store_true"
+    )
+    parser.add_argument(
+        "-y-max",
+        help="Max value on the y-axis",
+        type=int,
     )
     parser.add_argument(
         "-loss",
@@ -50,6 +56,8 @@ def main():
 
     plt.xlabel("steps")
     plt.ylabel(args.loss)
+    if args.y_max is not None:
+        plt.ylim(None, args.y_max)
     plt.legend()
     plt.savefig(args.output)
 

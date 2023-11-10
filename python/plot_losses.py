@@ -20,7 +20,7 @@ def main():
     parser.add_argument(
         "-y-max",
         help="Max value on the y-axis",
-        type=int,
+        type=float,
     )
     parser.add_argument(
         "-loss",

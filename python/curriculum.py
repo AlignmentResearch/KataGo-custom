@@ -524,8 +524,11 @@ class Curriculum:
         with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}\n")
-                if self.harden_below_visits is not None and self._cur_victim.max_visits_victim <= self.harden_below_visits:
-                    f.write(f"passingBehavior0 = avoid-pass-alive-territory\n")
+                if (
+                    self.harden_below_visits is not None
+                    and self._cur_victim.max_visits_victim <= self.harden_below_visits
+                ):
+                    f.write("passingBehavior0=avoid-pass-alive-territory\n")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
         shutil.move(str(tmp_path), self.selfplay_config_override_path)
@@ -758,7 +761,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-harden-below-visits",
         type=int,
-        help="Enable pass-alive hardening when victim has at most this number of visits",
+        help="Enable pass-alive hardening when victim has at most this many visits",
     )
     parser.add_argument(
         "-d",

@@ -413,6 +413,7 @@ class Metrics:
                     soft_policy_weight_scale=soft_policy_weight_scale,
                     value_loss_scale=value_loss_scale,
                     td_value_loss_scales=td_value_loss_scales,
+                    use_vtimeloss=use_vtimeloss,
                 )
                 for key,value in iresults.items():
                     if key != "loss_sum":
@@ -736,6 +737,7 @@ class Metrics:
         soft_policy_weight_scale,
         value_loss_scale,
         td_value_loss_scales,
+        use_vtimeloss,
     ):
         (
             policy_logits,
@@ -928,7 +930,7 @@ class Metrics:
             + loss_scorebelief_pdf
             + loss_scorestdev
             + loss_lead
-            + loss_variance_time
+            + (loss_variance_time if use_vtimeloss else 0)
         )
 
         results = {

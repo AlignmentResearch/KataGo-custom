@@ -18,8 +18,13 @@ def main():
         "-log-y", help="Plot the y-axis on a logarithmic scale", action="store_true"
     )
     parser.add_argument(
+        "-y-min",
+        help="Minimum value on the y-axis",
+        type=float,
+    )
+    parser.add_argument(
         "-y-max",
-        help="Max value on the y-axis",
+        help="Maximum value on the y-axis",
         type=float,
     )
     parser.add_argument(
@@ -56,6 +61,8 @@ def main():
 
     plt.xlabel("steps")
     plt.ylabel(args.loss)
+    if args.y_min is not None:
+        plt.ylim(args.y_min, None)
     if args.y_max is not None:
         plt.ylim(None, args.y_max)
     plt.legend()

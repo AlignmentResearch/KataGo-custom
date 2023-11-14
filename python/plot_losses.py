@@ -53,10 +53,6 @@ def main():
                 metrics = json.loads(line)
                 nsamps.append(metrics[nsamp_key])
                 losses.append(metrics[args.loss])
-        if args.log_x:
-            plt.xscale("log")
-        if args.log_y:
-            plt.yscale("log")
         plt.plot(nsamps, losses, label=d.name)
 
     plt.xlabel("steps")
@@ -65,6 +61,10 @@ def main():
         plt.ylim(args.y_min, None)
     if args.y_max is not None:
         plt.ylim(None, args.y_max)
+    if args.log_x:
+        plt.xscale("log")
+    if args.log_y:
+        plt.yscale("log")
     plt.legend()
     plt.savefig(args.output)
 

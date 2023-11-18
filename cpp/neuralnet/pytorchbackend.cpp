@@ -110,7 +110,7 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
-  const bool useFP16 = useFP16Mode  != enabled_t::False;
+  const bool useFP16 = useFP16Mode != enabled_t::False;
   if (useFP16) {
     // There doesn't seem to be a way to autocast without making it a global
     // setting.

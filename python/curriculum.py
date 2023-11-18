@@ -394,7 +394,8 @@ class Curriculum:
         config: Sequence[Config],
         stats_rolling_window: int,
         game_buffer_capacity: int,
-        harden_below_visits: Optional[int],
+        # Defaults to 0 (no victims are hardened)
+        harden_below_visits: int = 0,
     ):
         """Initial curriculum setup.
 
@@ -524,10 +525,7 @@ class Curriculum:
         with open(tmp_path, "w") as f:
             if self._cur_victim.max_visits_victim is not None:
                 f.write(f"maxVisits0={self._cur_victim.max_visits_victim}\n")
-                if (
-                    self.harden_below_visits is not None
-                    and self._cur_victim.max_visits_victim <= self.harden_below_visits
-                ):
+                if self._cur_victim.max_visits_victim <= self.harden_below_visits:
                     f.write("passingBehavior0=avoid-pass-alive-territory\n")
             if self._cur_victim.max_visits_adv is not None:
                 f.write(f"maxVisits1={self._cur_victim.max_visits_adv}\n")
@@ -761,6 +759,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-harden-below-visits",
         type=int,
+        default=0,
         help="Enable pass-alive hardening when victim has at most this many visits",
     )
     parser.add_argument(

@@ -1308,47 +1308,6 @@ b20c640nbt = {
     "v2_size":144,
 }
 
-sandbox = {
-    "version":14,
-    "norm_kind":"fixup",
-    "bnorm_epsilon": 1e-4,
-    "bnorm_running_avg_momentum": 0.001,
-    "initial_conv_1x1": False,
-    "trunk_num_channels":256,
-    "mid_num_channels":256,
-    "gpool_num_channels":64,
-    "use_attention_pool":False,
-    "num_attention_pool_heads":4,
-    "block_kind": [
-        ["rconv1","regular"],
-        ["rconv2","regular"],
-        ["rconv3","regular"],
-        ["rconv4","regular"],
-        ["rconv5","regular"],
-        ["rconv6","regular"],
-        ["rconv7","regulargpool"],
-        ["rconv8","regular"],
-        ["rconv9","regular"],
-        ["rconv10","regular"],
-        ["rconv11","regular"],
-        ["rconv12","regulargpool"],
-        ["rconv13","regular"],
-        ["rconv14","regular"],
-        ["rconv15","regular"],
-        ["rconv16","regular"],
-        ["rconv17","regulargpool"],
-        ["rconv18","regular"],
-        ["rconv19","regular"],
-        ["rconv20","regular"],
-    ],
-    "p1_num_channels":48,
-    "g1_num_channels":48,
-    "v1_num_channels":96,
-    "sbv2_num_channels":96,
-    "num_scorebeliefs":8,
-    "v2_size":112,
-}
-
 vitp2b4c384 = {
     "version":14,
 
@@ -1399,11 +1358,11 @@ vitp2b8c384 = {
     "v2_size":128, # value head
 }
 
-vitp2b8c768 = {
+vitp2b16c384 = {
     "version":14,
 
-    "block_kind": [ "dummy" for _ in range(8) ], # controls the number of blocks
-    "trunk_num_channels":768,
+    "block_kind": [ "dummy" for _ in range(16) ], # controls the number of blocks
+    "trunk_num_channels":384,
     "norm_kind":"fixup",
     # Standard ViTs use GeLU, so let's make it the activation function
     # throughout the whole model.
@@ -1412,8 +1371,8 @@ vitp2b8c768 = {
     # ViT-specific parameters.
     "vit": True,
     "patch_size":2,
-    "num_attention_heads":12,
-    "feed_forward_num_channels":768*4,
+    "num_attention_heads":6,
+    "feed_forward_num_channels":384*4,
 
     # Policy and value head parameters. These values are copied from b18c384nbt.
     "p1_num_channels":48, # policy head
@@ -1422,6 +1381,47 @@ vitp2b8c768 = {
     "sbv2_num_channels":112, # value head
     "num_scorebeliefs":8, # value head
     "v2_size":128, # value head
+}
+
+sandbox = {
+    "version":14,
+    "norm_kind":"fixup",
+    "bnorm_epsilon": 1e-4,
+    "bnorm_running_avg_momentum": 0.001,
+    "initial_conv_1x1": False,
+    "trunk_num_channels":256,
+    "mid_num_channels":256,
+    "gpool_num_channels":64,
+    "use_attention_pool":False,
+    "num_attention_pool_heads":4,
+    "block_kind": [
+        ["rconv1","regular"],
+        ["rconv2","regular"],
+        ["rconv3","regular"],
+        ["rconv4","regular"],
+        ["rconv5","regular"],
+        ["rconv6","regular"],
+        ["rconv7","regulargpool"],
+        ["rconv8","regular"],
+        ["rconv9","regular"],
+        ["rconv10","regular"],
+        ["rconv11","regular"],
+        ["rconv12","regulargpool"],
+        ["rconv13","regular"],
+        ["rconv14","regular"],
+        ["rconv15","regular"],
+        ["rconv16","regular"],
+        ["rconv17","regulargpool"],
+        ["rconv18","regular"],
+        ["rconv19","regular"],
+        ["rconv20","regular"],
+    ],
+    "p1_num_channels":48,
+    "g1_num_channels":48,
+    "v1_num_channels":96,
+    "sbv2_num_channels":96,
+    "num_scorebeliefs":8,
+    "v2_size":112,
 }
 
 base_config_of_name = {
@@ -1468,13 +1468,11 @@ base_config_of_name = {
     "b28c512nbt": b28c512nbt,  # Recommended best config for this cost
     "b20c640nbt": b20c640nbt,
 
-    "sandbox": sandbox,
-
     "vitp2b4c384": vitp2b4c384,
     "vitp2b8c384": vitp2b8c384,
-    # ViT, about as fast in TorchScript as a TorchScript b18c384nbt,though
-    # TorchScript is ~2x slower than the C++ CUDA backend.
-    "vitp2b8c768": vitp2b8c768,
+    "vitp2b16c384": vitp2b16c384,
+
+    "sandbox": sandbox,
 }
 
 config_of_name = {}

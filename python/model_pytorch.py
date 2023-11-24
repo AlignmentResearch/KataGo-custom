@@ -1391,7 +1391,7 @@ class Model(torch.nn.Module):
                     patch_size=self.patch_size,
                     num_channels=num_input_channels,
             )
-            self.vit = transformers.ViTModel(vit_config)
+            self.vit = transformers.ViTModel(vit_config, add_pooling_layer=config.get("vit_pooler", False))
             self.unembedder = torch.nn.Linear(self.c_trunk, self.c_trunk * self.patch_size * self.patch_size)
         else:
             self.blocks = torch.nn.ModuleList()

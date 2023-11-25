@@ -35,6 +35,7 @@ mkdir -p "$TMPDIR"/val
 
 echo "Beginning shuffle at" $(date "+%Y-%m-%d %H:%M:%S")
 
+SKIP_VALIDATE=1
 if [[ -n "${SKIP_VALIDATE:-}" ]]
 then
   (

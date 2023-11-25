@@ -770,10 +770,10 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                 if max_train_steps_since_last_reload is not None:
                     if train_state["train_steps_since_last_reload"] + 0.99 * samples_per_epoch/sub_epochs > max_train_steps_since_last_reload:
                         logging.info(
-                            "Too many train steps since last reload, waiting 5m and retrying (current %f)" %
+                            "Too many train steps since last reload, waiting 20s and retrying (current %f)" %
                             train_state["train_steps_since_last_reload"]
                         )
-                        time.sleep(300)
+                        time.sleep(20)
                         continue
 
             break
@@ -925,10 +925,10 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                         break
                     else:
                         logging.info(
-                            "Exceeding train bucket, not enough new data rows, waiting 5m and retrying (current level %f)" %
+                            "Exceeding train bucket, not enough new data rows, waiting 20s and retrying (current level %f)" %
                             train_state["train_bucket_level"]
                         )
-                        time.sleep(300)
+                        time.sleep(20)
                         continue
 
         # DDP need to wait on the main process after reloading data and/or training bucket waiting
@@ -965,8 +965,8 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                     if quit_if_no_data:
                         logging.info("Not enough data files to fill a subepoch! Quitting.")
                         sys.exit(0)
-                    logging.info("Not enough data files to fill a subepoch! Waiting 5m before retrying.")
-                    time.sleep(300)
+                    logging.info("Not enough data files to fill a subepoch!  Waiting 20s before retrying.")
+                    time.sleep(20)
                     maybe_reload_training_data()
                     train_files_to_use = get_files_for_subepoch()
 
@@ -1240,6 +1240,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                     time.sleep(2)
                     os.rename(savepathtmp,savepath)
 
+        logging.info("Current time: " + str(datetime.datetime.now()))
         if max_epochs_this_instance is not None and max_epochs_this_instance >= 0 and num_epochs_this_instance >= max_epochs_this_instance:
             logging.info("Hit max epochs this instance, done")
             break

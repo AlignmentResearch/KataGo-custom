@@ -24,6 +24,7 @@ import torch.nn
 import torch.optim
 import torch.distributed
 import torch.multiprocessing
+import torch.utils.tensorboard
 from torch.nn.parallel import DistributedDataParallel
 from torch.optim.swa_utils import AveragedModel
 from torch.cuda.amp import GradScaler, autocast
@@ -797,7 +798,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         metric_sums[metric] += metrics[metric]
         metric_weights[metric] += batch_size
 
-  def log_metrics(metric_sums, metric_weights, metrics, metrics_out):
+  def log_metrics(metric_sums, metric_weights, metrics, metrics_out, tensorboard_writer):
     metrics_to_print = {}
     for metric in metric_sums:
       if metric.endswith("_sum"):
@@ -817,12 +818,20 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
       metrics_out.write(json.dumps(metrics_to_print) + "\n")
       metrics_out.flush()
 
+    num_samples = metrics_to_print.get("nsamp_train") or metrics_to_print["nsamp"]
+    for k, v in metrics_to_print.items():
+        tensorboard_writer.add_scalar(k, v, num_samples)
+
   if rank == 0:
     train_metrics_out = open(os.path.join(traindir,"metrics_train.json"),"a")
     val_metrics_out = open(os.path.join(traindir,"metrics_val.json"),"a")
+    train_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, "tensorboard_train"))
+    val_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, "tensorboard_val"))
   else:
     train_metrics_out = open(os.path.join(traindir,f"metrics_train_rank{rank}.json"),"a")
     val_metrics_out = open(os.path.join(traindir,f"metrics_val_rank{rank}.json"),"a")
+    train_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, f"tensorboard_train_rank{rank}"))
+    val_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, f"tensorboard_val_rank{rank}"))
 
   # TRAIN! -----------------------------------------------------------------------------------
 
@@ -1026,7 +1035,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
           timediff = t1 - last_train_stats_time
           last_train_stats_time = t1
           metrics["time_since_last_print"] = timediff
-          log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out)
+          log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out, train_tensorboard_writer)
 
         # Update LR more frequently at the start for smoother warmup ramp and wd adjustment
         if train_state["global_step_samples"] <= 50000000 and batch_count_this_epoch % 10 == 0:
@@ -1166,7 +1175,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
             val_metric_weights["nsamp_train"] = running_metrics["weights"]["nsamp"]
             val_metric_sums["wsum_train"] = running_metrics["sums"]["wsum"]
             val_metric_weights["wsum_train"] = running_metrics["weights"]["wsum"]
-          log_metrics(val_metric_sums, val_metric_weights, metrics, val_metrics_out)
+          log_metrics(val_metric_sums, val_metric_weights, metrics, val_metrics_out, val_tensorboard_writer)
           t1 = time.perf_counter()
           logging.info(f"Validation took {t1-t0} seconds")
           ddp_model.train()
@@ -1189,6 +1198,8 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
 
   train_metrics_out.close()
   val_metrics_out.close()
+  train_tensorboard_writer.close()
+  val_tensorboard_writer.close()
 
 
 if __name__ == "__main__":

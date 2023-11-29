@@ -1372,6 +1372,8 @@ class Model(torch.nn.Module):
         self.global_input_shape = [19]
 
         if self.is_vit:
+            if "vit_version" not in config:
+                config["vit_version"] = 0
             self.patch_size = config["patch_size"]
             self.num_patches_one_dim = (self.pos_len + self.patch_size - 1) // self.patch_size
             # If patch_size does not divide image size (pos_len), the
@@ -1391,7 +1393,7 @@ class Model(torch.nn.Module):
                     patch_size=self.patch_size,
                     num_channels=num_input_channels,
             )
-            self.vit = transformers.ViTModel(vit_config, add_pooling_layer=config.get("vit_pooler", False))
+            self.vit = transformers.ViTModel(vit_config, add_pooling_layer=config["vit_version"] < 1)
             self.unembedder = torch.nn.Linear(self.c_trunk, self.c_trunk * self.patch_size * self.patch_size)
         else:
             self.blocks = torch.nn.ModuleList()
@@ -1574,18 +1576,24 @@ class Model(torch.nn.Module):
         reg_dict["output_noreg"] = []
 
         if self.is_vit:
-            for name, param in self.vit.named_parameters():
-                # Weight decay is generally not applied to bias terms:
-                # https://stats.stackexchange.com/questions/153605/no-regularisation-term-for-bias-unit-in-neural-network
-                # This comment claims that weight decay shouldn't be applied to
-                # layer norm and the embedding layer:
-                # https://github.com/karpathy/minGPT/pull/24#issuecomment-679316025
-                if "bias" in name or "layernorm" in name or "embeddings" in name:
-                    reg_dict["noreg"].append(param)
-                else:
+            if self.config["vit_version"] >= 1:
+                for name, param in self.vit.named_parameters():
+                    # Weight decay is generally not applied to bias terms:
+                    # https://stats.stackexchange.com/questions/153605/no-regularisation-term-for-bias-unit-in-neural-network
+                    # This comment claims that weight decay shouldn't be applied to
+                    # layer norm and the embedding layer:
+                    # https://github.com/karpathy/minGPT/pull/24#issuecomment-679316025
+                    if "bias" in name or "layernorm" in name or "embeddings" in name:
+                        reg_dict["noreg"].append(param)
+                    else:
+                        reg_dict["normal"].append(param)
+                reg_dict["output"].append(self.unembedder.weight)
+                reg_dict["output_noreg"].append(self.unembedder.bias)
+            else:
+                reg_dict["normal"].append(self.unembedder.weight)
+                reg_dict["normal"].append(self.unembedder.bias)
+                for param in self.vit.parameters():
                     reg_dict["normal"].append(param)
-            reg_dict["output"].append(self.unembedder.weight)
-            reg_dict["output_noreg"].append(self.unembedder.bias)
         else:
             reg_dict["normal"].append(self.conv_spatial.weight)
             reg_dict["normal"].append(self.linear_global.weight)

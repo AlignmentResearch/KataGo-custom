@@ -1574,10 +1574,18 @@ class Model(torch.nn.Module):
         reg_dict["output_noreg"] = []
 
         if self.is_vit:
-            reg_dict["normal"].append(self.unembedder.weight)
-            reg_dict["normal"].append(self.unembedder.bias)
-            for param in self.vit.parameters():
-                reg_dict["normal"].append(param)
+            for name, param in self.vit.named_parameters():
+                # Weight decay is generally not applied to bias terms:
+                # https://stats.stackexchange.com/questions/153605/no-regularisation-term-for-bias-unit-in-neural-network
+                # This comment claims that weight decay shouldn't be applied to
+                # layer norm and the embedding layer:
+                # https://github.com/karpathy/minGPT/pull/24#issuecomment-679316025
+                if "bias" in name or "layernorm" in name or "embeddings" in name:
+                    reg_dict["noreg"].append(param)
+                else:
+                    reg_dict["normal"].append(param)
+            reg_dict["output"].append(self.unembedder.weight)
+            reg_dict["output_noreg"].append(self.unembedder.bias)
         else:
             reg_dict["normal"].append(self.conv_spatial.weight)
             reg_dict["normal"].append(self.linear_global.weight)

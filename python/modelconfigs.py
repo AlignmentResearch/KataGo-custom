@@ -1308,6 +1308,31 @@ b20c640nbt = {
     "v2_size":144,
 }
 
+vitp2b2c16 = {
+    "version":14,
+
+    "block_kind": [ "dummy" for _ in range(2) ], # controls the number of blocks
+    "trunk_num_channels":16,
+    "norm_kind":"fixup",
+    # Standard ViTs use GeLU, so let's make it the activation function
+    # throughout the whole model.
+    "activation":"gelu",
+
+    # ViT-specific parameters.
+    "vit": True,
+    "patch_size":2,
+    "num_attention_heads":2,
+    "feed_forward_num_channels":16*4,
+
+    # Policy and value head parameters. These values are copied from b2c16.
+    "p1_num_channels":8,
+    "g1_num_channels":8,
+    "v1_num_channels":8,
+    "sbv2_num_channels":12,
+    "num_scorebeliefs":2,
+    "v2_size":12,
+}
+
 vitp2b4c384 = {
     "version":14,
 
@@ -1468,6 +1493,7 @@ base_config_of_name = {
     "b28c512nbt": b28c512nbt,  # Recommended best config for this cost
     "b20c640nbt": b20c640nbt,
 
+    "vitp2b2c16": vitp2b2c16,
     "vitp2b4c384": vitp2b4c384,
     "vitp2b8c384": vitp2b8c384,
     "vitp2b16c384": vitp2b16c384,

@@ -417,11 +417,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
             model_config = state_dict["config"] if "config" in state_dict else modelconfigs.config_of_name[model_kind]
             logging.info(str(model_config))
 
-            if "vit.pooler.dense.weight" in state_dict["model"]:
-                # hack(tomtseng): The ViT pooler is unused but we accidentally
-                # included it in old versions of the ViT, so we need to handle
-                # it for backwards compatibility.
-                model_config["vit_pooler"] = True
             raw_model = Model(model_config,pos_len)
             raw_model.initialize()
 

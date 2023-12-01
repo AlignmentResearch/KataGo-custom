@@ -818,9 +818,12 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
       metrics_out.write(json.dumps(metrics_to_print) + "\n")
       metrics_out.flush()
 
-    num_samples = metrics_to_print.get("nsamp_train") or metrics_to_print["nsamp"]
-    for k, v in metrics_to_print.items():
-        tensorboard_writer.add_scalar(k, v, num_samples)
+    num_samples_key = "nsamp_train" if "nsamp_train" in metrics_to_print else "nsamp"
+    num_samples = metrics_to_print[num_samples_key]
+    for metric_name, metric_value in metrics_to_print.items():
+        if metric_name == num_samples_key:
+            continue
+        tensorboard_writer.add_scalar(metric_name, metric_value, num_samples)
 
   if rank == 0:
     train_metrics_out = open(os.path.join(traindir,"metrics_train.json"),"a")

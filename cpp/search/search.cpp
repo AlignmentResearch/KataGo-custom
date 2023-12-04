@@ -149,7 +149,10 @@ double Search::getScoreStdev(double scoreMean, double scoreMeanSq) {
 }
 
 string Search::getRankStr() const {
-  const auto getVisitStr = [](const Search* bot, string prefix) {
+  const auto getVisitStr = [](const Search* bot, string prefix) -> string {
+    if (bot == nullptr) {
+      return "NULL";
+    }
     return prefix + "v=" + std::to_string(bot->searchParams.maxVisits) + "," +
            prefix + "rsym=" +
            std::to_string(bot->searchParams.rootNumSymmetriesToSample);
@@ -504,7 +507,18 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
-    if (searchParams.maxVisits > 1) {
+    if (oppNNEval == nullptr) {
+      // oppNNEval being nullptr signifies oppBot shouldn't be created. This can
+      // happen when both bots are running A-MCTS. When bot 0 runs A-MCTS, it
+      // needs to create oppBot representing bot 1, but oppBot->oppBot doesn't
+      // need to exist since oppBot will have maxVisits==1 and hence will never
+      // evaluate oppBot->oppBot.
+      // (We should initialize oppBot based on whether oppNNEval is nullptr
+      // rather than whther maxVisits is 1. Even if bot 0 has maxVisits==1, it
+      // still should create oppBot in case the number of visits changes later.
+      // E.g., during victimplay, at the end of a game, bots are used with a
+      // modified number of visits to estimate stats of the board.)
+    } else {
       assert(oppNNEval != nullptr);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
         ? params.oppVisitsOverride.value_or(oppParams.maxVisits)

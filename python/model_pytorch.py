@@ -1576,7 +1576,7 @@ class Model(torch.nn.Module):
         reg_dict["output_noreg"] = []
 
         if self.is_vit:
-            if self.config["vit_version"] >= 2:
+            if self.config["vit_version"] >= 1:
                 for name, param in self.vit.named_parameters():
                     # Weight decay is generally not applied to bias terms:
                     # https://stats.stackexchange.com/questions/153605/no-regularisation-term-for-bias-unit-in-neural-network

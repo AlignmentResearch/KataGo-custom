@@ -1310,7 +1310,7 @@ b20c640nbt = {
 
 vitp2b2c16 = {
     "version":14,
-    "vit_version":1,
+    "vit_version":2,
 
     "block_kind": [ "dummy" for _ in range(2) ], # controls the number of blocks
     "trunk_num_channels":16,
@@ -1336,7 +1336,7 @@ vitp2b2c16 = {
 
 vitp2b4c384 = {
     "version":14,
-    "vit_version":1,
+    "vit_version":2,
 
     "block_kind": [ "dummy" for _ in range(4) ], # controls the number of blocks
     "trunk_num_channels":384,
@@ -1362,7 +1362,7 @@ vitp2b4c384 = {
 
 vitp2b8c384 = {
     "version":14,
-    "vit_version":1,
+    "vit_version":2,
 
     "block_kind": [ "dummy" for _ in range(8) ], # controls the number of blocks
     "trunk_num_channels":384,
@@ -1388,7 +1388,7 @@ vitp2b8c384 = {
 
 vitp2b16c384 = {
     "version":14,
-    "vit_version":1,
+    "vit_version":2,
 
     "block_kind": [ "dummy" for _ in range(16) ], # controls the number of blocks
     "trunk_num_channels":384,

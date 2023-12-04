@@ -416,7 +416,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
             state_dict = torch.load(path_to_load_from, map_location=device)
             model_config = state_dict["config"] if "config" in state_dict else modelconfigs.config_of_name[model_kind]
             logging.info(str(model_config))
-
             raw_model = Model(model_config,pos_len)
             raw_model.initialize()
 

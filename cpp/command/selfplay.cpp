@@ -207,6 +207,20 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   bool autoCleanupAllButLatestIfUnused = true;
   SelfplayManager* manager = new SelfplayManager(validationProp, maxDataQueueSize, &logger, logGamesEvery, autoCleanupAllButLatestIfUnused);
 
+  GameRunner* victimplayGameRunner = nullptr;
+  if (victimplay) {
+    victimplayGameRunner = gameRunner;
+    if (cfg.contains("selfplayCheapSearchProb")) {
+      // When running victimplay with selfplayProportion > 0,
+      // selfplayCheapSearchProb controls the cheap search probability of the
+      // selfplay games. It has no effect when running the actual `selfplay`
+      // command.
+      PlaySettings selfplayPlaySettings = playSettings;
+      selfplayPlaySettings.cheapSearchProb = cfg.getDouble("selfplayCheapSearchProb",0.0,1.0);
+      gameRunner = new GameRunner(cfg, selfplayPlaySettings, logger);
+    }
+  }
+
   const int minBoardXSizeUsed = gameRunner->getGameInitializer()->getMinBoardXSize();
   const int minBoardYSizeUsed = gameRunner->getGameInitializer()->getMinBoardYSize();
   const int maxBoardXSizeUsed = gameRunner->getGameInitializer()->getMaxBoardXSize();
@@ -497,6 +511,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   ForkData* forkData = new ForkData();
   auto gameLoop = [
     &gameRunner,
+    &victimplayGameRunner,
     &manager,
     &logger,
     switchNetsMidGame,
@@ -635,7 +650,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
             curVictimNNEval.get(), nnEval,
             curVictimSearchParams, curAdvSearchParams,
             gameIdx % 2 == 0 ? C_BLACK : C_WHITE,
-            gameRunner, shouldStopFunc, logger,
+            victimplayGameRunner, shouldStopFunc, logger,
             gameIdx, seed, curPredictorNNEval.get()
           );
         } else {  // selfplay game
@@ -762,6 +777,7 @@ int MainCmds::selfplay(const vector<string>& args, const bool victimplay) {
   NeuralNet::globalCleanup();
   delete forkData;
   delete gameRunner;
+  delete victimplayGameRunner;
   ScoreValue::freeTables();
 
   if(sigReceived.load())

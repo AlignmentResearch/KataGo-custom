@@ -412,6 +412,9 @@ void Setup::loadParams(
     else if(cfg.contains("maxTimePondering"))   params.maxTimePondering = cfg.getDouble("maxTimePondering",        0.0, 1.0e20);
     else if(applyDefaultParams)                 params.maxTimePondering = 1.0e20;
 
+    if(cfg.contains("cheapSearchVisits"+idxStr)) params.cheapSearchVisits = cfg.getInt64("cheapSearchVisits"+idxStr, (int64_t)1, (int64_t)1 << 50);
+    else if(cfg.contains("cheapSearchVisits"))   params.cheapSearchVisits = cfg.getInt64("cheapSearchVisits",        (int64_t)1, (int64_t)1 << 50);
+
     if(cfg.contains("lagBuffer"+idxStr)) params.lagBuffer = cfg.getDouble("lagBuffer"+idxStr, 0.0, 3600.0);
     else if(cfg.contains("lagBuffer"))   params.lagBuffer = cfg.getDouble("lagBuffer",        0.0, 3600.0);
     else if(applyDefaultParams)          params.lagBuffer = 0.0;

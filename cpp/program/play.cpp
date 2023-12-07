@@ -1088,15 +1088,16 @@ static SearchLimitsThisMove getSearchLimitsThisMove(
 
 
   if(hintLoc == Board::NULL_LOC && cheapSearchProb > 0.0 && gameRand.nextBool(cheapSearchProb)) {
-    if(playSettings.cheapSearchVisits <= 0)
-      throw StringError("playSettings.cheapSearchVisits <= 0");
-    if(playSettings.cheapSearchVisits > toMoveBot->searchParams.maxVisits ||
-       playSettings.cheapSearchVisits > toMoveBot->searchParams.maxPlayouts)
-      throw StringError("playSettings.cheapSearchVisits > maxVisits and/or maxPlayouts");
+    const int64_t cheapSearchVisits = toMoveBot->searchParams.cheapSearchVisits;
+    if(cheapSearchVisits <= 0)
+      throw StringError("cheapSearchVisits <= 0");
+    if(cheapSearchVisits > toMoveBot->searchParams.maxVisits ||
+       cheapSearchVisits > toMoveBot->searchParams.maxPlayouts)
+      throw StringError("cheapSearchVisits > maxVisits and/or maxPlayouts");
 
     doAlterVisitsPlayouts = true;
-    numAlterVisits = std::min(numAlterVisits,(int64_t)playSettings.cheapSearchVisits);
-    numAlterPlayouts = std::min(numAlterPlayouts,(int64_t)playSettings.cheapSearchVisits);
+    numAlterVisits = std::min(numAlterVisits,cheapSearchVisits);
+    numAlterPlayouts = std::min(numAlterPlayouts,cheapSearchVisits);
     targetWeight *= playSettings.cheapSearchTargetWeight;
 
     //If not recording cheap searches, do a few more things

@@ -160,7 +160,7 @@ string Search::getRankStr() const {
 
   if (searchParams.usingAdversarialAlgo())
     return "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "") + "," + getVisitStr(oppBot.get(), "opp_");
-  
+
   if (searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS)
     return "algo=MCTS," + getVisitStr(this, "");
 
@@ -522,6 +522,9 @@ Search::Search(
       assert(oppNNEval != nullptr);
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
         ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
+        : 1;
+      oppParams.cheapSearchVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
+        ? oppParams.cheapSearchVisits
         : 1;
       // We don't want to recursively model an opponent also using A-MCTS or else
       // we'll have infinite recursion.
@@ -1401,7 +1404,7 @@ void Search::runWholeSearch(
             auto result = std::find(locs.begin(), locs.end(), searchParams.queryMoveLoc);
             if (result != locs.end()) {
               std::vector<double> selectionProbs(playSelectionValues.size());
-              
+
               double temp = interpolateEarly(
                 searchParams.chosenMoveTemperatureHalflife, searchParams.chosenMoveTemperatureEarly, searchParams.chosenMoveTemperature
               );

@@ -35,9 +35,9 @@ struct PlaySettings {
   //Hack to improve learning of very weird komi and very lopsided positions
   bool fancyKomiVarying;
 
-  //With this probability, use only this many visits for a move, and record it with only this weight
+  //With this probability, use only `cheapSearchVisits` many visits for a move, and record it with only this weight.
+  //Parameter `cheapSearchVisits` is located in SearchParams so that it can be configured for each bot individually.
   double cheapSearchProb;
-  int cheapSearchVisits;
   float cheapSearchTargetWeight;
 
   //Attenuate the number of visits used in positions where one player or the other is extremely winning

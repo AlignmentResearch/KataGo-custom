@@ -211,6 +211,7 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = 100;
+    params.cheapSearchVisits = 20;
     params.drawEquivalentWinsForWhite = drawEquivalentWinsForWhite;
 
     MatchPairer::BotSpec botSpec;
@@ -240,7 +241,6 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
     playSettings.policyInitAreaProp = 0.04;
     playSettings.sidePositionProb = 0.40;
     playSettings.cheapSearchProb = 0.5;
-    playSettings.cheapSearchVisits = 20;
     playSettings.cheapSearchTargetWeight = 0.123f;
     playSettings.earlyForkGameProb = 0.5;
     playSettings.earlyForkGameExpectedMoveProp = 0.05;
@@ -283,13 +283,13 @@ void Tests::runSelfplayInitTestsWithNN(const string& modelFile) {
       Player pla = forkData.forks[0]->pla;
       PlayUtils::adjustKomiToEven(
         bot, bot, board, hist, pla,
-        playSettings.cheapSearchVisits, OtherGameProperties(), rand
+        params.cheapSearchVisits, OtherGameProperties(), rand
       );
       BoardHistory hist2 = forkData.forks[0]->hist;
       float oldKomi = hist2.rules.komi;
       double lead = PlayUtils::computeLead(
         bot, bot, board, hist2, pla,
-        playSettings.cheapSearchVisits, OtherGameProperties()
+        params.cheapSearchVisits, OtherGameProperties()
       );
       cout << "Lead: " << lead << endl;
       hist.printDebugInfo(cout,board);
@@ -379,6 +379,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = testResign ? 10 : 100;
+    params.cheapSearchVisits = testResign ? 5 : 50;
     params.drawEquivalentWinsForWhite = 0.5;
     if(testLead) {
       params.chosenMoveTemperature = 1.0;
@@ -435,7 +436,6 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     playSettings.policyInitAreaProp = 0.04;
     playSettings.sidePositionProb = testScaleDataWeight ? 0.2 : 0.0;
     playSettings.cheapSearchProb = 0.5;
-    playSettings.cheapSearchVisits = testResign ? 5 : 50;
     playSettings.cheapSearchTargetWeight = 0.456f;
     playSettings.compensateKomiVisits = 10;
     playSettings.minAsymmetricCompensateKomiProb = 0.5;
@@ -565,6 +565,7 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
 
     SearchParams params;
     params.maxVisits = 100;
+    params.cheapSearchVisits = 50;
     params.drawEquivalentWinsForWhite = 0.5;
 
     MatchPairer::BotSpec botSpec;
@@ -594,7 +595,6 @@ void Tests::runMoreSelfplayTestsWithNN(const string& modelFile) {
     playSettings.policyInitAreaProp = 0;
     playSettings.sidePositionProb = 0.2;
     playSettings.cheapSearchProb = 0.5;
-    playSettings.cheapSearchVisits = 50;
     playSettings.cheapSearchTargetWeight = 0.0;
     playSettings.compensateKomiVisits = 10;
     playSettings.minAsymmetricCompensateKomiProb = 0.5;
@@ -950,6 +950,7 @@ xxxxxxxx.
     params.rootPolicyTemperature = 1.1;
     params.rootDesiredPerChildVisitsCoeff = 2.0;
     params.maxVisits = 800;
+    params.cheapSearchVisits = 200;
     params.drawEquivalentWinsForWhite = 0.5;
 
     MatchPairer::BotSpec botSpec;
@@ -962,7 +963,6 @@ xxxxxxxx.
     playSettings.initGamesWithPolicy = false;
     playSettings.sidePositionProb = 0.0;
     playSettings.cheapSearchProb = 0.5;
-    playSettings.cheapSearchVisits = 200;
     playSettings.cheapSearchTargetWeight = 0;
     playSettings.minAsymmetricCompensateKomiProb = 0.0;
     playSettings.compensateAfterPolicyInitProb = 0.0;
@@ -1917,7 +1917,6 @@ void Tests::runSekiTrainWriteTests(const string& modelFile) {
     playSettings.initGamesWithPolicy = false;
     playSettings.sidePositionProb = 0;
     playSettings.cheapSearchProb = 0;
-    playSettings.cheapSearchVisits = 0;
     playSettings.cheapSearchTargetWeight = 0;
     playSettings.earlyForkGameProb = 0;
     playSettings.earlyForkGameExpectedMoveProp = 0;

@@ -131,6 +131,7 @@ SearchParams::SearchParams()
    maxVisitsPondering(((int64_t)1) << 50),
    maxPlayoutsPondering(((int64_t)1) << 50),
    maxTimePondering(1.0e20),
+   cheapSearchVisits(((int64_t)1) << 50),
    lagBuffer(0.0),
    searchFactorAfterOnePass(1.0),
    searchFactorAfterTwoPass(1.0),

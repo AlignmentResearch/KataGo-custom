@@ -149,6 +149,8 @@ struct SearchParams {
   int64_t maxPlayoutsPondering;
   double maxTimePondering;
 
+  int64_t cheapSearchVisits; // Number of visits for cheap search
+
   //Amount of time to reserve for lag when using a time control
   double lagBuffer;
 

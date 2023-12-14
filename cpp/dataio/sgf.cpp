@@ -1593,10 +1593,16 @@ void WriteSgf::writeSgf(
     if(gameData->playoutDoublingAdvantage != 0)
       out << "," << "pdaWhite=" << ((gameData->playoutDoublingAdvantagePla == P_WHITE ? 1 : -1) * gameData->playoutDoublingAdvantage);
 
+
     for(int j = 0; j<gameData->changedNeuralNets.size(); j++) {
       out << ",newNeuralNetTurn" << gameData->changedNeuralNets[j]->turnIdx
           << "=" << gameData->changedNeuralNets[j]->name;
     }
+
+    if (gameData->movesToPlayVictimFromPolicy >= 0) {
+      out << ",movesToPlayVictimFromPolicy=" << gameData->movesToPlayVictimFromPolicy;
+    }
+
     out << "]";
     assert(endHist.moveHistory.size() <= startTurnIdx + gameData->whiteValueTargetsByTurn.size());
   }

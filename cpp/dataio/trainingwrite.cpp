@@ -92,7 +92,9 @@ FinishedGameData::FinishedGameData()
    finalWhiteScoring(NULL),
 
    sidePositions(),
-   changedNeuralNets()
+   changedNeuralNets(),
+
+   movesToPlayVictimFromPolicy(-1)
 {
 }
 

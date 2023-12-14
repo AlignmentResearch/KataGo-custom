@@ -12,6 +12,10 @@ struct PlaySettings {
   //Occasionally try some alternative moves and search the responses to them.
   double sidePositionProb;
 
+  // In victimplay games, make the victim play a bunch of 1-visit moves at the
+  // start of the game.
+  bool initVictimWithPolicy;
+
   //Temperature to use for placing handicap stones and for initializing the board position
   double policyInitAreaTemperature;
   double handicapTemperature;

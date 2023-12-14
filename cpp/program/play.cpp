@@ -1511,6 +1511,13 @@ FinishedGameData* Play::runGame(
   vector<double> policySurpriseByTurn;
   vector<ReportedSearchValues> rawNNValues;
 
+  // hacky implementation of making victim play from policy initially
+  int movesToPlayVictimFromPolicy = -1;
+  if (playSettings.initVictimWithPolicy && botB != botW) {
+    movesToPlayVictimFromPolicy = gameRand.nextInt(0, (board.x_size * board.y_size * 72) / 100);
+  }
+  gameData->movesToPlayVictimFromPolicy = movesToPlayVictimFromPolicy;
+
   //Main play loop
   for(int i = 0; i<maxMovesPerGame; i++) {
     if(doEndGameIfAllPassAlive)
@@ -1521,10 +1528,22 @@ FinishedGameData* Play::runGame(
       break;
 
     Search* toMoveBot = pla == P_BLACK ? botB : botW;
+    Search* otherBot = pla == P_BLACK ? botW : botB;
 
     SearchLimitsThisMove limits = getSearchLimitsThisMove(
       toMoveBot, pla, playSettings, gameRand, historicalMctsWinLossValues, clearBotBeforeSearch, otherGameProps
     );
+    // hack: assume if bot is MCTS and opponent is AMCTS that we're the victim
+    // in a victimplay game
+    if (i < movesToPlayVictimFromPolicy && !toMoveBot->searchParams.usingAdversarialAlgo()
+        && otherBot->searchParams.usingAdversarialAlgo()) {
+      limits.doAlterVisitsPlayouts = true;
+      limits.numAlterVisits = limits.numAlterPlayouts = 1;
+      limits.targetWeight = 0;
+      limits.clearBotBeforeSearchThisMove = false;
+      limits.removeRootNoise = true;
+    }
+
     Loc loc = runBotWithLimits(toMoveBot, pla, playSettings, limits, logger);
 
     if(loc == Board::NULL_LOC || !toMoveBot->isLegalStrict(loc,pla))

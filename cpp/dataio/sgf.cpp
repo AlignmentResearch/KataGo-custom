@@ -1599,8 +1599,8 @@ void WriteSgf::writeSgf(
           << "=" << gameData->changedNeuralNets[j]->name;
     }
 
-    if (gameData->movesToPlayVictimFromPolicy >= 0) {
-      out << ",movesToPlayVictimFromPolicy=" << gameData->movesToPlayVictimFromPolicy;
+    if (gameData->numInitVictimPolicyMoves >= 0) {
+      out << ",numInitVictimPolicyMoves=" << gameData->numInitVictimPolicyMoves;
     }
 
     out << "]";

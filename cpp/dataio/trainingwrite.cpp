@@ -94,7 +94,7 @@ FinishedGameData::FinishedGameData()
    sidePositions(),
    changedNeuralNets(),
 
-   movesToPlayVictimFromPolicy(-1)
+   numInitVictimPolicyMoves(-1)
 {
 }
 

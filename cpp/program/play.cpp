@@ -1512,11 +1512,20 @@ FinishedGameData* Play::runGame(
   vector<ReportedSearchValues> rawNNValues;
 
   // hacky implementation of making victim play from policy initially
-  int movesToPlayVictimFromPolicy = -1;
+  int numInitVictimPolicyMoves = -1;
   if (playSettings.initVictimWithPolicy && botB != botW) {
-    movesToPlayVictimFromPolicy = gameRand.nextInt(0, (board.x_size * board.y_size * 72) / 100);
+    if (gameRand.nextBool(0.9)) {
+      // With 90% probability, draw from a Gaussian centered around 251 since
+      // that's around the point at which switching from v=1 to v=300 gives h5 a
+      // 50% win rate against r5.
+      numInitVictimPolicyMoves = static_cast<int>((gameRand.nextGaussian() * 20 + 251) * (19 * 19) / (board.x_size * board.y_size));
+    } else {
+      // With 10% probability draw uniformly from [0, 361] in order to have a
+      // broad support.
+      numInitVictimPolicyMoves = gameRand.nextInt(0, board.x_size * board.y_size);
+    }
   }
-  gameData->movesToPlayVictimFromPolicy = movesToPlayVictimFromPolicy;
+  gameData->numInitVictimPolicyMoves = numInitVictimPolicyMoves;
 
   //Main play loop
   for(int i = 0; i<maxMovesPerGame; i++) {
@@ -1535,7 +1544,7 @@ FinishedGameData* Play::runGame(
     );
     // hack: assume if bot is MCTS and opponent is AMCTS that we're the victim
     // in a victimplay game
-    if (i < movesToPlayVictimFromPolicy && !toMoveBot->searchParams.usingAdversarialAlgo()
+    if (i < numInitVictimPolicyMoves && !toMoveBot->searchParams.usingAdversarialAlgo()
         && otherBot->searchParams.usingAdversarialAlgo()) {
       limits.doAlterVisitsPlayouts = true;
       limits.numAlterVisits = limits.numAlterPlayouts = 1;

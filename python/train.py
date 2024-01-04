@@ -54,7 +54,9 @@ if __name__ == "__main__":
     parser.add_argument('-batch-size', help='Per-GPU batch size to use for training', type=int, required=True)
     parser.add_argument('-samples-per-epoch', help='Number of data samples to consider as one epoch', type=int, required=False)
     parser.add_argument('-model-kind', help='String name for what model config to use', required=False)
+    parser.add_argument('-force-model-kind', help="Let -model-kind take precedence over the config saved in the latest checkpoint", required=False, action='store_true')
     parser.add_argument('-lr-scale', help='LR multiplier on the hardcoded schedule', type=float, required=False)
+    parser.add_argument('-weight-decay-scale', help='Multiplier on the weight decay', type=float, required=False)
     parser.add_argument('-gnorm-clip-scale', help='Multiplier on gradient clipping threshold', type=float, required=False)
     parser.add_argument('-sub-epochs', help='Reload training data up to this many times per epoch', type=int, default=1, required=False)
     parser.add_argument('-swa-period-samples', help='How frequently to average an SWA sample, in samples', type=float, required=False)
@@ -135,7 +137,9 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
     batch_size = args["batch_size"]
     samples_per_epoch = args["samples_per_epoch"]
     model_kind = args["model_kind"]
+    force_model_kind = args["force_model_kind"]
     lr_scale = args["lr_scale"]
+    weight_decay_scale = args["weight_decay_scale"]
     gnorm_clip_scale = args["gnorm_clip_scale"]
     sub_epochs = args["sub_epochs"]
     swa_period_samples = args["swa_period_samples"]
@@ -176,6 +180,8 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
 
     if lr_scale is None:
         lr_scale = 1.0
+    if weight_decay_scale is None:
+        weight_decay_scale = 1.0
 
     if samples_per_epoch is None:
         samples_per_epoch = 1000000
@@ -277,10 +283,10 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                 torch.save(state_dict, get_checkpoint_path() + ".tmp")
                 os.replace(get_checkpoint_path() + ".tmp", get_checkpoint_path())
 
-    def get_weight_decay(raw_model, lr_scale, warmup_scale, train_state, running_metrics, group_name):
+    def get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale, train_state, running_metrics, group_name):
         if raw_model.get_norm_kind() == "fixup" or raw_model.get_norm_kind() == "fixscale":
             if group_name == "normal" or group_name == "normal_gamma" or group_name == "output":
-                return 0.000001 * world_size * batch_size / 256.0
+                return 0.000001 * world_size * batch_size / 256.0 * weight_decay_scale
             elif group_name == "noreg":
                 return 0.0
             elif group_name == "output_noreg":
@@ -314,9 +320,9 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                 # than expected.
                 # So we scale sublinearly with lr_scale so as to slightly preadjust to this effect.
                 # Adaptive scale should then help keep us there thereafter.
-                return 0.00125 * world_size * batch_size / 256.0 * math.pow(lr_scale * warmup_scale,0.75) * adaptive_scale * gamma_scale
+                return 0.00125 * world_size * batch_size / 256.0 * math.pow(lr_scale * warmup_scale,0.75) * adaptive_scale * gamma_scale * weight_decay_scale
             elif group_name == "output":
-                return 0.000001 * world_size * batch_size / 256.0
+                return 0.000001 * world_size * batch_size / 256.0 * weight_decay_scale
             elif group_name == "noreg":
                 return 0.0
             elif group_name == "output_noreg":
@@ -332,28 +338,28 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         param_groups = []
         param_groups.append({
             "params": reg_dict["normal"],
-            "weight_decay": get_weight_decay(raw_model, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="normal"),
+            "weight_decay": get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="normal"),
             "group_name": "normal",
         })
         if len(reg_dict["normal_gamma"]) > 0:
             param_groups.append({
                 "params": reg_dict["normal_gamma"],
-                "weight_decay": get_weight_decay(raw_model, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="normal_gamma"),
+                "weight_decay": get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="normal_gamma"),
                 "group_name": "normal_gamma",
             })
         param_groups.append({
             "params": reg_dict["output"],
-            "weight_decay": get_weight_decay(raw_model, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="output"),
+            "weight_decay": get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="output"),
             "group_name": "output",
         })
         param_groups.append({
             "params": reg_dict["noreg"],
-            "weight_decay": get_weight_decay(raw_model, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="noreg"),
+            "weight_decay": get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="noreg"),
             "group_name": "noreg",
         })
         param_groups.append({
             "params": reg_dict["output_noreg"],
-            "weight_decay": get_weight_decay(raw_model, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="output_noreg"),
+            "weight_decay": get_weight_decay(raw_model, weight_decay_scale, lr_scale, warmup_scale=1.0, train_state=train_state, running_metrics=running_metrics, group_name="output_noreg"),
             "group_name": "output_noreg",
         })
         num_params = len(list(raw_model.parameters()))
@@ -416,6 +422,9 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         else:
             state_dict = torch.load(path_to_load_from, map_location=device)
             model_config = state_dict["config"] if "config" in state_dict else modelconfigs.config_of_name[model_kind]
+            if force_model_kind:
+                assert model_kind is not None, "Model kind is unspecified but -force-model-kind is set"
+                model_config = modelconfigs.config_of_name[model_kind]
             logging.info(str(model_config))
 
             raw_model = Model(model_config,pos_len)
@@ -619,6 +628,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
 
             param_group["weight_decay"] = get_weight_decay(
                 raw_model,
+                weight_decay_scale,
                 lr_scale,
                 warmup_scale=warmup_scale,
                 train_state=train_state,

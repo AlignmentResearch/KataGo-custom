@@ -1438,6 +1438,33 @@ vitp2b16c384 = {
     "v2_size":128, # value head
 }
 
+vitp2b16c384d1 = {
+    "version":14,
+    "vit_version":1,
+
+    "block_kind": [ "dummy" for _ in range(16) ], # controls the number of blocks
+    "trunk_num_channels":384,
+    "norm_kind":"fixup",
+    # Standard ViTs use GeLU, so let's make it the activation function
+    # throughout the whole model.
+    "activation":"gelu",
+
+    # ViT-specific parameters.
+    "vit": True,
+    "patch_size":2,
+    "num_attention_heads":6,
+    "feed_forward_num_channels":384*4,
+    "dropout":0.1,
+
+    # Policy and value head parameters. These values are copied from b18c384nbt.
+    "p1_num_channels":48, # policy head
+    "g1_num_channels":48, # policy head
+    "v1_num_channels":96, # value head
+    "sbv2_num_channels":112, # value head
+    "num_scorebeliefs":8, # value head
+    "v2_size":128, # value head
+}
+
 sandbox = {
     "version":14,
     "norm_kind":"fixup",
@@ -1528,6 +1555,7 @@ base_config_of_name = {
     "vitp2b8c384": vitp2b8c384,
     "vitp2b12c384": vitp2b12c384,
     "vitp2b16c384": vitp2b16c384,
+    "vitp2b16c384d1": vitp2b16c384d1,
 
     "sandbox": sandbox,
 }

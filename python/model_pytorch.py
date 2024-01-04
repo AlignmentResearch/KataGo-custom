@@ -1389,6 +1389,8 @@ class Model(torch.nn.Module):
                     num_hidden_layers=self.num_total_blocks,
                     num_attention_heads=config["num_attention_heads"],
                     intermediate_size=config["feed_forward_num_channels"],
+                    hidden_dropout_prob=config.get("dropout", 0.0),
+                    attention_probs_dropout_prob=config.get("dropout", 0.0),
                     image_size=padded_image_size,
                     patch_size=self.patch_size,
                     num_channels=num_input_channels,

@@ -426,7 +426,6 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                 assert model_kind is not None, "Model kind is unspecified but -force-model-kind is set"
                 model_config = modelconfigs.config_of_name[model_kind]
             logging.info(str(model_config))
-
             raw_model = Model(model_config,pos_len)
             raw_model.initialize()
 

@@ -1,6 +1,7 @@
 #include "../neuralnet/pytorchbackend.h"
 
 #include <cassert>
+#include <iomanip>
 #include <sstream>
 
 #include <ATen/autocast_mode.h>
@@ -26,10 +27,30 @@ const int NUM_GLOBAL_FEATURES = NNModelVersion::getNumGlobalFeatures(MODEL_VERSI
 void logModelForwardFailure(ComputeHandle* handle, InputBuffers* inputBuffers) {
   if (handle->logger != nullptr) {
     std::stringstream str;
+    assert(inputBuffers->modelInputs.size() == 2);
     str << "Model evaluation failed with model " << getModelName(&handle->model) << " on input:";
     for (const auto& input: inputBuffers->modelInputs) {
-      str << '\n' << input;
+      str << input << '\n';
     }
+
+    // We may want to print in full precision for debugging, but Torch doesn't
+    // have a built-in option for this:
+    // https://github.com/pytorch/pytorch/issues/73911
+    // Let's manually print out the global input in full precision. The spatial
+    // input is binary so we don't need to print it.
+    const auto globalInput = inputBuffers->modelInputs[1].toTensor();
+    const auto globalInputShape = globalInput.sizes();
+    assert(globalInputShape.size() == 2);
+    str << std::setprecision(std::numeric_limits<double>::digits10);
+    str << "full-precision global input, shape={" << globalInputShape[0] << "," << globalInputShape[1] << "}: {";
+    for (size_t batch_index = 0; batch_index < globalInputShape[0]; batch_index++) {
+      str << " {";
+      for (size_t i = 0; i < globalInputShape[1]; i++) {
+        str << " " << globalInput[batch_index][i].item<double>();
+      }
+      str << " }";
+    }
+    str << " }\n";
     handle->logger->write(str.str());
   }
 }

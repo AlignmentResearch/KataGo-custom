@@ -73,8 +73,7 @@ saver = tf.compat.v1.train.Saver(
 )
 
 #Some tensorflow options
-#tfconfig = tf.compat.v1.ConfigProto(log_device_placement=False,device_count={'GPU': 0})
-tfconfig = tf.compat.v1.ConfigProto(log_device_placement=False)
+tfconfig = tf.compat.v1.ConfigProto(log_device_placement=False,device_count={'GPU': 0})
 #tfconfig.gpu_options.allow_growth = True
 #tfconfig.gpu_options.per_process_gpu_memory_fraction = 0.4
 with tf.compat.v1.Session(config=tfconfig) as session:

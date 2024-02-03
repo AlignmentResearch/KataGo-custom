@@ -103,6 +103,7 @@ ComputeContext* createComputeContext(
   const LoadedModel* loadedModel
 ) {
   (void)gpuIdxs;
+  (void)logger;
   (void)openCLTunerFile;
   (void)homeDataDirOverride;
   (void)openCLReTunePerBoardSize;
@@ -110,13 +111,7 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
-  const bool useFP16 = useFP16Mode != enabled_t::False;
-  if (useFP16) {
-    // There doesn't seem to be a way to autocast without making it a global
-    // setting.
-    logger->write("Enabling useFP16 for all TorchScript models");
-    at::autocast::set_enabled(true);
-  }
+  const bool useFP16 = useFP16Mode == enabled_t::True;
   assert(nnXLen <= MAX_BOARD_LEN);
   assert(nnYLen <= MAX_BOARD_LEN);
 
@@ -240,10 +235,17 @@ void getOutput(
     std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
   }
 
+  auto spatialInputsSlice = spatialInputs.index({Slice(0, batchSize)});
+  auto globalInputsSlice = globalInputs.index({Slice(0, batchSize)});
+  if (gpuHandle->useFP16) {
+    spatialInputsSlice = spatialInputsSlice.to(torch::kFloat16);
+    globalInputsSlice = globalInputsSlice.to(torch::kFloat16);
+  }
+
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
-  modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
+  modelInputs.emplace_back(spatialInputsSlice.to(gpuHandle->device));
+  modelInputs.emplace_back(globalInputsSlice.to(gpuHandle->device));
 
   c10::IValue modelOutput;
   {
@@ -303,7 +305,7 @@ void getOutput(
 
     if (output->whiteOwnerMap != NULL) {
       if (!ownershipOutputs.defined()) {
-        ownershipOutputs = modelOutputs[4].toTensor().to(at::kCPU);
+        ownershipOutputs = modelOutputs[4].toTensor().to(at::kCPU, torch::kFloat32);
       }
       SymmetryHelpers::copyOutputsWithSymmetry(ownershipOutputs[row].data_ptr<float>(), output->whiteOwnerMap, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
     }

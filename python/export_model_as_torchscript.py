@@ -116,6 +116,7 @@ def main():
         help="Filename prefix to save to within directory",
         required=True,
     )
+    parser.add_argument("-use-fp16", help="Export with float16", action="store_true")
     parser.add_argument("-use-swa", help="Use SWA model", action="store_true")
     parser.add_argument(
         "-gpu",
@@ -133,6 +134,9 @@ def main():
         global_input_shape=global_input_shape,
         device=device,
     )
+    if args.use_fp16:
+        model.half()
+        input_batch = tuple(x.half() for x in input_batch)
 
     with torch.no_grad():
         traced_script_module = torch.jit.trace(func=model, example_inputs=input_batch)

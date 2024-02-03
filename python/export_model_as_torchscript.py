@@ -1,10 +1,4 @@
 """Exports PyTorch models as TorchScript models.
-
-NOTE(tomtseng) on FP16: Enabling FP16 consists of invoking a model wrapped `with
-torch.cuda.amp.autocast()`, or at least that's what train.py does. I'm not sure
-if tracing with autocast is supported---I get an error when tracing KataGo
-models with autocast. I'm also not sure if tracing with autocast is needed in
-order to have the resulting TorchScript model be autocastable.
 """
 import argparse
 import os
@@ -55,11 +49,11 @@ class EvalModel(torch.nn.Module):
             persistent=False,
         )
 
-    def forward(self, input_spatial: torch.tensor, spatial_global: torch.tensor):
+    def forward(self, input_spatial: torch.tensor, input_global: torch.tensor):
         # The output of self.model() is a tuple of tuples where the first item
         # of the outer tuple is the main head output.
         policy, value, miscvalue, moremiscvalue, ownership, _, _, _, _ = self.model(
-            input_spatial, spatial_global
+            input_spatial, input_global
         )[0]
         return (
             policy[:, self.policy_output_channels],

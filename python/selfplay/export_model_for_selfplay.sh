@@ -80,6 +80,7 @@ function exportStuff() {
                           -checkpoint "$SRC"/model.ckpt \
                           -export-dir "$TMPDST" \
                           -filename-prefix model \
+                          -use-fp16 \
                           -use-swa
                 fi
 

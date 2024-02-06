@@ -235,17 +235,11 @@ void getOutput(
     std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
   }
 
-  auto spatialInputsSlice = spatialInputs.index({Slice(0, batchSize)});
-  auto globalInputsSlice = globalInputs.index({Slice(0, batchSize)});
-  if (gpuHandle->useFP16) {
-    spatialInputsSlice = spatialInputsSlice.to(torch::kFloat16);
-    globalInputsSlice = globalInputsSlice.to(torch::kFloat16);
-  }
-
+  const auto modelDataType = gpuHandle->useFP16 ? torch::kFloat16 : torch::kFloat32;
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  modelInputs.emplace_back(spatialInputsSlice.to(gpuHandle->device));
-  modelInputs.emplace_back(globalInputsSlice.to(gpuHandle->device));
+  modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device, modelDataType));
+  modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device, modelDataType));
 
   c10::IValue modelOutput;
   {

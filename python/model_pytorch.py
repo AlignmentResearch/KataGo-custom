@@ -340,10 +340,10 @@ class KataGPool(torch.nn.Module):
         """
         mask_sum_hw_sqrt_offset = torch.sqrt(mask_sum_hw) - 14.0
 
-        layer_mean = torch.sum(x, dim=(2, 3), keepdim=True, dtype=torch.float32) / mask_sum_hw
+        layer_mean = torch.sum(x, dim=(2, 3), keepdim=True) / mask_sum_hw
         # All activation functions we use right now are always greater than -1.0, and map 0 -> 0.
         # So off-board areas will equal 0, and then this max is mask-safe if we assign -1.0 to off-board areas.
-        (layer_max,_argmax) = torch.max((x+(mask-1.0)).view(x.shape[0],x.shape[1],-1).to(torch.float32), dim=2)
+        (layer_max,_argmax) = torch.max((x+(mask-1.0)).view(x.shape[0],x.shape[1],-1), dim=2)
         layer_max = layer_max.view(x.shape[0],x.shape[1],1,1)
 
         out_pool1 = layer_mean
@@ -369,7 +369,7 @@ class KataValueHeadGPool(torch.nn.Module):
         """
         mask_sum_hw_sqrt_offset = torch.sqrt(mask_sum_hw) - 14.0
 
-        layer_mean = torch.sum(x, dim=(2, 3), keepdim=True, dtype=torch.float32) / mask_sum_hw
+        layer_mean = torch.sum(x, dim=(2, 3), keepdim=True) / mask_sum_hw
 
         out_pool1 = layer_mean
         out_pool2 = layer_mean * (mask_sum_hw_sqrt_offset / 10.0)

@@ -103,6 +103,7 @@ ComputeContext* createComputeContext(
   const LoadedModel* loadedModel
 ) {
   (void)gpuIdxs;
+  (void)logger;
   (void)openCLTunerFile;
   (void)homeDataDirOverride;
   (void)openCLReTunePerBoardSize;
@@ -110,13 +111,7 @@ ComputeContext* createComputeContext(
   if (useNHWCMode != enabled_t::False) {
     throw StringError("useNHWC is not yet implemented for PyTorch.");
   }
-  const bool useFP16 = useFP16Mode != enabled_t::False;
-  if (useFP16) {
-    // There doesn't seem to be a way to autocast without making it a global
-    // setting.
-    logger->write("Enabling useFP16 for all TorchScript models");
-    at::autocast::set_enabled(true);
-  }
+  const bool useFP16 = useFP16Mode == enabled_t::True;
   assert(nnXLen <= MAX_BOARD_LEN);
   assert(nnYLen <= MAX_BOARD_LEN);
 
@@ -240,10 +235,11 @@ void getOutput(
     std::copy(rowGlobal, rowGlobal + NUM_GLOBAL_FEATURES, globalInputs[row].data_ptr<float>());
   }
 
+  const auto modelDataType = gpuHandle->useFP16 ? torch::kFloat16 : torch::kFloat32;
   auto& modelInputs = inputBuffers->modelInputs;
   modelInputs.clear();
-  modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
-  modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device));
+  modelInputs.emplace_back(spatialInputs.index({Slice(0, batchSize)}).to(gpuHandle->device, modelDataType));
+  modelInputs.emplace_back(globalInputs.index({Slice(0, batchSize)}).to(gpuHandle->device, modelDataType));
 
   c10::IValue modelOutput;
   {
@@ -253,8 +249,18 @@ void getOutput(
     } catch (const c10::Error&) {
       logModelForwardFailure(gpuHandle, inputBuffers);
       throw;
-    } catch (const std::runtime_error&) {
-      logModelForwardFailure(gpuHandle, inputBuffers);
+    } catch (const std::runtime_error& err) {
+      if (std::string(err.what()).find("RuntimeError: Input type") != std::string::npos) {
+        // If the error message looks like "RuntimeError: Input type
+        // (CUDAHalfType) and weight type (CUDAFloatType) should be the same",
+        // the error may be that the user did not set useFP16-N to match whether
+        // TorchScript model nnModelFileN was exported with FP16.
+        if (gpuHandle->logger != nullptr) {
+          gpuHandle->logger->write("HINT: Is useFP16 set correctly for each TorchScript bot?");
+        }
+      } else {
+        logModelForwardFailure(gpuHandle, inputBuffers);
+      }
       throw;
     }
   }
@@ -303,7 +309,7 @@ void getOutput(
 
     if (output->whiteOwnerMap != NULL) {
       if (!ownershipOutputs.defined()) {
-        ownershipOutputs = modelOutputs[4].toTensor().to(at::kCPU);
+        ownershipOutputs = modelOutputs[4].toTensor().to(at::kCPU, torch::kFloat32);
       }
       SymmetryHelpers::copyOutputsWithSymmetry(ownershipOutputs[row].data_ptr<float>(), output->whiteOwnerMap, 1, nnYLen, nnXLen, inputBufs[row]->symmetry);
     }

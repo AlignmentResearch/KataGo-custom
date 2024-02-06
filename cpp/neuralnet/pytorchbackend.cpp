@@ -39,24 +39,7 @@ void logModelForwardFailure(ComputeHandle* handle, InputBuffers* inputBuffers) {
 
 LoadedModel::LoadedModel(const std::string& filename)
   : model(torch::jit::load(filename))
-  , modelName(filename) {
-  // We disable optimizations that make the TorchScript KataGo models crash.
-  //
-  // In particular, what I (tomtseng) saw was that with model b18-s7530m and
-  // libtorch v2.0.1 + CUDA 11.8, the second time I executed the model with
-  // batch size > 1 on CUDA, the model would crash (e.g., with an illegal CUDA
-  // memory access) or return NaNs. The first few calls of a model are when
-  // TorchScript performs profiling and optimization, hence why these calls are
-  // slower and why this issue occurs on the second call of the model.
-  //
-  // This issue would also occur when I ran the TorchScript models in Python.
-  // The fix in Python was to either turn off the default GPU fuser NVFuser
-  // (https://pytorch.org/docs/stable/jit.html#fusion-backends) with
-  // `torch._C._jit_set_nvfuser_enabled(False)` or to first run the model twice
-  // on the CPU (maybe this makes the model optimize with the default CPU fuser
-  // NNC instead of NVFuser, even after moving the model to the GPU?).
-  torch::jit::fuser::cuda::setEnabled(false);
-}
+  , modelName(filename) {}
 
 LoadedModel::LoadedModel(const LoadedModel& other)
   : model(other.model.clone())

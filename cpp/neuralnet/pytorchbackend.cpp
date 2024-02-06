@@ -255,8 +255,18 @@ void getOutput(
     } catch (const c10::Error&) {
       logModelForwardFailure(gpuHandle, inputBuffers);
       throw;
-    } catch (const std::runtime_error&) {
-      logModelForwardFailure(gpuHandle, inputBuffers);
+    } catch (const std::runtime_error& err) {
+      if (std::string(err.what()).find("RuntimeError: Input type") != std::string::npos) {
+        // If the error message looks like "RuntimeError: Input type
+        // (CUDAHalfType) and weight type (CUDAFloatType) should be the same",
+        // the error may be that the user did not set useFP16-N to match whether
+        // TorchScript model nnModelFileN was exported with FP16.
+        if (gpuHandle->logger != nullptr) {
+          gpuHandle->logger->write("HINT: Is useFP16 set correctly for each TorchScript bot?");
+        }
+      } else {
+        logModelForwardFailure(gpuHandle, inputBuffers);
+      }
       throw;
     }
   }

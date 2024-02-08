@@ -113,7 +113,7 @@ do
             for VICTIM in "${victim_array[@]}"; do
                 # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
                 VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
-                EXTRA_CONFIG="numGamesTotal=100"
+                EXTRA_CONFIG="numGamesTotal=100,passingBehavior0=standard"
 
                 if [ -n "$PREDICTOR_DIR" ]; then
                     # https://stackoverflow.com/questions/4561895/how-to-recursively-find-the-latest-modified-file-in-a-directory

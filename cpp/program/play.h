@@ -315,6 +315,8 @@ class GameRunner {
   bool logSearchInfo;
   bool logMoves;
   int maxMovesPerGame;
+  // If true, max moves is adjusted to maxMovesPerGame * <board area> / 19^2.
+  bool scaleMaxMovesWithBoardSize;
   bool clearBotBeforeSearch;
   PlaySettings playSettings;
   GameInitializer* gameInit;

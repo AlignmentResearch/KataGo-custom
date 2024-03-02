@@ -12,6 +12,16 @@ void Setup::initializeSession(ConfigParser& cfg) {
   NeuralNet::globalInitialize();
 }
 
+std::vector<std::string> Setup::getBackendPrefixes() {
+  std::vector<std::string> prefixes;
+  prefixes.push_back("cuda");
+  prefixes.push_back("trt");
+  prefixes.push_back("opencl");
+  prefixes.push_back("eigen");
+  prefixes.push_back("dummybackend");
+  return prefixes;
+}
+
 NNEvaluator* Setup::initializeNNEvaluator(
   const string& nnModelName,
   const string& nnModelFile,
@@ -25,12 +35,25 @@ NNEvaluator* Setup::initializeNNEvaluator(
   int defaultNNYLen,
   int defaultMaxBatchSize,
   bool defaultRequireExactNNLen,
+  bool disableFP16,
   setup_for_t setupFor
 ) {
   vector<NNEvaluator*> nnEvals =
     initializeNNEvaluators(
-      {nnModelName},{nnModelFile},{expectedSha256},
-      cfg,logger,seedRand,maxConcurrentEvals,expectedConcurrentEvals,defaultNNXLen,defaultNNYLen,defaultMaxBatchSize,defaultRequireExactNNLen,setupFor
+      {nnModelName},
+      {nnModelFile},
+      {expectedSha256},
+      cfg,
+      logger,
+      seedRand,
+      maxConcurrentEvals,
+      expectedConcurrentEvals,
+      defaultNNXLen,
+      defaultNNYLen,
+      defaultMaxBatchSize,
+      defaultRequireExactNNLen,
+      disableFP16,
+      setupFor
     );
   assert(nnEvals.size() == 1);
   return nnEvals[0];
@@ -49,6 +72,7 @@ vector<NNEvaluator*> Setup::initializeNNEvaluators(
   int defaultNNYLen,
   int defaultMaxBatchSize,
   bool defaultRequireExactNNLen,
+  bool disableFP16,
   setup_for_t setupFor
 ) {
   vector<NNEvaluator*> nnEvals;
@@ -69,16 +93,10 @@ vector<NNEvaluator*> Setup::initializeNNEvaluators(
 
   //Automatically flag keys that are for other backends as used so that we don't warn about unused keys
   //for those options
-  if(backendPrefix != "cuda")
-    cfg.markAllKeysUsedWithPrefix("cuda");
-  if(backendPrefix != "trt")
-    cfg.markAllKeysUsedWithPrefix("trt");
-  if(backendPrefix != "opencl")
-    cfg.markAllKeysUsedWithPrefix("opencl");
-  if(backendPrefix != "eigen")
-    cfg.markAllKeysUsedWithPrefix("eigen");
-  if(backendPrefix != "dummybackend")
-    cfg.markAllKeysUsedWithPrefix("dummybackend");
+  for(const string& prefix: getBackendPrefixes()) {
+    if(prefix != backendPrefix)
+      cfg.markAllKeysUsedWithPrefix(prefix);
+  }
 
   for(size_t i = 0; i<nnModelFiles.size(); i++) {
     string idxStr = Global::uint64ToString(i);
@@ -293,6 +311,8 @@ vector<NNEvaluator*> Setup::initializeNNEvaluators(
 #endif
 
     int defaultSymmetry = forcedSymmetry >= 0 ? forcedSymmetry : 0;
+    if(disableFP16)
+      useFP16Mode = enabled_t::False;
 
     NNEvaluator* nnEval = new NNEvaluator(
       nnModelName,

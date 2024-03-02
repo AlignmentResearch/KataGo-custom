@@ -543,21 +543,23 @@ void AMCTSTests::checkFinalMoveSelection(const Search& bot) {
       double fpuValue = bot.getFpuValueForChildrenAssumeVisited(
           *tree.root, tree.root->nextPla, true, 1.0, parentUtility,
           parentWeightPerVisit, parentUtilityStdevFactor);
+      const double exploreScaling = bot.getExploreScaling(totalChildWeight, parentUtilityStdevFactor);
 
       return bot.getExploreSelectionValueOfChild(
           *tree.root, policyProbs, heaviestChild,
-          tree.revEdge.at(heaviestChild).moveLoc, totalChildWeight,
+          tree.revEdge.at(heaviestChild).moveLoc, exploreScaling, totalChildWeight,
           heaviestChild->stats.visits.load(std::memory_order_acquire), fpuValue,
-          parentUtility, parentWeightPerVisit, parentUtilityStdevFactor, false,
+          parentUtility, parentWeightPerVisit, false,
           false, maxChildWeight, NULL);
     }();
+    const double exploreScaling = bot.getExploreScaling(totalChildWeight, 1.0);
     for (auto& [child, weight] : childToPsv) {
       if (child == heaviestChild) continue;
       const int64_t visits =
           child->stats.visits.load(std::memory_order_acquire);
       const double reduced = bot.getReducedPlaySelectionWeight(
           *tree.root, policyProbs, child, tree.revEdge.at(child).moveLoc,
-          totalChildWeight, visits, 1.0, bestChildExploreSelectionValue);
+          exploreScaling, visits, bestChildExploreSelectionValue);
       weight = ceil(reduced);
     }
 
@@ -846,12 +848,13 @@ shared_ptr<NNEvaluator> AMCTSTests::getNNEval(string modelFile,
   int expectedConcurrentEvals = 1;
   int defaultMaxBatchSize = 8;
   bool defaultRequireExactNNLen = false;
+  bool disableFP16 = false;
   string expectedSha256 = "";
 
   NNEvaluator* nnEval = Setup::initializeNNEvaluator(
       modelFile, modelFile, expectedSha256, cfg, logger, seedRand,
       maxConcurrentEvals, expectedConcurrentEvals, NNPos::MAX_BOARD_LEN,
-      NNPos::MAX_BOARD_LEN, defaultMaxBatchSize, defaultRequireExactNNLen,
+      NNPos::MAX_BOARD_LEN, defaultMaxBatchSize, defaultRequireExactNNLen, disableFP16,
       Setup::SETUP_FOR_OTHER);
 
   shared_ptr<NNEvaluator> ret(nnEval);

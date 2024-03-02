@@ -9,13 +9,10 @@ import shutil
 import psutil
 import json
 import hashlib
+import datetime
 
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.compat.v1 import python_io
-
-import tfrecordio
 
 keys = [
   "binaryInputNCHWPacked",
@@ -110,7 +107,9 @@ def shardify(input_idx, input_file_group, num_out_files, out_tmp_dirs, keep_prob
   countsums = np.cumsum(counts)
   assert(countsums[len(countsums)-1] == num_rows_to_keep)
 
-  #print("Shardify writing... (mem usage %dMB)" % memusage_mb())
+  # if input_idx % 29 == 0:
+  #   print("%s: Shardify writing... (mem usage %dMB)" % (str(datetime.datetime.now()),memusage_mb()), flush=True)
+
   for out_idx in range(num_out_files):
     start = countsums[out_idx]-counts[out_idx]
     stop = countsums[out_idx]
@@ -131,8 +130,7 @@ def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_
   if output_npz:
     record_writer = None
   else:
-    tfoptions = python_io.TFRecordOptions(python_io.TFRecordCompressionType.ZLIB)
-    record_writer = python_io.TFRecordWriter(filename,tfoptions)
+    assert False, "No longer supports outputting tensorflow data"
 
   binaryInputNCHWPackeds = []
   globalInputNCs = []
@@ -148,10 +146,10 @@ def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_
 
       binaryInputNCHWPacked = npz["binaryInputNCHWPacked"]
       globalInputNC = npz["globalInputNC"]
-      policyTargetsNCMove = npz["policyTargetsNCMove"].astype(np.float32)
+      policyTargetsNCMove = npz["policyTargetsNCMove"]
       globalTargetsNC = npz["globalTargetsNC"]
-      scoreDistrN = npz["scoreDistrN"].astype(np.float32)
-      valueTargetsNCHW = npz["valueTargetsNCHW"].astype(np.float32)
+      scoreDistrN = npz["scoreDistrN"]
+      valueTargetsNCHW = npz["valueTargetsNCHW"]
 
       binaryInputNCHWPackeds.append(binaryInputNCHWPacked)
       globalInputNCs.append(globalInputNC)
@@ -188,6 +186,8 @@ def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_
   assert(scoreDistrN.shape[0] == num_rows)
   assert(valueTargetsNCHW.shape[0] == num_rows)
 
+  # print("%s: Merge writing... (mem usage %dMB)" % (str(datetime.datetime.now()),memusage_mb()), flush=True)
+
   #Just truncate and lose the batch at the end, it's fine
   num_batches = (num_rows // (batch_size * ensure_batch_multiple)) * ensure_batch_multiple
   if output_npz:
@@ -203,22 +203,7 @@ def merge_shards(filename, num_shards_to_merge, out_tmp_dir, batch_size, ensure_
       valueTargetsNCHW = valueTargetsNCHW[start:stop]
     )
   else:
-    for i in range(num_batches):
-      start = i*batch_size
-      stop = (i+1)*batch_size
-
-      example = tfrecordio.make_tf_record_example(
-        binaryInputNCHWPacked,
-        globalInputNC,
-        policyTargetsNCMove,
-        globalTargetsNC,
-        scoreDistrN,
-        valueTargetsNCHW,
-        start,
-        stop
-      )
-      if record_writer is not None:
-        record_writer.write(example.SerializeToString())
+    assert False, "No longer supports outputting tensorflow data"
 
   jsonfilename = os.path.splitext(filename)[0] + ".json"
   with open(jsonfilename,"w") as f:
@@ -293,13 +278,14 @@ if __name__ == '__main__':
   parser.add_argument('-summary-file', required=False, help='Summary json file for directory contents')
   parser.add_argument('-out-dir', required=True, help='Dir to output training files')
   parser.add_argument('-out-tmp-dir', required=True, help='Dir to use as scratch space')
-  parser.add_argument('-approx-rows-per-out-file', type=int, required=True, help='Number of rows per output tf records file')
+  parser.add_argument('-approx-rows-per-out-file', type=int, required=True, help='Number of rows per output file')
   parser.add_argument('-num-processes', type=int, required=True, help='Number of multiprocessing processes')
   parser.add_argument('-batch-size', type=int, required=True, help='Batch size to write training examples in')
   parser.add_argument('-ensure-batch-multiple', type=int, required=False, help='Ensure each file is a multiple of this many batches')
   parser.add_argument('-worker-group-size', type=int, required=False, help='Internally, target having many rows per parallel sharding worker (does not affect merge)')
   parser.add_argument('-exclude', required=False, help='Text file with npzs to ignore, one per line')
   parser.add_argument('-exclude-prefix', required=False, help='Prefix to concat to lines in exclude to produce the full file path')
+  parser.add_argument('-exclude-basename', required=False, action="store_true", help='Consider an exclude to match if basename matches')
   parser.add_argument('-only-include-md5-path-prop-lbound', type=float, required=False, help='Just before sharding, include only filepaths hashing to float >= this')
   parser.add_argument('-only-include-md5-path-prop-ubound', type=float, required=False, help='Just before sharding, include only filepaths hashing to float < this')
   parser.add_argument('-output-npz', action="store_true", required=False, help='Output results as npz files')
@@ -329,6 +315,7 @@ if __name__ == '__main__':
   exclude_prefix = args.exclude_prefix
   if exclude_prefix is None:
     exclude_prefix = ""
+  exclude_basename = args.exclude_basename
   only_include_md5_path_prop_lbound = args.only_include_md5_path_prop_lbound
   only_include_md5_path_prop_ubound = args.only_include_md5_path_prop_ubound
   output_npz = args.output_npz
@@ -388,10 +375,15 @@ if __name__ == '__main__':
       if not success:
         raise RuntimeError("Could not load summary file")
 
+  # If excluding basenames, also add them to the set
+  if exclude_basename:
+    basenames = [os.path.basename(path) for path in exclude_set]
+    exclude_set.update(basenames)
 
   all_files = []
   files_with_unknown_num_rows = []
   excluded_count = 0
+  excluded_due_to_excludes_count = 0
   tempfilelike_count = 0
   with TimeStuff("Finding files"):
     for d in dirs:
@@ -409,9 +401,14 @@ if __name__ == '__main__':
                 excluded_count += 1
                 tempfilelike_count += 1
                 continue
+              if exclude_basename and os.path.basename(filename) in exclude_set:
+                excluded_count += 1
+                excluded_due_to_excludes_count += 1
+                continue
               filename = os.path.join(path,dirname,filename)
               if filename in exclude_set:
                 excluded_count += 1
+                excluded_due_to_excludes_count += 1
                 continue
               if num_rows is None:
                 print("WARNING: Skipping bad rowless file, treating as exclude: ", filename)
@@ -429,9 +426,14 @@ if __name__ == '__main__':
             excluded_count += 1
             tempfilelike_count += 1
             continue
+          if exclude_basename and os.path.basename(filename) in exclude_set:
+            excluded_count += 1
+            excluded_due_to_excludes_count += 1
+            continue
           filename = os.path.join(path,filename)
           if filename in exclude_set:
             excluded_count += 1
+            excluded_due_to_excludes_count += 1
             continue
           filtered_filenames.append(filename)
         filenames = filtered_filenames
@@ -443,9 +445,14 @@ if __name__ == '__main__':
   print("Total number of files with unknown row count: %d" % len(files_with_unknown_num_rows), flush=True)
   print("Excluded count: %d" % excluded_count, flush=True)
   print("Excluded count due to looking like temp file: %d" % tempfilelike_count, flush=True)
+  print("Excluded count due to cmdline excludes file: %d" % excluded_due_to_excludes_count, flush=True)
 
   with TimeStuff("Sorting"):
     all_files.sort(key=(lambda x: x[1]), reverse=False)
+
+  # Wait a few seconds just in case to limit the chance of filesystem races, now that we know exactly
+  # the set of filenames we want
+  time.sleep(3)
 
   with TimeStuff("Computing rows for unsummarized files"):
     with multiprocessing.Pool(num_processes) as pool:
@@ -566,7 +573,8 @@ if __name__ == '__main__':
   if output_npz:
     out_files = [os.path.join(out_dir, "data%d.npz" % i) for i in range(num_out_files)]
   else:
-    out_files = [os.path.join(out_dir, "data%d.tfrecord" % i) for i in range(num_out_files)]
+    assert False, "No longer supports outputting tensorflow data"
+
   out_tmp_dirs = [os.path.join(out_tmp_dir, "tmp.shuf%d" % i) for i in range(num_out_files)]
   print("Writing %d output files with %d kept / %d desired rows" % (num_out_files, approx_rows_to_keep, desired_num_rows))
 
@@ -580,6 +588,7 @@ if __name__ == '__main__':
   for tmp_dir in out_tmp_dirs:
     os.mkdir(tmp_dir)
 
+  num_rows_in_desired_files = 0
   if only_include_md5_path_prop_lbound is not None or only_include_md5_path_prop_ubound is not None:
     new_desired_input_files = []
     for (input_file,num_rows_in_file) in desired_input_files:
@@ -592,9 +601,17 @@ if __name__ == '__main__':
         ok = False
       if ok:
         new_desired_input_files.append((input_file,num_rows_in_file))
+        num_rows_in_desired_files += num_rows_in_file
     print("Due to only_include_md5, filtering down to %d/%d files" % (len(new_desired_input_files),len(desired_input_files)))
     desired_input_files = new_desired_input_files
     del desired_input_row_range # this array is not consistent with new_desired_input_files
+
+  if len(desired_input_files) <= 0:
+    print("No files after filtering for desired range")
+    sys.exit(0)
+  if num_rows_in_desired_files <= 0:
+    print("No rows in desired files")
+    sys.exit(0)
 
   # Clump files into sharding groups. More efficient if shuffling a ton of small npz files
   # since we aren't doing separate tasks for every individual file but rather handling a bunch

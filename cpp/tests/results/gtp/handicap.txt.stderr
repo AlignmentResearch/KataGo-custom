@@ -1,4 +1,4 @@
-KataGo v1.11.0
+KataGo v1.12.0
 Using TrompTaylor rules initially, unless GTP/GUI overrides this
 Initializing board with boardXSize 19 boardYSize 19
 Loaded config configs/gtp_example.cfg and/or command-line and query overrides
@@ -353,3 +353,4 @@ L5  : T  60.12c W  59.91c S   2.81c ( +8.9 L  +9.1) LCB  -14.14c P  2.94% WF   2
 G10 : T  56.91c W  54.66c S   2.25c ( +8.4 L  +8.7) LCB -293.09c P  2.77% WF   1.0 PSV       0 N       1  --  G10
 E11 : T  59.41c W  57.26c S   2.16c ( +8.3 L  +8.8) LCB -290.59c P  2.39% WF   1.0 PSV       0 N       1  --  E11
 C11 : T  58.43c W  56.55c S   1.88c ( +8.0 L  +8.4) LCB -291.57c P  2.36% WF   1.0 PSV       0 N       1  --  C11
+Initializing board with boardXSize 2 boardYSize 2

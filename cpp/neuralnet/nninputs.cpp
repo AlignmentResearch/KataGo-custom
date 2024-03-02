@@ -668,12 +668,14 @@ Board SymmetryHelpers::getSymBoard(const Board& board, int symmetry) {
       if(transpose)
         std::swap(symX,symY);
       Loc symLoc = Location::getLoc(symX,symY,symBoard.x_size);
-      symBoard.setStone(symLoc,board.colors[loc]);
+      bool suc = symBoard.setStoneFailIfNoLibs(symLoc,board.colors[loc]);
+      assert(suc);
+      (void)suc;
       if(loc == board.ko_loc)
         symKoLoc = symLoc;
     }
   }
-  //Set only at the end because otherwise setStone clears it.
+  //Set only at the end because otherwise setStoneFailIfNoLibs clears it.
   if(symKoLoc != Board::NULL_LOC)
     symBoard.setSimpleKoLoc(symKoLoc);
   return symBoard;
@@ -2414,10 +2416,10 @@ void NNInputs::fillRowV7(
   float selfKomi = hist.currentSelfKomi(nextPlayer,nnInputParams.drawEquivalentWinsForWhite);
   float bArea = (float)(xSize * ySize);
   //Bound komi just in case
-  if(selfKomi > bArea+1.0f)
-    selfKomi = bArea+1.0f;
-  if(selfKomi < -bArea-1.0f)
-    selfKomi = -bArea-1.0f;
+  if(selfKomi > bArea+20.0f)
+    selfKomi = bArea+20.0f;
+  if(selfKomi < -bArea-20.0f)
+    selfKomi = -bArea-20.0f;
   rowGlobal[5] = selfKomi/20.0f;
 
   //Ko rule

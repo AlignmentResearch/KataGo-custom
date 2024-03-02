@@ -13,6 +13,8 @@ namespace MainCmds {
   int matchauto(const std::vector<std::string>& args);
   int selfplay(const std::vector<std::string>& args, const bool victimplay = false);
 
+  int testgpuerror(const std::vector<std::string>& args);
+
   int runtests(const std::vector<std::string>& args);
   int runexpensivetests(const std::vector<std::string>& args);
   int runnnlayertests(const std::vector<std::string>& args);

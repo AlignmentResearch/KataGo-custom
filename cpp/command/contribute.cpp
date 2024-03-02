@@ -304,7 +304,9 @@ static void runAndUploadSingleGame(
         Tests::runCanaryTests(nnEvalBlack, NNInputs::SYMMETRY_NOTSPECIFIED, false);
         gameTask.blackManager->withDataWriters(
           nnEvalBlack,
-          [gameData,&gameTask,gameIdx,&sgfFile,&connection,&logger,&shouldStopFunc](TrainingDataWriter* tdataWriter, TrainingDataWriter* vdataWriter, std::ofstream* sgfOut) {
+          [gameData,&gameTask,gameIdx,&sgfFile,&connection,&logger,&shouldStopFunc,&posSample](
+            TrainingDataWriter* tdataWriter, TrainingDataWriter* vdataWriter, std::ofstream* sgfOut
+          ) {
             (void)vdataWriter;
             (void)sgfOut;
             assert(tdataWriter->isEmpty());
@@ -317,7 +319,7 @@ static void runAndUploadSingleGame(
             if(producedFile) {
               bool suc = false;
               try {
-                suc = connection->uploadTrainingGameAndData(gameTask.task,gameData,sgfFile,resultingFilename,numDataRows,retryOnFailure,shouldStopFunc);
+                suc = connection->uploadTrainingGameAndData(gameTask.task,gameData,posSample,sgfFile,resultingFilename,numDataRows,retryOnFailure,shouldStopFunc);
               }
               catch(StringError& e) {
                 logger.write(string("Giving up uploading training game and data due to error:\n") + e.what());
@@ -807,7 +809,7 @@ int MainCmds::contribute(const vector<string>& args) {
 
   auto loadNeuralNetIntoManager =
     [&runParams,&tdataDir,&sgfsDir,&logger,&userCfg,maxSimultaneousGames,maxSimultaneousRatingGamesPossible,&userCfgWarnedYet,
-     &invalidModelErrorTimer,&invalidModelErrorEwms,&lastInvalidModelErrorTime,&invalidModelErrorMutex](
+     &invalidModelErrorTimer,&invalidModelErrorEwms,&lastInvalidModelErrorTime,&invalidModelErrorMutex,&shouldPause](
       SelfplayManager* manager, const Client::ModelInfo modelInfo, const string& modelFile, bool isRatingManager
     ) {
     const string& modelName = modelInfo.name;
@@ -864,13 +866,65 @@ int MainCmds::contribute(const vector<string>& args) {
     int maxRowsPerTrainFile = 20000;
 
     Rand rand;
-    NNEvaluator* nnEval = Setup::initializeNNEvaluator(
-      modelName,modelFile,modelInfo.sha256,*userCfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
-      NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,defaultMaxBatchSize,defaultRequireExactNNLen,
-      Setup::SETUP_FOR_DISTRIBUTED
-    );
-    assert(!nnEval->isNeuralNetLess() || modelFile == "/dev/null");
-    logger.write("Loaded latest neural net " + modelName + " from: " + modelFile);
+
+    NNEvaluator* nnEval;
+
+    {
+      const bool disableFP16 = false;
+      nnEval = Setup::initializeNNEvaluator(
+        modelName,modelFile,modelInfo.sha256,*userCfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
+        NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,defaultMaxBatchSize,defaultRequireExactNNLen,disableFP16,
+        Setup::SETUP_FOR_DISTRIBUTED
+      );
+      assert(!nnEval->isNeuralNetLess() || modelFile == "/dev/null");
+      logger.write("Loaded latest neural net " + modelName + " from: " + modelFile);
+    }
+
+    if(!nnEval->isNeuralNetLess()) {
+      NNEvaluator* nnEval32;
+
+      if(nnEval->isAnyThreadUsingFP16()) {
+        const bool disableFP16 = true;
+        nnEval32 = Setup::initializeNNEvaluator(
+          modelName,modelFile,modelInfo.sha256,*userCfg,logger,rand,maxConcurrentEvals,expectedConcurrentEvals,
+          NNPos::MAX_BOARD_LEN,NNPos::MAX_BOARD_LEN,defaultMaxBatchSize,defaultRequireExactNNLen,disableFP16,
+          Setup::SETUP_FOR_DISTRIBUTED
+        );
+      }
+      else {
+        nnEval32 = nnEval;
+      }
+      logger.write("Testing loaded net");
+
+      const bool verbose = false;
+      const bool quickTest = true;
+      const int boardSizeTest = 19;
+      // Cap test to avoid spawning too many threads when many selfplay games are running
+      const int maxBatchSizeCap = std::min(4, 1 + nnEval->getMaxBatchSize()/2);
+      bool fp32BatchSuccessBuf = true;
+      bool success = Tests::runFP16Test(nnEval,nnEval32,logger,boardSizeTest,maxBatchSizeCap,verbose,quickTest,fp32BatchSuccessBuf);
+      if(!fp32BatchSuccessBuf) {
+        logger.write("Error: large GPU numerical errors, unable to continue");
+        shouldStop.store(true);
+        shouldStopGracefully.store(true);
+        shouldPause->setPermanently(false);
+        if(nnEval32 != nnEval)
+          delete nnEval32;
+        delete nnEval;
+        return false;
+      }
+      if(!success) {
+        logger.write("Warning: large FP16 errors, using FP32 instead");
+        assert(nnEval32 != nnEval);
+        delete nnEval;
+        nnEval = nnEval32;
+      }
+      else {
+      logger.write("Testing loaded net okay");
+        if(nnEval32 != nnEval)
+          delete nnEval32;
+      }
+    }
 
     if(!userCfgWarnedYet) {
       userCfgWarnedYet = true;

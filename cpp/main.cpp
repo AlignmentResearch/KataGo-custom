@@ -48,6 +48,8 @@ victimplaygatekeeper : Same as gatekeeper, but for victimplay.
 ---Testing/debugging subcommands-------------
 evalsgf : Utility/debug tool, analyze a single position of a game from an SGF file.
 
+testgpuerror : Print the average error of the neural net between current config and fp32 config.
+
 runtests : Test important board algorithms and datastructures
 runnnlayertests : Test a few subcomponents of the current neural net backend
 runexpensivetests : Expensive tests (mostly for the go_attack project).
@@ -95,6 +97,8 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::selfplay(subArgs);
   else if(subcommand == "victimplay")
     return MainCmds::selfplay(subArgs, true);
+  else if(subcommand == "testgpuerror")
+    return MainCmds::testgpuerror(subArgs);
   else if(subcommand == "runtests")
     return MainCmds::runtests(subArgs);
   else if(subcommand == "runexpensivetests")
@@ -209,11 +213,11 @@ int main(int argc, const char* const* argv) {
 
 
 string Version::getKataGoVersion() {
-  return string("1.11.0");
+  return string("1.12.0");
 }
 
 string Version::getKataGoVersionForHelp() {
-  return string("KataGo v1.11.0");
+  return string("KataGo v1.12.0");
 }
 
 string Version::getKataGoVersionFullInfo() {

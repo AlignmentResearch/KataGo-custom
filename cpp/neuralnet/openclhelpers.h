@@ -105,11 +105,15 @@ namespace OpenCLHelpers {
   cl_mem createReadWriteBuffer(cl_context context, std::vector<half_float::half>& data);
   cl_mem createReadWriteBufferFloat(cl_context context, size_t numElts);
   cl_mem createReadWriteBufferHalf(cl_context context, size_t numElts);
+  cl_mem createReadWriteBufferBytes(cl_context clContext, size_t numBytes);
 
   void blockingReadBuffer(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, std::vector<float>& dstBuf);
+  void blockingReadBuffer(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, float* dstBuf);
   void blockingReadBuffer(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, std::vector<half_float::half>& dstBuf);
   void blockingReadBufferHalfToFloat(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, std::vector<float>& dstBuf);
+  void blockingReadBufferHalfToFloat(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, float* dstBuf);
   void blockingReadBuffer(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, std::vector<float>& dstBuf, bool useFP16);
+  void blockingReadBuffer(cl_command_queue commandQueue, cl_mem srcBuf, size_t numElts, float* dstBuf, bool useFP16);
 
   size_t powerOf2ify(size_t size);
   size_t roundUpToMultiple(size_t size, size_t ofThis);
@@ -132,6 +136,15 @@ namespace OpenCLHelpers {
     int M, int N, int K,
     cl_mem A, cl_mem B, cl_mem C,
     int numBatchElts,
+    cl_event* eventBuf
+  );
+
+  cl_int doHGemmWmma_NCHW_ICOC(
+    cl_kernel kernel,
+    cl_command_queue commandQueue,
+    const OpenCLTuneParams& tuneParams,
+    int batchSize, int cSize, int hwSize, int ocSize,
+    cl_mem A, cl_mem B, cl_mem C,
     cl_event* eventBuf
   );
 
@@ -178,7 +191,7 @@ namespace OpenCLHelpers {
     cl_event* eventBuf
   );
 
-  cl_int doWinogradTransformWithBNRelu(
+  cl_int doWinogradTransformWithBNAct(
     cl_kernel kernel,
     cl_command_queue commandQueue,
     const OpenCLTuneParams& tuneParams,
@@ -203,12 +216,12 @@ namespace OpenCLHelpers {
     cl_event* eventBuf
   );
 
-  cl_int performGPool(
+  cl_int performGPoolMask(
     cl_kernel kernel,
     cl_command_queue commandQueue,
     const OpenCLTuneParams& tuneParams,
     int batchSize, int gpoolChannels, int nnXYLen,
-    cl_mem gpoolConvOut, cl_mem gpoolConcat, cl_mem maskSum,
+    cl_mem gpoolConvOut, cl_mem gpoolConcat, cl_mem mask, cl_mem maskSum,
     cl_event* eventBuf
   );
 

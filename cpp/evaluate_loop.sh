@@ -28,6 +28,9 @@ usage() {
     echo "  -g GO_ATTACK_ROOT, --go-attack-root GO_ATTACK_ROOT"
     echo "    The root directory of the go-attack repository."
     echo "    Default: '/go_attack'"
+    echo "  --num-games NUM_GAMES"
+    echo "    Number of games per evaluation."
+    echo "    Default: 100"
     echo
     echo "Optional arguments should be specified before positional arguments."
     echo "Currently expects to be run from within the 'cpp' directory of the KataGo repo."
@@ -38,6 +41,7 @@ VICTIMS_DIR=""
 PREDICTOR_DIR=""
 KATAGO_BIN="/engines/KataGo-custom/cpp/katago"
 GO_ATTACK_ROOT="/go_attack"
+NUM_GAMES=100
 
 # Command line flag parsing (https://stackoverflow.com/a/33826763/4865149)
 while [ -n "${1-}" ]; do
@@ -49,6 +53,7 @@ while [ -n "${1-}" ]; do
     -p|--prediction-dir) PREDICTOR_DIR="$2"; shift 2 ;;
     -k|--katago-bin) KATAGO_BIN="$2"; shift 2 ;;
     -g|--go-attack-root) GO_ATTACK_ROOT="$2"; shift 2 ;;
+    --num-games) NUM_GAMES="$2"; shift 2;;
     -*) echo "Unknown parameter passed: $1"; usage; exit 1 ;;
     *) break ;;
   esac
@@ -113,7 +118,7 @@ do
             for VICTIM in "${victim_array[@]}"; do
                 # https://stackoverflow.com/questions/12152626/how-can-i-remove-the-extension-of-a-filename-in-a-shell-script
                 VICTIM_NAME=$(echo "$VICTIM" | cut -f 1 -d '.')
-                EXTRA_CONFIG="numGamesTotal=100"
+                EXTRA_CONFIG="numGamesTotal=$NUM_GAMES"
 
                 if [ -n "$PREDICTOR_DIR" ]; then
                     # https://stackoverflow.com/questions/4561895/how-to-recursively-find-the-latest-modified-file-in-a-directory

@@ -24,6 +24,7 @@ import torch.nn
 import torch.optim
 import torch.distributed
 import torch.multiprocessing
+import torch.utils.tensorboard
 from torch.nn.parallel import DistributedDataParallel
 from torch.optim.swa_utils import AveragedModel
 from torch.cuda.amp import GradScaler, autocast
@@ -90,6 +91,8 @@ if __name__ == "__main__":
   parser.add_argument('-main-loss-scale', type=float, help='Loss factor scale for main head', required=False)
   parser.add_argument('-intermediate-loss-scale', type=float, help='Loss factor scale for intermediate head', required=False)
   parser.add_argument('-intermediate-distill-scale', type=float, help='Distill factor scale for intermediate head', required=False)
+
+  parser.add_argument('-disable-vtimeloss', help='Disable vtimeloss for training', required=False, dest="use_vtimeloss", action='store_false')
 
   args = vars(parser.parse_args())
 
@@ -169,6 +172,8 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
   main_loss_scale = args["main_loss_scale"]
   intermediate_loss_scale = args["intermediate_loss_scale"]
   intermediate_distill_scale = args["intermediate_distill_scale"]
+
+  use_vtimeloss = args["use_vtimeloss"]
 
   if lr_scale is None:
     lr_scale = 1.0
@@ -793,7 +798,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
         metric_sums[metric] += metrics[metric]
         metric_weights[metric] += batch_size
 
-  def log_metrics(metric_sums, metric_weights, metrics, metrics_out):
+  def log_metrics(metric_sums, metric_weights, metrics, metrics_out, tensorboard_writer):
     metrics_to_print = {}
     for metric in metric_sums:
       if metric.endswith("_sum"):
@@ -813,12 +818,23 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
       metrics_out.write(json.dumps(metrics_to_print) + "\n")
       metrics_out.flush()
 
+    num_samples_key = "nsamp_train" if "nsamp_train" in metrics_to_print else "nsamp"
+    num_samples = metrics_to_print[num_samples_key]
+    for metric_name, metric_value in metrics_to_print.items():
+        if metric_name == num_samples_key:
+            continue
+        tensorboard_writer.add_scalar(metric_name, metric_value, num_samples)
+
   if rank == 0:
     train_metrics_out = open(os.path.join(traindir,"metrics_train.json"),"a")
     val_metrics_out = open(os.path.join(traindir,"metrics_val.json"),"a")
+    train_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, "tensorboard_train"))
+    val_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, "tensorboard_val"))
   else:
     train_metrics_out = open(os.path.join(traindir,f"metrics_train_rank{rank}.json"),"a")
     val_metrics_out = open(os.path.join(traindir,f"metrics_val_rank{rank}.json"),"a")
+    train_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, f"tensorboard_train_rank{rank}"))
+    val_tensorboard_writer = torch.utils.tensorboard.SummaryWriter(os.path.join(traindir, f"tensorboard_val_rank{rank}"))
 
   # TRAIN! -----------------------------------------------------------------------------------
 
@@ -944,6 +960,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
           main_loss_scale=main_loss_scale,
           intermediate_loss_scale=intermediate_loss_scale,
           intermediate_distill_scale=intermediate_distill_scale,
+          use_vtimeloss=use_vtimeloss,
         )
 
         # DDP averages loss across instances, so to preserve LR as per-sample lr, we scale by world size.
@@ -1021,7 +1038,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
           timediff = t1 - last_train_stats_time
           last_train_stats_time = t1
           metrics["time_since_last_print"] = timediff
-          log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out)
+          log_metrics(running_metrics["sums"], running_metrics["weights"], metrics, train_metrics_out, train_tensorboard_writer)
 
         # Update LR more frequently at the start for smoother warmup ramp and wd adjustment
         if train_state["global_step_samples"] <= 50000000 and batch_count_this_epoch % 10 == 0:
@@ -1150,6 +1167,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
               main_loss_scale=main_loss_scale,
               intermediate_loss_scale=intermediate_loss_scale,
               intermediate_distill_scale=intermediate_distill_scale,
+              use_vtimeloss=use_vtimeloss,
             )
             metrics = detensorify_metrics(metrics)
             accumulate_metrics(val_metric_sums, val_metric_weights, metrics, batch_size, decay=1.0, new_weight=1.0)
@@ -1160,7 +1178,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
             val_metric_weights["nsamp_train"] = running_metrics["weights"]["nsamp"]
             val_metric_sums["wsum_train"] = running_metrics["sums"]["wsum"]
             val_metric_weights["wsum_train"] = running_metrics["weights"]["wsum"]
-          log_metrics(val_metric_sums, val_metric_weights, metrics, val_metrics_out)
+          log_metrics(val_metric_sums, val_metric_weights, metrics, val_metrics_out, val_tensorboard_writer)
           t1 = time.perf_counter()
           logging.info(f"Validation took {t1-t0} seconds")
           ddp_model.train()
@@ -1183,6 +1201,8 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
 
   train_metrics_out.close()
   val_metrics_out.close()
+  train_tensorboard_writer.close()
+  val_tensorboard_writer.close()
 
 
 if __name__ == "__main__":

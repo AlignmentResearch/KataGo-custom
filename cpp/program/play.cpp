@@ -2335,26 +2335,34 @@ void Play::maybeHintForkGame(
 
 
 GameRunner::GameRunner(ConfigParser& cfg, PlaySettings pSettings, Logger& logger)
-  :logSearchInfo(),logMoves(),maxMovesPerGame(),clearBotBeforeSearch(),
+  :logSearchInfo(),logMoves(),maxMovesPerGame(),scaleMaxMovesWithBoardSize(),clearBotBeforeSearch(),
    playSettings(pSettings),
    gameInit(NULL)
 {
   logSearchInfo = cfg.getBool("logSearchInfo");
   logMoves = cfg.getBool("logMoves");
   maxMovesPerGame = cfg.getInt("maxMovesPerGame",0,1 << 30);
+  scaleMaxMovesWithBoardSize =
+    cfg.contains("scaleMaxMovesWithBoardSize")
+    ? cfg.getBool("scaleMaxMovesWithBoardSize")
+    : false;
   clearBotBeforeSearch = cfg.contains("clearBotBeforeSearch") ? cfg.getBool("clearBotBeforeSearch") : false;
 
   //Initialize object for randomizing game settings
   gameInit = new GameInitializer(cfg,logger);
 }
 GameRunner::GameRunner(ConfigParser& cfg, const string& gameInitRandSeed, PlaySettings pSettings, Logger& logger)
-  :logSearchInfo(),logMoves(),maxMovesPerGame(),clearBotBeforeSearch(),
+  :logSearchInfo(),logMoves(),maxMovesPerGame(),scaleMaxMovesWithBoardSize(),clearBotBeforeSearch(),
    playSettings(pSettings),
    gameInit(NULL)
 {
   logSearchInfo = cfg.getBool("logSearchInfo");
   logMoves = cfg.getBool("logMoves");
   maxMovesPerGame = cfg.getInt("maxMovesPerGame",0,1 << 30);
+  scaleMaxMovesWithBoardSize =
+    cfg.contains("scaleMaxMovesWithBoardSize")
+    ? cfg.getBool("scaleMaxMovesWithBoardSize")
+    : false;
   clearBotBeforeSearch = cfg.contains("clearBotBeforeSearch") ? cfg.getBool("clearBotBeforeSearch") : false;
 
   //Initialize object for randomizing game settings
@@ -2508,13 +2516,18 @@ FinishedGameData* GameRunner::runGame(
     }
   }
 
+  const int gameMaxMoves =
+    scaleMaxMovesWithBoardSize
+    ? maxMovesPerGame * board.x_size * board.y_size / (19 * 19)
+    : maxMovesPerGame;
+
   FinishedGameData* finishedGameData = Play::runGame(
     board,pla,hist,extraBlackAndKomi,
     botSpecB,botSpecW,
     botB,botW,
     doEndGameIfAllPassAlive,clearBotBeforeSearchThisGame,
     logger,logSearchInfo,logMoves,
-    maxMovesPerGame,shouldStop,
+    gameMaxMoves,shouldStop,
     shouldPause,
     playSettings,otherGameProps,
     gameRand,

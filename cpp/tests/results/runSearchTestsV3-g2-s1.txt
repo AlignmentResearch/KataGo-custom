@@ -40,11 +40,11 @@ HASH: CD7D34A65095D83669559B90EBE257EE
 Win 66.70c
 Loss 33.29c
 NoResult 0.01c
-ScoreMean 6.5
+ScoreMean 6.52
 ScoreMeanSq 42.4
-Lead 6.5
+Lead 6.52
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0    0 
@@ -116,11 +116,11 @@ HASH: CD7D34A65095D83669559B90EBE257EE
 Win 66.70c
 Loss 33.29c
 NoResult 0.01c
-ScoreMean 6.5
+ScoreMean 6.52
 ScoreMeanSq 42.4
-Lead 6.5
+Lead 6.52
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    1    1    1    1    1    1    1    1    1    1    1    1    1    1    1    1    1    1    1 
@@ -266,11 +266,11 @@ HASH: 1B6D4264AC8E8615F558CCD7E94EE4A5
 Win 72.51c
 Loss 27.48c
 NoResult 0.01c
-ScoreMean 3.5
+ScoreMean 3.48
 ScoreMeanSq 12.1
-Lead 3.5
+Lead 3.48
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    0    -    1    1    0    0    0    0    -   12    0 
@@ -316,11 +316,11 @@ HASH: 1B6D4264AC8E8615F558CCD7E94EE4A5
 Win 72.51c
 Loss 27.48c
 NoResult 0.01c
-ScoreMean 3.5
+ScoreMean 3.48
 ScoreMeanSq 12.1
-Lead 3.5
+Lead 3.48
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    0    -    1    1    0    0    0    0    -   12    0 
@@ -1391,11 +1391,11 @@ HASH: 5AF63E0AF830CE859332D16214395C9B
 Win 53.21c
 Loss 46.78c
 NoResult 0.01c
-ScoreMean 0.0
+ScoreMean 0.03
 ScoreMeanSq 0.0
-Lead 0.0
+Lead 0.03
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    1    1    1    1    1    1    2    1    1 
@@ -1459,11 +1459,11 @@ HASH: 5AF63E0AF830CE859332D16214395C9B
 Win 61.70c
 Loss 38.29c
 NoResult 0.01c
-ScoreMean 0.6
+ScoreMean 0.55
 ScoreMeanSq 0.3
-Lead 0.6
+Lead 0.55
 VarTimeLeft -1.0
-STWinlossError -1.0
+STWinlossError -1.000
 STScoreError -1.0
 Policy
    2    2    2    2    2    2    2    2    2 

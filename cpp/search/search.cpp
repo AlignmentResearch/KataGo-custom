@@ -114,13 +114,20 @@ Search::Search(
 {
   if (searchParams.usingAdversarialAlgo()) {
     assert(searchParams.numThreads == 1); // We do not support multithreading with AMCTS (yet).
-    // When using AMCTS, we don't support graph search for ourselves or our
-    // opponent.
+    // When using AMCTS, we don't support graph search for ourselves.
     assert(!searchParams.useGraphSearch);
-    // We only want to initialize oppBot if maxVisits > 1 or else we'll get
-    // infinite recursion when both bots are using A-MCTS.
-    if (searchParams.maxVisits > 1) {
-      assert(oppNNEval != nullptr);
+    if (oppNNEval == nullptr) {
+      // oppNNEval being nullptr signifies oppBot shouldn't be created. This can
+      // happen when both bots are running A-MCTS. When bot 0 runs A-MCTS, it
+      // needs to create oppBot representing bot 1, but oppBot->oppBot doesn't
+      // need to exist since oppBot will have maxVisits==1 and hence will never
+      // evaluate oppBot->oppBot.
+      // (We should initialize oppBot based on whether oppNNEval is nullptr
+      // rather than whther maxVisits is 1. Even if bot 0 has maxVisits==1, it
+      // still should create oppBot in case the number of visits changes later.
+      // E.g., during victimplay, at the end of a game, bots are used with a
+      // modified number of visits to estimate stats of the board.)
+    } else {
       oppParams.maxVisits = params.searchAlgo == SearchParams::SearchAlgorithm::AMCTS_R
         ? params.oppVisitsOverride.value_or(oppParams.maxVisits)
         : 1;
@@ -173,20 +180,17 @@ Search::~Search() {
 }
 
 string Search::getRankStr() const {
-  const auto getVisitStr = [](const Search* bot, string prefix) {
+  const auto getVisitStr = [](const Search* bot, string prefix) -> string {
+    if (bot == nullptr) {
+      return "NULL";
+    }
     return prefix + "v=" + std::to_string(bot->searchParams.maxVisits) + "," +
            prefix + "rsym=" +
            std::to_string(bot->searchParams.rootNumSymmetriesToSample);
   };
 
-  if (searchParams.usingAdversarialAlgo()) {
-    string rankStr = "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "");
-    // oppBot may be null if the number of visits is 1.
-    if (oppBot != nullptr) {
-      rankStr += "," + getVisitStr(oppBot.get(), "opp_");
-    }
-    return rankStr;
-  }
+  if (searchParams.usingAdversarialAlgo())
+    return "algo=" + searchParams.getSearchAlgoAsStr() + "," + getVisitStr(this, "") + "," + getVisitStr(oppBot.get(), "opp_");
 
   if (searchParams.searchAlgo == SearchParams::SearchAlgorithm::MCTS)
     return "algo=MCTS," + getVisitStr(this, "");

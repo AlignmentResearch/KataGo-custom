@@ -367,6 +367,7 @@ class Metrics:
         td_value_loss_scales,
         main_loss_scale,
         intermediate_loss_scale,
+        use_vtimeloss,
     ):
         results = self.metrics_dict_batchwise_single_heads_output(
             raw_model,
@@ -377,6 +378,7 @@ class Metrics:
             value_loss_scale=value_loss_scale,
             td_value_loss_scales=td_value_loss_scales,
             is_intermediate=False,
+            use_vtimeloss=use_vtimeloss,
         )
         if main_loss_scale is not None:
             results["loss_sum"] = main_loss_scale * results["loss_sum"]
@@ -399,6 +401,7 @@ class Metrics:
                     value_loss_scale=value_loss_scale,
                     td_value_loss_scales=td_value_loss_scales,
                     is_intermediate=True,
+                    use_vtimeloss=use_vtimeloss,
                 )
                 for key,value in iresults.items():
                     if key != "loss_sum":
@@ -418,6 +421,7 @@ class Metrics:
         value_loss_scale,
         td_value_loss_scales,
         is_intermediate,
+        use_vtimeloss,
     ):
         (
             policy_logits,
@@ -723,7 +727,7 @@ class Metrics:
             + loss_scorebelief_pdf
             + loss_scorestdev
             + loss_lead
-            + loss_variance_time
+            + (loss_variance_time if use_vtimeloss else 0)
             + loss_shortterm_value_error
             + loss_shortterm_score_error
         )

@@ -43,8 +43,6 @@ if [[ -n $(pwd | grep "^$BASEDIR/scripts/") ]]
 then
     echo "Already running out of snapshotted scripts directory, not snapshotting again"
 else
-    GITROOTDIR="$(git rev-parse --show-toplevel)"
-
     pushd "$GITROOTDIR"
     git show --no-patch --no-color > "$BASEDIR"/train/"$TRAININGNAME"/version.txt
     git diff --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diff.txt

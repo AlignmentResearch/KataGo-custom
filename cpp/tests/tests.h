@@ -91,11 +91,11 @@ namespace Tests {
   void runCollectFilesTests();
   void runLoadModelTests();
 
-  //testpassing.cpp
-  void runPassingTests();
-
   //testbook.cpp
   void runBookTests();
+
+  // testpassing.cpp (KataGo-custom test)
+  void runPassingTests();
 }
 
 namespace TestCommon {

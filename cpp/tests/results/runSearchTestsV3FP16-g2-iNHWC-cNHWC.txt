@@ -40,9 +40,9 @@ HASH: CD7D34A65095D83669559B90EBE257EE
 Win 65.31c
 Loss 34.68c
 NoResult 0.01c
-ScoreMean 5.87
+ScoreMean 5.86
 ScoreMeanSq 34.4
-Lead 5.87
+Lead 5.86
 VarTimeLeft -1.0
 STWinlossError -1.000
 STScoreError -1.0
@@ -116,9 +116,9 @@ HASH: CD7D34A65095D83669559B90EBE257EE
 Win 65.31c
 Loss 34.68c
 NoResult 0.01c
-ScoreMean 5.87
+ScoreMean 5.86
 ScoreMeanSq 34.4
-Lead 5.87
+Lead 5.86
 VarTimeLeft -1.0
 STWinlossError -1.000
 STScoreError -1.0
@@ -266,9 +266,9 @@ HASH: 1B6D4264AC8E8615F558CCD7E94EE4A5
 Win 71.06c
 Loss 28.93c
 NoResult 0.02c
-ScoreMean 3.33
+ScoreMean 3.34
 ScoreMeanSq 11.1
-Lead 3.33
+Lead 3.34
 VarTimeLeft -1.0
 STWinlossError -1.000
 STScoreError -1.0
@@ -316,9 +316,9 @@ HASH: 1B6D4264AC8E8615F558CCD7E94EE4A5
 Win 71.06c
 Loss 28.93c
 NoResult 0.02c
-ScoreMean 3.33
+ScoreMean 3.34
 ScoreMeanSq 11.1
-Lead 3.33
+Lead 3.34
 VarTimeLeft -1.0
 STWinlossError -1.000
 STScoreError -1.0
@@ -1307,11 +1307,11 @@ New playouts: 80
 NN rows: 67
 NN batches: 67
 NN avg batch size: 1
-PV: A1 J6 C3 pass B4 pass A4 pass B1
+PV: A1 J6 C3 pass B4 pass A4 pass
 Tree:
-: T  99.90c W  91.54c S   8.32c ( +8.6 L  +8.6) N      80  --  A1 J6 C3 pass B4 pass A4
+: T 100.13c W  91.56c S   8.54c ( +8.8 L  +8.8) N      80  --  A1 J6 C3 pass B4 pass A4
 ---White(^)---
-A1  : T 108.47c W  99.54c S   8.93c ( +9.1 L  +9.1) LCB  107.92c P 34.47% WF  75.0 PSV      68 N      68  --  A1 J6 C3 pass B4 pass A4 pass
+A1  : T 108.71c W  99.54c S   9.16c ( +9.4 L  +9.4) LCB  108.18c P 34.47% WF  75.0 PSV      68 N      68  --  A1 J6 C3 pass B4 pass A4 pass
 J6  : T -29.50c W -29.13c S  -0.37c ( -0.4 L  -0.4) LCB -289.50c P 13.46% WF   0.5 PSV       0 N       1  --  J6
 C3  : T -73.71c W -70.13c S  -3.58c ( -3.4 L  -3.4) LCB -333.71c P  7.04% WF   0.3 PSV       0 N       1  --  C3
 J7  : T -63.44c W -60.92c S  -2.52c ( -2.4 L  -2.4) LCB -323.44c P  5.54% WF   0.4 PSV       0 N       1  --  J7

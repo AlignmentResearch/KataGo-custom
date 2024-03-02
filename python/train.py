@@ -1198,6 +1198,7 @@ def main(rank: int, world_size: int, args, multi_gpu_device_ids, readpipes, writ
                             td_value_loss_scales=td_value_loss_scales,
                             main_loss_scale=main_loss_scale,
                             intermediate_loss_scale=intermediate_loss_scale,
+                            use_vtimeloss=use_vtimeloss,
                         )
                         metrics = detensorify_metrics(metrics)
                         accumulate_metrics(val_metric_sums, val_metric_weights, metrics, batch_size, decay=1.0, new_weight=1.0)

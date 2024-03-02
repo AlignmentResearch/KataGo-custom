@@ -1655,7 +1655,8 @@ class Model(torch.nn.Module):
             # hidden_size.
             out = self.vit(out).last_hidden_state
             # Remove [CLS] patch usually used for attaching a classification
-            # head.
+            # head. The [CLS] patch is the first patch, see
+            # https://github.com/huggingface/transformers/blob/092f1fdaa4224fdd88c616dc9678e6fcb37bfffd/src/transformers/models/vit/modeling_vit.py#L131-L133
             out = out[:, 1:]
 
             # Unembed the patches and truncate back to original board size.

@@ -198,6 +198,7 @@ add_executable(katago
   neuralnet/nneval.cpp
   neuralnet/desc.cpp
   ${NEURALNET_BACKEND_SOURCES}
+  neuralnet/pytorchbackend.cpp
   book/book.cpp
   book/bookcssjs.cpp
   search/timecontrols.cpp
@@ -273,6 +274,11 @@ add_executable(katago
   command/tune.cpp
   main.cpp
   )
+
+# Expect libtorch to be installed at /opt/libtorch.
+list(APPEND CMAKE_PREFIX_PATH "/opt/libtorch")
+find_package(Torch REQUIRED)
+target_link_libraries(katago "${TORCH_LIBRARIES}")
 
 if(USE_BACKEND STREQUAL "CUDA")
   target_compile_definitions(katago PRIVATE USE_CUDA_BACKEND)

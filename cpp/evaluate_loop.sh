@@ -92,7 +92,7 @@ do
     if [[ -z "$VICTIM_LIST_ARG" ]]
     then
         # https://stackoverflow.com/questions/1015678/get-most-recent-file-in-a-directory-on-linux
-        VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | grep "\.gz" | tail --lines 1)
+        VICTIM_LIST=$(ls -Art "$VICTIMS_DIR" | grep "\.\(pt\|gz\)" | tail --lines 1)
     else
         VICTIM_LIST="$VICTIM_LIST_ARG"
     fi

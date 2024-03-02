@@ -5,13 +5,14 @@ set -o pipefail
 #Takes any models in torchmodels_toexport_extra/ and outputs a cuda-runnable model file to models_extra/
 #Should be run periodically.
 
-if [[ $# -ne 3 ]]
+if [[ $# -ne 4 ]]
 then
-    echo "Usage: $0 NAMEPREFIX BASEDIR USEGATING"
+    echo "Usage: $0 NAMEPREFIX BASEDIR USEGATING USETORCHSCRIPT"
     echo "Currently expects to be run from within the 'python' directory of the KataGo repo, or otherwise in the same dir as export_model.py."
     echo "NAMEPREFIX string prefix for this training run, try to pick something globally unique. Will be displayed to users when KataGo loads the model."
     echo "BASEDIR containing selfplay data and models and related directories"
     echo "USEGATING = 1 to use gatekeeper, 0 to not use gatekeeper and output directly to models/"
+    echo "USETORCHSCRIPT = 1 to export model as TorchScript, 0 to export as standard KataGo format"
     exit 0
 fi
 NAMEPREFIX="$1"
@@ -19,6 +20,8 @@ shift
 BASEDIR="$1"
 shift
 USEGATING="$1"
+shift
+USETORCHSCRIPT="$1"
 shift
 
 #------------------------------------------------------------------------------
@@ -64,12 +67,22 @@ function exportStuff() {
                 mkdir "$TMPDST"
 
                 set -x
-                python3 ./export_model_pytorch.py \
-                        -checkpoint "$SRC"/model.ckpt \
-                        -export-dir "$TMPDST" \
-                        -model-name "$NAMEPREFIX""-""$NAME" \
-                        -filename-prefix model \
-                        -use-swa
+                if [ "$USETORCHSCRIPT" -eq 0 ]
+                then
+                  python3 ./export_model_pytorch.py \
+                          -checkpoint "$SRC"/model.ckpt \
+                          -export-dir "$TMPDST" \
+                          -model-name "$NAMEPREFIX""-""$NAME" \
+                          -filename-prefix model \
+                          -use-swa
+                else
+                  python3 ./export_model_as_torchscript.py \
+                          -checkpoint "$SRC"/model.ckpt \
+                          -export-dir "$TMPDST" \
+                          -filename-prefix model \
+                          -use-fp16 \
+                          -use-swa
+                fi
 
                 python3 ./clean_checkpoint.py \
                         -checkpoint "$SRC"/model.ckpt \
@@ -77,7 +90,10 @@ function exportStuff() {
                 set +x
 
                 rm -r "$SRC"
-                gzip "$TMPDST"/model.bin
+                if [ "$USETORCHSCRIPT" -eq 0 ]
+                then
+                  gzip "$TMPDST"/model.bin
+                fi
 
                 #Make a bunch of the directories that selfplay will need so that there isn't a race on the selfplay
                 #machines to concurrently make it, since sometimes concurrent making of the same directory can corrupt

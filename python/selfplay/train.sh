@@ -38,23 +38,30 @@ BASEDIR="$(realpath "$BASEDIR")"
 set -x
 
 mkdir -p "$BASEDIR"/train/"$TRAININGNAME"
-pushd "$GITROOTDIR"
-git show --no-patch --no-color > "$BASEDIR"/train/"$TRAININGNAME"/version.txt
-git diff --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diff.txt
-git diff --staged --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diffstaged.txt
-popd
 
-# For archival and logging purposes - you can look back and see exactly the python code on a particular date
-DATE_FOR_FILENAME=$(date "+%Y%m%d-%H%M%S")
-DATED_ARCHIVE="$BASEDIR"/scripts/train/dated/"$DATE_FOR_FILENAME"
-mkdir -p "$DATED_ARCHIVE"
-cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/train.sh "$DATED_ARCHIVE"
+if [[ -n $(pwd | grep "^$BASEDIR/scripts/") ]]
+then
+    echo "Already running out of snapshotted scripts directory, not snapshotting again"
+else
+    pushd "$GITROOTDIR"
+    git show --no-patch --no-color > "$BASEDIR"/train/"$TRAININGNAME"/version.txt
+    git diff --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diff.txt
+    git diff --staged --no-color > "$BASEDIR"/train/"$TRAININGNAME"/diffstaged.txt
+    popd
 
-pushd "$GITROOTDIR"
-git show --no-patch --no-color > "$DATED_ARCHIVE"/version.txt
-git diff --no-color > "$DATED_ARCHIVE"/diff.txt
-git diff --staged --no-color > "$DATED_ARCHIVE"/diffstaged.txt
-popd
+    # For archival and logging purposes - you can look back and see exactly the python code on a particular date
+    DATE_FOR_FILENAME=$(date "+%Y%m%d-%H%M%S")
+    DATED_ARCHIVE="$BASEDIR"/scripts/train/dated/"$DATE_FOR_FILENAME"
+    mkdir -p "$DATED_ARCHIVE"
+    cp "$GITROOTDIR"/python/*.py "$GITROOTDIR"/python/selfplay/train.sh "$DATED_ARCHIVE"
+
+    pushd "$GITROOTDIR"
+    git show --no-patch --no-color > "$DATED_ARCHIVE"/version.txt
+    git diff --no-color > "$DATED_ARCHIVE"/diff.txt
+    git diff --staged --no-color > "$DATED_ARCHIVE"/diffstaged.txt
+    cd "$DATED_ARCHIVE"
+    popd
+fi
 
 if [ "$EXPORTMODE" == "main" ]
 then
@@ -73,7 +80,7 @@ else
     exit 1
 fi
 
-time python3 "$DATED_ARCHIVE"/train.py \
+time python3 ./train.py \
      -traindir "$BASEDIR"/train/"$TRAININGNAME" \
      -datadir "$BASEDIR"/shuffleddata/current/ \
      -exportdir "$BASEDIR"/"$EXPORT_SUBDIR" \

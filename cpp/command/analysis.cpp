@@ -373,7 +373,7 @@ int MainCmds::analysis(const vector<string>& args) {
     bots.push_back(bot);
   }
 
-  logger.write("Analyzing up to " + Global::intToString(numAnalysisThreads) + " positions at at time in parallel");
+  logger.write("Analyzing up to " + Global::intToString(numAnalysisThreads) + " positions at a time in parallel");
   logger.write("Started, ready to begin handling requests");
   if(!logToStderr) {
     cerr << "Started, ready to begin handling requests" << endl;
@@ -623,11 +623,9 @@ int MainCmds::analysis(const vector<string>& args) {
           continue;
         }
         if(!parseInteger(input, "boardXSize", xBuf, 2, Board::MAX_LEN, boardSizeError.c_str())) {
-          reportErrorForId(rbase.id, "boardXSize", boardSizeError.c_str());
           continue;
         }
         if(!parseInteger(input, "boardYSize", yBuf, 2, Board::MAX_LEN, boardSizeError.c_str())) {
-          reportErrorForId(rbase.id, "boardYSize", boardSizeError.c_str());
           continue;
         }
         boardXSize = (int)xBuf;

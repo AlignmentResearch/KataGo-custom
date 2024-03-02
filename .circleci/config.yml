@@ -112,7 +112,7 @@ jobs:
       # lint files we add, or have substantially modified.
       # WARNING: If you change this, also change `FULL_LINT_FILES` in
       # `.pre-commit-config.yaml`.
-      FULL_LINT_FILES: python/curriculum.py python/sgfmill/__init__.py
+      FULL_LINT_FILES: python/curriculum.py
     steps:
       - checkout
 

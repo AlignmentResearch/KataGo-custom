@@ -38,8 +38,11 @@ namespace Tests {
 
   //testnninputs.cpp
   void runNNInputsV3V4Tests();
+
+  //testsymmetries.cpp
   void runBasicSymmetryTests();
   void runBoardSymmetryTests();
+  void runSymmetryDifferenceTests();
 
   //testsearchnonn.cpp
   void runNNLessSearchTests();
@@ -87,7 +90,11 @@ namespace Tests {
   //testmisc.cpp
   void runCollectFilesTests();
   void runLoadModelTests();
-  //testpassing.cpp
+
+  //testbook.cpp
+  void runBookTests();
+
+  // testpassing.cpp (KataGo-custom test)
   void runPassingTests();
 }
 

@@ -1,6 +1,6 @@
 Running search tests
 : Initializing neural net buffer to be size 19 * 19 allowing smaller boards
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 5 useFP16 = true useNHWC = true
 : Cuda backend thread 0: Model name: b6c96-s103408384-d26419149
 GAME 1 ==========================================================================

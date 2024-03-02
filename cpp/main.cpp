@@ -91,8 +91,6 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::tuner(subArgs);
   else if(subcommand == "match")
     return MainCmds::match(subArgs);
-  else if(subcommand == "matchauto")
-    return MainCmds::matchauto(subArgs);
   else if(subcommand == "selfplay")
     return MainCmds::selfplay(subArgs);
   else if(subcommand == "victimplay")
@@ -143,8 +141,12 @@ static int handleSubcommand(const string& subcommand, const vector<string>& args
     return MainCmds::dataminesgfs(subArgs);
   else if(subcommand == "genbook")
     return MainCmds::genbook(subArgs);
+  else if(subcommand == "writebook")
+    return MainCmds::writebook(subArgs);
   else if(subcommand == "checkbook")
     return MainCmds::checkbook(subArgs);
+  else if(subcommand == "booktoposes")
+    return MainCmds::booktoposes(subArgs);
   else if(subcommand == "trystartposes")
     return MainCmds::trystartposes(subArgs);
   else if(subcommand == "viewstartposes")
@@ -213,11 +215,11 @@ int main(int argc, const char* const* argv) {
 
 
 string Version::getKataGoVersion() {
-  return string("1.12.4");
+  return string("1.13.0");
 }
 
 string Version::getKataGoVersionForHelp() {
-  return string("KataGo v1.12.4");
+  return string("KataGo v1.13.0");
 }
 
 string Version::getKataGoVersionFullInfo() {

@@ -29,13 +29,13 @@ searchRandSeed = forTesting
 trtUseFP16 = false
 
 : GTP Engine starting...
-: KataGo v1.12.4
+: KataGo v1.13.0
 : Using TrompTaylor rules initially, unless GTP/GUI overrides this
 : Using 1 CPU thread(s) for search
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 19 * 19 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 19 nnYLen 19
@@ -65,7 +65,7 @@ trtUseFP16 = false
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 9 * 9 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 9 nnYLen 9
@@ -180,7 +180,7 @@ whiteOwnership
 : nnRandSeed0 = forTesting
 : After dedups: nnModelFile0 = tests/models/g170-b6c96-s175395328-d26788732.bin.gz useFP16 false useNHWC false
 : Initializing neural net buffer to be size 7 * 10 exactly
-: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51050250240 compute capability major 8 minor 6 device 0
+: Cuda backend thread 0: Found GPU NVIDIA RTX A6000 memory 51041271808 compute capability major 8 minor 6 device 0
 : Cuda backend thread 0: Model version 8 useFP16 = false useNHWC = false
 : Cuda backend thread 0: Model name: g170-b6c96-s175395328-d26788732
 : Loaded neural net with nnXLen 7 nnYLen 10

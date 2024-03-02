@@ -94,6 +94,8 @@ FinishedGameData::FinishedGameData()
    finalSekiAreas(NULL),
    finalWhiteScoring(NULL),
 
+   trainingWeight(1.0),
+
    sidePositions(),
    changedNeuralNets(),
    bTimeUsed(0.0),
@@ -212,6 +214,7 @@ void FinishedGameData::printDebug(ostream& out) const {
       out << endl;
     }
   }
+  out << "trainingWeight " << trainingWeight << endl;
   for(int i = 0; i<sidePositions.size(); i++) {
     SidePosition* sp = sidePositions[i];
     out << "Side position " << i << endl;
@@ -364,6 +367,12 @@ static void fillValueTDTargets(const vector<ValueTargets>& whiteValueTargetsByTu
     noResultValue += weightNow * targets.noResult;
     score += weightNow * (nextPlayer == P_WHITE ? targets.score : -targets.score);
   }
+  double scoreTargetCap = NNPos::MAX_BOARD_AREA + NNPos::EXTRA_SCORE_DISTR_RADIUS;
+  if(score > scoreTargetCap)
+    score = scoreTargetCap;
+  if(score < -scoreTargetCap)
+    score = -scoreTargetCap;
+
   buf[0] = (float)winValue;
   buf[1] = (float)lossValue;
   buf[2] = (float)noResultValue;
@@ -492,8 +501,15 @@ void TrainingWriteBuffers::addRow(
   rowGlobal[29] = 0.0f;
   const ValueTargets& thisTargets = whiteValueTargets[whiteValueTargetsIdx];
   if(thisTargets.hasLead && !(data.endHist.isGameFinished && data.endHist.isNoResult)) {
+    float lead = nextPlayer == P_WHITE ? thisTargets.lead : -thisTargets.lead;
+    float scoreTargetCap = NNPos::MAX_BOARD_AREA + NNPos::EXTRA_SCORE_DISTR_RADIUS;
+    if(lead > scoreTargetCap)
+      lead = scoreTargetCap;
+    if(lead < -scoreTargetCap)
+      lead = -scoreTargetCap;
+
     //Flip based on next player for training
-    rowGlobal[21] = nextPlayer == P_WHITE ? thisTargets.lead : -thisTargets.lead;
+    rowGlobal[21] = lead;
     rowGlobal[29] = 1.0f;
   }
 
@@ -1055,7 +1071,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
             writeBuffers->addRow(
               board,hist,nextPlayer,
               turnIdx,
-              1.0,
+              (float)data.trainingWeight,
               unreducedNumVisits,
               policyTarget0,
               policyTarget1,
@@ -1119,7 +1135,7 @@ void TrainingDataWriter::writeGame(const FinishedGameData& data) {
           buffers->addRow(
             sp->board,sp->hist,sp->pla,
             turnIdx,
-            1.0,
+            (float)data.trainingWeight,
             sp->unreducedNumVisits,
             &(sp->policyTarget),
             NULL,
